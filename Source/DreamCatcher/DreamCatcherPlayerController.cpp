@@ -1,67 +1,73 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-
 #include "DreamCatcherPlayerController.h"
-#include "EnhancedInputSubsystems.h"
+#include "DreamCatcherCharacter.h"
 #include "Engine/LocalPlayer.h"
+#include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
-#include "Blueprint/UserWidget.h"
-#include "DreamCatcher.h"
-#include "Widgets/Input/SVirtualJoystick.h"
+#include "UI/DCPlayerHUDWidget.h"
 
 void ADreamCatcherPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// only spawn touch controls on local player controllers
-	if (ShouldUseTouchControls() && IsLocalPlayerController())
-	{
-		// spawn the mobile controls widget
-		MobileControlsWidget = CreateWidget<UUserWidget>(this, MobileControlsWidgetClass);
+	// 첫 플레이어블은 게임 조작만 있으면 되므로 GameOnly 입력 모드로 둠.
+	FInputModeGameOnly InputMode;
+	SetInputMode(InputMode);
+	bShowMouseCursor = false;
 
-		if (MobileControlsWidget)
-		{
-			// add the controls to the player screen
-			MobileControlsWidget->AddToPlayerScreen(0);
-
-		} else {
-
-			UE_LOG(LogDreamCatcher, Error, TEXT("Could not spawn mobile controls widget."));
-
-		}
-
-	}
+	ApplyInputMappingContexts();
+	CreateHUD();
+	BindHUDToCurrentPawn();
 }
 
-void ADreamCatcherPlayerController::SetupInputComponent()
+void ADreamCatcherPlayerController::OnPossess(APawn* InPawn)
 {
-	Super::SetupInputComponent();
+	Super::OnPossess(InPawn);
 
-	// only add IMCs for local player controllers
-	if (IsLocalPlayerController())
+	// 플레이어 Pawn이 바뀌면 HUD가 새 캐릭터를 다시 바라보게 함.
+	BindHUDToCurrentPawn();
+}
+
+void ADreamCatcherPlayerController::ApplyInputMappingContexts()
+{
+	if (!IsLocalController())
 	{
-		// Add Input Mapping Contexts
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
-		{
-			for (UInputMappingContext* CurrentContext : DefaultMappingContexts)
-			{
-				Subsystem->AddMappingContext(CurrentContext, 0);
-			}
+		return;
+	}
 
-			// only add these IMCs if we're not using mobile touch input
-			if (!ShouldUseTouchControls())
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+	{
+		for (UInputMappingContext* MappingContext : DefaultMappingContexts)
+		{
+			if (MappingContext)
 			{
-				for (UInputMappingContext* CurrentContext : MobileExcludedMappingContexts)
-				{
-					Subsystem->AddMappingContext(CurrentContext, 0);
-				}
+				Subsystem->AddMappingContext(MappingContext, 0);
 			}
 		}
 	}
 }
 
-bool ADreamCatcherPlayerController::ShouldUseTouchControls() const
+void ADreamCatcherPlayerController::CreateHUD()
 {
-	// are we on a mobile platform? Should we force touch?
-	return SVirtualJoystick::ShouldDisplayTouchInterface() || bForceTouchControls;
+	if (!IsLocalController() || HUDWidget || !HUDWidgetClass)
+	{
+		return;
+	}
+
+	HUDWidget = CreateWidget<UDCPlayerHUDWidget>(this, HUDWidgetClass);
+	if (HUDWidget)
+	{
+		HUDWidget->AddToViewport();
+	}
+}
+
+void ADreamCatcherPlayerController::BindHUDToCurrentPawn()
+{
+	if (!HUDWidget)
+	{
+		return;
+	}
+
+	HUDWidget->BindToCharacter(Cast<ADreamCatcherCharacter>(GetPawn()));
 }

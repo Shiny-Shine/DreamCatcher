@@ -6,47 +6,30 @@
 #include "GameFramework/PlayerController.h"
 #include "DreamCatcherPlayerController.generated.h"
 
+class UDCPlayerHUDWidget;
 class UInputMappingContext;
-class UUserWidget;
 
-/**
- *  Basic PlayerController class for a third person game
- *  Manages input mappings
- */
-UCLASS(abstract)
-class ADreamCatcherPlayerController : public APlayerController
+UCLASS()
+class DREAMCATCHER_API ADreamCatcherPlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
+
 protected:
+	// 로컬 플레이어에 적용할 기본 입력 매핑.
+	UPROPERTY(EditAnywhere, Category="Input")
+	TArray<TObjectPtr<UInputMappingContext>> DefaultMappingContexts;
 
-	/** Input Mapping Contexts */
-	UPROPERTY(EditAnywhere, Category ="Input|Input Mappings")
-	TArray<UInputMappingContext*> DefaultMappingContexts;
+	// 플레이어 HUD의 C++ 베이스 위젯 클래스.
+	UPROPERTY(EditAnywhere, Category="UI")
+	TSubclassOf<UDCPlayerHUDWidget> HUDWidgetClass;
 
-	/** Input Mapping Contexts */
-	UPROPERTY(EditAnywhere, Category="Input|Input Mappings")
-	TArray<UInputMappingContext*> MobileExcludedMappingContexts;
+	UPROPERTY(Transient)
+	TObjectPtr<UDCPlayerHUDWidget> HUDWidget;
 
-	/** Mobile controls widget to spawn */
-	UPROPERTY(EditAnywhere, Category="Input|Touch Controls")
-	TSubclassOf<UUserWidget> MobileControlsWidgetClass;
-
-	/** Pointer to the mobile controls widget */
-	UPROPERTY()
-	TObjectPtr<UUserWidget> MobileControlsWidget;
-
-	/** If true, the player will use UMG touch controls even if not playing on mobile platforms */
-	UPROPERTY(EditAnywhere, Config, Category = "Input|Touch Controls")
-	bool bForceTouchControls = false;
-
-	/** Gameplay initialization */
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
 
-	/** Input mapping context setup */
-	virtual void SetupInputComponent() override;
-
-	/** Returns true if the player should use UMG touch controls */
-	bool ShouldUseTouchControls() const;
-
+	void ApplyInputMappingContexts();
+	void CreateHUD();
+	void BindHUDToCurrentPawn();
 };
