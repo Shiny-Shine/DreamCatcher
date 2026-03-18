@@ -8,35 +8,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d3105365-c11e-41e2-a641-2e628673f69e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemyCharacter.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemyCharacter.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemySpawner.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemySpawner.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/Components/DCCombatComponent.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/Components/DCCombatComponent.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/Components/DCHealthComponent.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/Components/DCHealthComponent.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/Stage/DCEncounterController.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/Stage/DCEncounterController.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/Stage/DCStageDirector.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/Stage/DCStageDirector.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/UI/DCPlayerHUDWidget.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Source/DreamCatcher/UI/DCPlayerHUDWidget.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/copilot.data.migration.ask2agent.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/encodings.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/indexLayout.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher/.idea/encodings.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher/.idea/workspace.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Config/DefaultEngine.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultEngine.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Config/DefaultGame.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultGame.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherCharacter.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherCharacter.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherGameMode.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherGameMode.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherGameMode.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherGameMode.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherPlayerController.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherPlayerController.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherPlayerController.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/DreamCatcher/DreamCatcherPlayerController.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Blueprint/AI/BP_EnemyCharacter.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Blueprint/AI/BP_EnemyCharacter.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Blueprint/BP_DreamCatcherChracter.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Blueprint/BP_DreamCatcherChracter.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Blueprint/BP_DreamCatcherGameMode.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Blueprint/BP_DreamCatcherGameMode.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Blueprint/BP_DreamCatcherPlayerController.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Blueprint/BP_DreamCatcherPlayerController.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Blueprint/UI/WBP_PlayerHUD.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Blueprint/UI/WBP_PlayerHUD.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Characters/Mannequins/Meshes/SKM_Manny_Simple.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Characters/Mannequins/Meshes/SKM_Manny_Simple.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Characters/Mannequins/Meshes/SK_Mannequin.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Characters/Mannequins/Meshes/SK_Mannequin.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Input/IMC_Player.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Input/IMC_Player.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/ThirdPerson/Blueprints/BP_ThirdPersonCharacter.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/ThirdPerson/Blueprints/BP_ThirdPersonCharacter.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemySpawner.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemySpawner.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,12 +28,13 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="14153" />
+    <option name="cachedIndexableFilesCount" value="14156" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/DreamCatcher/UHT/DCStageDirector.gen.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemyCharacter.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemyCharacter.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Source/DreamCatcher/AI/DCEnemySpawner.cpp" root0="FORCE_HIGHLIGHTING" />
@@ -70,10 +55,10 @@
     <urls />
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
-  <component name="ProjectColorInfo"><![CDATA[{
-  "customColor": "",
-  "associatedIndex": 2
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 2
+}</component>
   <component name="ProjectId" id="3B4sBZg0jDo8zP7yjGoNfoYdBGe" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -86,6 +71,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "Uproject.DreamCatcher.executor": "Debug",
     "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
     "node.js.detected.package.eslint": "true",
@@ -93,6 +79,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.lookFeel",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -178,7 +165,8 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1773759546866</updated>
-      <workItem from="1773759555929" duration="7559000" />
+      <workItem from="1773759555929" duration="9835000" />
+      <workItem from="1773812626721" duration="12844000" />
     </task>
     <servers />
   </component>

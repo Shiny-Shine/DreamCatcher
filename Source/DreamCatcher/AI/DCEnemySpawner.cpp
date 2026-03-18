@@ -4,6 +4,7 @@
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "DreamCatcher.h"
 
 ADCEnemySpawner::ADCEnemySpawner()
 {
@@ -45,8 +46,16 @@ void ADCEnemySpawner::ActivateSpawner()
 
 void ADCEnemySpawner::TrySpawnNext()
 {
-	if (!bIsActive || bIsCleared || !EnemyClass)
+	if (!bIsActive || bIsCleared)
 	{
+		return;
+	}
+
+	// EnemyClass 누락 시 인카운터가 멈추지 않게 즉시 종료 처리.
+	if (!EnemyClass)
+	{
+		UE_LOG(LogDreamCatcher, Warning, TEXT("%s has no EnemyClass assigned. Completing spawner immediately."), *GetName());
+		CompleteSpawner();
 		return;
 	}
 
