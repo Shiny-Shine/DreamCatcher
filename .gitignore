@@ -56,4 +56,4 @@ DerivedDataCache/*
 #The specific folder inside the Content folder is included.
 !Content/00_Project/**
 
-!Content/Blueprint/**
+!Content/Blueprint/

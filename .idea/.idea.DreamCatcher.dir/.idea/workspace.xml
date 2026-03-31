@@ -80,7 +80,7 @@
         <option name="EXECUTABLE_PATH" value="$PROJECT_DIR$/../../UE_5.7/Engine/Binaries/Win64/UnrealEditor-Win64-DebugGame.exe" />
         <option name="MANDATORY_PROGRAM_PARAMETERS" value=" &quot;E:\Epic Games\UEProjects\DreamCatcher\DreamCatcher.uproject&quot;" />
         <option name="CUSTOM_PROGRAM_PARAMETERS" value="" />
-        <option name="WORKING_DIRECTORY" value="E:\Epic Games\UE_5.7" />
+        <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../../UE_5.7" />
         <option name="PASS_PARENT_ENVS" value="1" />
         <option name="USE_EXTERNAL_CONSOLE" value="1" />
         <option name="TERMINAL_INTERACTION_BEHAVIOR" value="FORCE_CONSOLE" />
@@ -93,7 +93,7 @@
         <option name="EXECUTABLE_PATH" value="$PROJECT_DIR$/Binaries/Win64/DreamCatcher-Win64-DebugGame.exe" />
         <option name="MANDATORY_PROGRAM_PARAMETERS" value="" />
         <option name="CUSTOM_PROGRAM_PARAMETERS" value="" />
-        <option name="WORKING_DIRECTORY" value="E:\Epic Games\UE_5.7" />
+        <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../../UE_5.7" />
         <option name="PASS_PARENT_ENVS" value="1" />
         <option name="USE_EXTERNAL_CONSOLE" value="1" />
         <option name="TERMINAL_INTERACTION_BEHAVIOR" value="FORCE_CONSOLE" />
@@ -106,7 +106,7 @@
         <option name="EXECUTABLE_PATH" value="$PROJECT_DIR$/../../UE_5.7/Engine/Binaries/Win64/UnrealEditor.exe" />
         <option name="MANDATORY_PROGRAM_PARAMETERS" value=" &quot;E:\Epic Games\UEProjects\DreamCatcher\DreamCatcher.uproject&quot;" />
         <option name="CUSTOM_PROGRAM_PARAMETERS" value="" />
-        <option name="WORKING_DIRECTORY" value="E:\Epic Games\UE_5.7" />
+        <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../../UE_5.7" />
         <option name="PASS_PARENT_ENVS" value="1" />
         <option name="USE_EXTERNAL_CONSOLE" value="1" />
         <option name="TERMINAL_INTERACTION_BEHAVIOR" value="FORCE_CONSOLE" />
@@ -119,7 +119,7 @@
         <option name="EXECUTABLE_PATH" value="$PROJECT_DIR$/Binaries/Win64/DreamCatcher.exe" />
         <option name="MANDATORY_PROGRAM_PARAMETERS" value="" />
         <option name="CUSTOM_PROGRAM_PARAMETERS" value="" />
-        <option name="WORKING_DIRECTORY" value="E:\Epic Games\UE_5.7" />
+        <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../../UE_5.7" />
         <option name="PASS_PARENT_ENVS" value="1" />
         <option name="USE_EXTERNAL_CONSOLE" value="1" />
         <option name="TERMINAL_INTERACTION_BEHAVIOR" value="FORCE_CONSOLE" />
@@ -132,7 +132,7 @@
         <option name="EXECUTABLE_PATH" value="$PROJECT_DIR$/Binaries/Win64/DreamCatcher-Win64-Shipping.exe" />
         <option name="MANDATORY_PROGRAM_PARAMETERS" value="" />
         <option name="CUSTOM_PROGRAM_PARAMETERS" value="" />
-        <option name="WORKING_DIRECTORY" value="E:\Epic Games\UE_5.7" />
+        <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../../UE_5.7" />
         <option name="PASS_PARENT_ENVS" value="1" />
         <option name="USE_EXTERNAL_CONSOLE" value="1" />
         <option name="TERMINAL_INTERACTION_BEHAVIOR" value="FORCE_CONSOLE" />
@@ -156,6 +156,7 @@
       <workItem from="1773759555929" duration="9835000" />
       <workItem from="1773812626721" duration="12954000" />
       <workItem from="1773846385463" duration="834000" />
+      <workItem from="1774977806171" duration="7000" />
     </task>
     <servers />
   </component>
