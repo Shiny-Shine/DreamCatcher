@@ -20,9 +20,17 @@
 SourceArt/**/*.png
 SourceArt/**/*.tga
 
-# Binary Files
-Binaries/*
-Plugins/**/Binaries/*
+# 디자이너가 pull만 해도 C++ 클래스가 보이게,
+# 프로젝트/플러그인 Win64 Editor 바이너리는 다시 추적
+!Binaries/
+!Binaries/Win64/**
+!Plugins/**/Binaries/
+!Plugins/**/Binaries/Win64/**
+
+# ===== 선택 사항 =====
+# 디버그 심볼은 용량이 커서 디자이너에게 불필요하면 다시 무시
+Binaries/**/*.pdb
+Plugins/**/Binaries/**/*.pdb
 
 # Builds
 Build/*
