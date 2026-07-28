@@ -77,7 +77,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "SolutionBuilderGeneralOptionsPage",
+    "settings.editor.selected.configurable": "CppUnrealEngineOptionsId",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -169,7 +169,7 @@
       <workItem from="1774977806171" duration="7000" />
       <workItem from="1774977979416" duration="337000" />
       <workItem from="1777729185426" duration="319000" />
-      <workItem from="1785232469629" duration="75000" />
+      <workItem from="1785232469629" duration="3353000" />
     </task>
     <servers />
   </component>
@@ -198,5 +198,9 @@
         </breakpoint>
       </breakpoints>
     </breakpoint-manager>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>
