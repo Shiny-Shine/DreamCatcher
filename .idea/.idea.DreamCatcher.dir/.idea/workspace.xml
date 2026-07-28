@@ -13,14 +13,16 @@
     <configurations />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d3105365-c11e-41e2-a641-2e628673f69e" name="Changes" comment="" />
+    <list default="true" id="d3105365-c11e-41e2-a641-2e628673f69e" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.DreamCatcher.dir/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="22448" />
+    <option name="cachedIndexableFilesCount" value="1" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -75,7 +77,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "application.passwordSafe",
+    "settings.editor.selected.configurable": "SolutionBuilderGeneralOptionsPage",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -167,6 +169,7 @@
       <workItem from="1774977806171" duration="7000" />
       <workItem from="1774977979416" duration="337000" />
       <workItem from="1777729185426" duration="319000" />
+      <workItem from="1785232469629" duration="75000" />
     </task>
     <servers />
   </component>
