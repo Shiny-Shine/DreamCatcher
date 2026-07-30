@@ -28,8 +28,17 @@ void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 
 	if (BoundCombatComponent)
 	{
+		// 궁극기 게이지가 변경됐을 때 HUD가 알림을 받도록 등록.
 		BoundCombatComponent->OnUltimateChargeChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
+
+		// HUD가 생성된 직후에도 현재 궁극기 게이지를 표시.
 		HandleUltimateChargeChanged(BoundCombatComponent->GetUltimateChargeNormalized());
+
+		// 조준 모드가 변경됐을 때 HUD가 알림을 받도록 등록.
+		BoundCombatComponent->OnAimModeChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleAimModeChanged);
+
+		// HUD가 생성된 직후에도 현재 조준 모드에 맞는 UI를 표시.
+		HandleAimModeChanged(BoundCombatComponent->GetAimMode());
 	}
 }
 
@@ -49,7 +58,12 @@ void UDCPlayerHUDWidget::UnbindFromCurrentCharacter()
 
 	if (BoundCombatComponent)
 	{
-		BoundCombatComponent->OnUltimateChargeChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
+		// 궁극기 게이지 변경 알림 등록 해제.
+		BoundCombatComponent->OnUltimateChargeChanged.RemoveDynamic(
+			this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
+		// 조준 모드 변경 알림 등록 해제.
+		BoundCombatComponent->OnAimModeChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleAimModeChanged);
+
 		BoundCombatComponent = nullptr;
 	}
 
@@ -64,4 +78,10 @@ void UDCPlayerHUDWidget::HandleHealthChanged(float CurrentHealth, float MaxHealt
 void UDCPlayerHUDWidget::HandleUltimateChargeChanged(float NormalizedCharge)
 {
 	BP_OnUltimateChargeChanged(NormalizedCharge);
+}
+
+void UDCPlayerHUDWidget::HandleAimModeChanged(EDCAimMode NewAimMode)
+{
+	// C++에서 받은 조준 모드를 WBP_PlayerHUD에 전달.
+	BP_OnAimModeChanged(NewAimMode);
 }

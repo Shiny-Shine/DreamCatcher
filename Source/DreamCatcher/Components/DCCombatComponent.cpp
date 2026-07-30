@@ -72,6 +72,7 @@ bool UDCCombatComponent::TryDodge()
 	{
 		return false;
 	}
+	ClearAimState();
 
 	bDodgeReady = false;
 	OnDodgeRequested.Broadcast();
@@ -97,6 +98,8 @@ bool UDCCombatComponent::TryUltimate()
 	{
 		return false;
 	}
+
+	ClearAimState();
 
 	CurrentUltimateCharge = 0.0f;
 	BroadcastUltimateCharge();
@@ -135,4 +138,91 @@ void UDCCombatComponent::ResetDodge()
 void UDCCombatComponent::BroadcastUltimateCharge()
 {
 	OnUltimateChargeChanged.Broadcast(GetUltimateChargeNormalized());
+}
+
+//조준 상태 정의
+void UDCCombatComponent::ToggleScopeAim()
+{
+	if (!bAimAllowed)
+	{
+		return;
+	}
+
+	// Scope 토글은 Hip과 Scope 사이에서만 허용, Shoulder 상태에서는 전환하지 않음.
+	if (CurrentAimMode == EDCAimMode::Hip)
+	{
+		bShoulderHeld = false;
+		bScopeToggled = true;
+	}
+	else if (CurrentAimMode == EDCAimMode::Scope)
+	{
+		bShoulderHeld = false;
+		bScopeToggled = false;
+	}
+	else
+	{
+		return;
+	}
+
+	RefreshAimMode();
+}
+
+void UDCCombatComponent::BeginShoulderAim()
+{
+	// 조준이 금지됐거나 Hip 상태가 아니면 Shoulder에 진입하지 않음.
+	if (!bAimAllowed || CurrentAimMode != EDCAimMode::Hip)
+	{
+		return;
+	}
+
+	// Shoulder와 Scope 상태가 동시에 저장되지 않도록 확실하게 해제.
+	bScopeToggled = false;
+	bShoulderHeld = true;
+
+	RefreshAimMode();
+}
+
+void UDCCombatComponent::EndShoulderAim()
+{
+	bShoulderHeld = false;
+	RefreshAimMode();
+}
+
+void UDCCombatComponent::ClearAimState()
+{
+	bScopeToggled = false;
+	bShoulderHeld = false;
+	RefreshAimMode();
+}
+
+void UDCCombatComponent::SetAimAllowed(bool bAllowed)
+{
+	bAimAllowed = bAllowed;
+
+	if (!bAimAllowed)
+	{
+		ClearAimState();
+	}
+}
+
+void UDCCombatComponent::RefreshAimMode()
+{
+	EDCAimMode NewAimMode = EDCAimMode::Hip;
+
+	if (bShoulderHeld)
+	{
+		NewAimMode = EDCAimMode::Shoulder;
+	}
+	else if (bScopeToggled)
+	{
+		NewAimMode = EDCAimMode::Scope;
+	}
+
+	if (CurrentAimMode == NewAimMode)
+	{
+		return;
+	}
+
+	CurrentAimMode = NewAimMode;
+	OnAimModeChanged.Broadcast(CurrentAimMode);
 }

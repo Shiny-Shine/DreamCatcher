@@ -51,6 +51,26 @@ ADreamCatcherCharacter::ADreamCatcherCharacter()
 	// 나중에 적 캐릭터나 보스에도 재사용하기 쉽게 만ㄷ므.
 	HealthComponent = CreateDefaultSubobject<UDCHealthComponent>(TEXT("HealthComponent"));
 	CombatComponent = CreateDefaultSubobject<UDCCombatComponent>(TEXT("CombatComponent"));
+	
+	// 카메라 기본값 설정
+	PrimaryActorTick.bCanEverTick = true;
+
+	HipCameraProfile.FieldOfView = 90.0f;
+	HipCameraProfile.TargetArmLength = 325.0f;
+	HipCameraProfile.SocketOffset = FVector(0.0f, 55.0f, 65.0f);
+	HipCameraProfile.LookSensitivityMultiplier = 1.0f;
+
+	ShoulderCameraProfile.FieldOfView = 72.0f;
+	ShoulderCameraProfile.TargetArmLength = 235.0f;
+	ShoulderCameraProfile.SocketOffset = FVector(0.0f, 80.0f, 65.0f);
+	ShoulderCameraProfile.LookSensitivityMultiplier = 0.7f;
+
+	ScopeCameraProfile.FieldOfView = 40.0f;
+	ScopeCameraProfile.TargetArmLength = 210.0f;
+	ScopeCameraProfile.SocketOffset = FVector(0.0f, 70.0f, 65.0f);
+	ScopeCameraProfile.LookSensitivityMultiplier = 0.35f;
+
+	FollowCamera->SetFieldOfView(HipCameraProfile.FieldOfView);
 }
 
 void ADreamCatcherCharacter::BeginPlay()
@@ -64,6 +84,11 @@ void ADreamCatcherCharacter::BeginPlay()
 		CombatComponent->OnPrimaryFireRequested.AddDynamic(this, &ADreamCatcherCharacter::HandlePrimaryFireRequested);
 		CombatComponent->OnDodgeRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleDodgeRequested);
 		CombatComponent->OnUltimateRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleUltimateRequested);
+		
+		// 카메라 기본값 설정
+		CombatComponent->OnAimModeChanged.AddDynamic(this, &ADreamCatcherCharacter::HandleAimModeChanged);
+
+		HandleAimModeChanged(CombatComponent->GetAimMode());
 	}
 
 	if (HealthComponent)
@@ -131,6 +156,35 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		UE_LOG(LogDreamCatcher, Warning, TEXT("UltimateAction is not assigned on %s"), *GetName());
 	}
+	
+	//조준 상태별 입력 바인딩
+	if (AimAction)
+	{
+		EnhancedInput->BindAction(
+			AimAction,
+			ETriggerEvent::Started,
+			this,
+			&ADreamCatcherCharacter::AimPressed
+		);
+
+		EnhancedInput->BindAction(
+			AimAction,
+			ETriggerEvent::Completed,
+			this,
+			&ADreamCatcherCharacter::AimReleased
+		);
+
+		EnhancedInput->BindAction(
+			AimAction,
+			ETriggerEvent::Canceled,
+			this,
+			&ADreamCatcherCharacter::AimCanceled
+		);
+	}
+	else
+	{
+		UE_LOG(LogDreamCatcher, Warning, TEXT("AimAction is not assigned on %s"), *GetName());
+	}
 }
 
 void ADreamCatcherCharacter::Move(const FInputActionValue& Value)
@@ -155,8 +209,8 @@ void ADreamCatcherCharacter::Look(const FInputActionValue& Value)
 	const FVector2D Input = Value.Get<FVector2D>();
 
 	// 마우스/패드 입력을 컨트롤러 회전에 반영.
-	AddControllerYawInput(Input.X);
-	AddControllerPitchInput(Input.Y);
+	AddControllerYawInput(Input.X * CurrentLookSensitivityMultiplier);
+	AddControllerPitchInput(Input.Y * CurrentLookSensitivityMultiplier);
 }
 
 void ADreamCatcherCharacter::StartPrimaryFire()
@@ -177,17 +231,17 @@ void ADreamCatcherCharacter::StopPrimaryFire()
 
 void ADreamCatcherCharacter::Dodge()
 {
-	if (CombatComponent)
+	if (CombatComponent && CombatComponent->TryDodge())
 	{
-		CombatComponent->TryDodge();
+		CancelAimInputAndState();
 	}
 }
 
 void ADreamCatcherCharacter::Ultimate()
 {
-	if (CombatComponent)
+	if (CombatComponent && CombatComponent->TryUltimate())
 	{
-		CombatComponent->TryUltimate();
+		CancelAimInputAndState();
 	}
 }
 
@@ -257,6 +311,7 @@ void ADreamCatcherCharacter::HandleDeath(AActor* /*DeadActor*/)
 {
 	// 죽는 순간 자동 연사를 끊어줌.
 	StopPrimaryFire();
+	CancelAimInputAndState();
 
 	// 더 이상 움직이지 못하게 막음.
 	GetCharacterMovement()->DisableMovement();
@@ -288,4 +343,183 @@ float ADreamCatcherCharacter::TakeDamage(float DamageAmount, FDamageEvent const&
 	}
 
 	return AppliedDamage;
+}
+
+// 조준 상태별 입력 함수
+void ADreamCatcherCharacter::AimPressed()
+{
+	if (!CombatComponent || !CombatComponent->IsAimAllowed())
+	{
+		return;
+	}
+
+	const EDCAimMode CurrentAimMode =
+		CombatComponent->GetAimMode();
+
+	// Scope 상태에서는 우클릭을 누르는 즉시 Hip으로 돌아감.
+	if (CurrentAimMode == EDCAimMode::Scope)
+	{
+		GetWorldTimerManager().ClearTimer(AimHoldTimerHandle);
+
+		bAimInputPressed = false;
+		bShoulderAimActivated = false;
+
+		CombatComponent->ClearAimState();
+		return;
+	}
+
+	// 짧은 클릭과 긴 입력을 구분하는 판정은 Hip 상태에서만.
+	if (CurrentAimMode != EDCAimMode::Hip)
+	{
+		return;
+	}
+
+	bAimInputPressed = true;
+	bShoulderAimActivated = false;
+
+	if (AimHoldThreshold <= 0.0f)
+	{
+		ActivateShoulderAim();
+		return;
+	}
+
+	// 설정된 시간 동안 우클릭을 유지하면 Shoulder로 전환.
+	GetWorldTimerManager().SetTimer(
+		AimHoldTimerHandle,
+		this,
+		&ADreamCatcherCharacter::ActivateShoulderAim,
+		AimHoldThreshold,
+		false
+	);
+}
+
+void ADreamCatcherCharacter::AimReleased()
+{
+	// Scope 상태에서 우클릭을 누른 경우에는 AimPressed()에서
+	// 이미 bAimInputPressed를 false로 만들었으므로 여기서 뭐 하지 않음.
+	if (!bAimInputPressed)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(AimHoldTimerHandle);
+
+	const bool bWasShoulderAim = bShoulderAimActivated;
+
+	bAimInputPressed = false;
+	bShoulderAimActivated = false;
+
+	if (!CombatComponent)
+	{
+		return;
+	}
+
+	if (bWasShoulderAim)
+	{
+		// Shoulder는 우클릭을 떼면 항상 Hip으로.
+		CombatComponent->EndShoulderAim();
+	}
+	else if (CombatComponent->GetAimMode() == EDCAimMode::Hip)
+	{
+		// Shoulder 진입 전에 버튼을 뗐다면 짧은 클릭이므로 Scope로 전환합니다.
+		CombatComponent->ToggleScopeAim();
+	}
+}
+
+void ADreamCatcherCharacter::AimCanceled()
+{
+	CancelAimInputAndState();
+}
+
+void ADreamCatcherCharacter::ActivateShoulderAim()
+{
+	if (!bAimInputPressed || !CombatComponent)
+	{
+		return;
+	}
+
+	bShoulderAimActivated = true;
+	CombatComponent->BeginShoulderAim();
+}
+
+void ADreamCatcherCharacter::CancelAimInputAndState()
+{
+	GetWorldTimerManager().ClearTimer(AimHoldTimerHandle);
+
+	bAimInputPressed = false;
+	bShoulderAimActivated = false;
+
+	if (CombatComponent)
+	{
+		CombatComponent->ClearAimState();
+	}
+}
+
+// 카메라와 감도 보간
+const FDCAimCameraProfile& ADreamCatcherCharacter::GetAimCameraProfile(EDCAimMode AimMode) const
+{
+	switch (AimMode)
+	{
+	case EDCAimMode::Shoulder:
+		return ShoulderCameraProfile;
+
+	case EDCAimMode::Scope:
+		return ScopeCameraProfile;
+
+	case EDCAimMode::Hip:
+	default:
+		return HipCameraProfile;
+	}
+}
+
+void ADreamCatcherCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	const EDCAimMode AimMode = CombatComponent
+		? CombatComponent->GetAimMode()
+		: EDCAimMode::Hip;
+
+	const FDCAimCameraProfile& Profile = GetAimCameraProfile(AimMode);
+
+	CameraBoom->TargetArmLength = FMath::FInterpTo(
+		CameraBoom->TargetArmLength,
+		Profile.TargetArmLength,
+		DeltaSeconds,
+		AimCameraBlendSpeed
+	);
+
+	CameraBoom->SocketOffset = FMath::VInterpTo(
+		CameraBoom->SocketOffset,
+		Profile.SocketOffset,
+		DeltaSeconds,
+		AimCameraBlendSpeed
+	);
+
+	const float NewFieldOfView = FMath::FInterpTo(
+		FollowCamera->FieldOfView,
+		Profile.FieldOfView,
+		DeltaSeconds,
+		AimCameraBlendSpeed
+	);
+
+	FollowCamera->SetFieldOfView(NewFieldOfView);
+
+	CurrentLookSensitivityMultiplier = FMath::FInterpTo(
+		CurrentLookSensitivityMultiplier,
+		Profile.LookSensitivityMultiplier,
+		DeltaSeconds,
+		AimCameraBlendSpeed
+	);
+}
+
+void ADreamCatcherCharacter::HandleAimModeChanged(EDCAimMode NewAimMode)
+{
+	BP_OnAimModeChanged(NewAimMode);
+}
+
+void ADreamCatcherCharacter::UnPossessed()
+{
+	CancelAimInputAndState();
+	Super::UnPossessed();
 }

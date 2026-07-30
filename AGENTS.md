@@ -3,7 +3,7 @@
 > **리포지토리:** `Shiny-Shine/DreamCatcher`  
 > **기본 브랜치:** `main`  
 > **문서 역할:** 프로젝트 전체 컨텍스트, 개발 정책, 아키텍처, 구현 현황, Codex 작업 규칙  
-> **최종 통합일:** 2026-07-24 KST  
+> **최종 통합일:** 2026-07-31 KST  
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
 
 ---
@@ -955,12 +955,7 @@ Content/Input/Actions/
   IA_Fire.uasset
   IA_Dodge.uasset
   IA_Ultimate.uasset
-```
-
-추가 예정:
-
-```text
-IA_Aim.uasset
+  IA_Aim.uasset
 ```
 
 ## 10.8 맵
@@ -1001,6 +996,11 @@ Source/DreamCatcherEditor.Target.cs
 - PlayerController 입력 매핑
 - HUD 생성
 - 이벤트 기반 HUD 연결
+- Hip / Shoulder / Scope 조준 상태 머신
+- Hip 상태의 짧은 우클릭 / Hold 판정
+- 조준 모드별 카메라 프로필, FOV, Spring Arm, 감도 보간
+- `OnAimModeChanged` 기반 Character / HUD 이벤트 연결
+- `IA_Aim` 및 `IMC_Player` 우클릭 입력 연결
 - 플레이어 사망 및 레벨 재시작
 - 기본 적 Character
 - 적 이동 및 공격
@@ -1021,6 +1021,7 @@ Source/DreamCatcherEditor.Target.cs
 - 궁극기 실제 효과
 - 궁극기 게이지 획득 방식
 - HUD 시각 완성도
+- 조준 AnimBP, Aim Offset, 최종 Scope 오버레이 연출
 - 실제 레벨 인카운터 배치
 - 전체 스테이지 진행
 - 컷신 연결
@@ -1043,7 +1044,6 @@ Source/DreamCatcherEditor.Target.cs
 - 정식 WeaponComponent
 - WeaponData
 - HitReactionComponent
-- 견착 / 스코프 조준 시스템
 - 회피 무적 프레임
 - 최종 데미지 숫자 디자인
 - 완성된 대화 흐름
@@ -1084,7 +1084,7 @@ Source/DreamCatcherEditor.Target.cs
 0.16~0.22초
 ```
 
-## 12.2 상태 우선순위
+## 12.2 상태 저장 원칙
 
 두 개의 의도 상태를 별도로 저장합니다.
 
@@ -1093,11 +1093,12 @@ bool bScopeToggled;
 bool bShoulderHeld;
 ```
 
-최종 조준 모드 우선순위:
+`bScopeToggled`와 `bShoulderHeld`는 동시에 참이 되지 않습니다.
 
-1. `bShoulderHeld`가 참이면 Shoulder
-2. 그렇지 않고 `bScopeToggled`가 참이면 Scope
-3. 둘 다 아니면 Hip
+- Scope는 Hip 상태의 짧은 클릭으로만 진입합니다.
+- Shoulder는 Hip 상태의 Hold로만 진입합니다.
+- Scope 상태에서는 Hold 판정을 시작하지 않습니다.
+- Shoulder 해제 후 이전 Scope 상태를 복구하지 않습니다.
 
 권장 enum:
 
@@ -1120,13 +1121,15 @@ Hip
   길게 누른 뒤 해제 -> Hip
 
 Scope
-  짧은 클릭 -> Hip
-  길게 누름 -> Shoulder
-  길게 누른 뒤 해제 -> Scope
+  우클릭 누름 -> Hip
+
+Shoulder
+  우클릭 유지 -> Shoulder
+  우클릭 해제 -> Hip
 ```
 
-Scope가 켜진 상태에서 Shoulder가 일시적으로 우선 적용됩니다.  
-Shoulder 해제 후 이전 Scope 상태로 돌아갑니다.
+짧은 클릭과 Hold 구분은 Hip 상태에서만 실행합니다.  
+Scope에서 Shoulder로 직접 전환하는 상태 전이는 허용하지 않습니다.
 
 ## 12.4 강제 해제 조건
 
@@ -1198,9 +1201,11 @@ Shoulder 해제 후 이전 Scope 상태로 돌아갑니다.
 - 렌더링 설정이 이미 무겁습니다.
 - 첫 프로토타입에서 불필요한 성능 비용과 복잡도가 발생합니다.
 
-## 12.8 Codex 수정 범위
+## 12.8 현재 구현 범위
 
-예상 C++ 파일:
+2026-07-31 기준 조준 시스템 1차 기능 프로토타입이 구현되었습니다.
+
+구현된 C++ 파일:
 
 ```text
 Source/DreamCatcher/DreamCatcherCharacter.h
@@ -1211,15 +1216,22 @@ Source/DreamCatcher/UI/DCPlayerHUDWidget.h
 Source/DreamCatcher/UI/DCPlayerHUDWidget.cpp
 ```
 
-수동 Unreal Editor 작업:
+반영된 Unreal Editor 에셋:
 
 ```text
 Content/Input/Actions/IA_Aim.uasset
 Content/Input/IMC_Player.uasset
 Content/Blueprint/BP_DreamCatcherChracter.uasset
 Content/Blueprint/UI/WBP_PlayerHUD.uasset
-Animation Blueprint 에셋
 ```
+
+후속 연출 작업:
+
+- Animation Blueprint 견착 자세
+- Aim Offset
+- 최종 Scope 오버레이 아트
+- 조준 전환 VFX / SFX
+- 조준 모드별 탄 퍼짐과 이동 속도
 
 ---
 
@@ -1360,7 +1372,7 @@ DataAsset 적용 순서:
 - 적 선딜
 - 회피 무적
 - 궁극기 게이지 획득
-- 조준 시스템
+- 조준 AnimBP 및 최종 연출
 
 ## 마일스톤 2 — 수직 슬라이스
 
@@ -1424,16 +1436,15 @@ DataAsset 적용 순서:
 
 현재 권장 순서:
 
-1. 전투 피드백
-2. 조준 시스템
-3. 적 공격 텔레그래프 분리
-4. 회피 무적 및 피드백
-5. Level 1 인카운터 안정화
-6. 전체 스테이지 흐름
-7. 최소 보스
-8. 결과 화면
-9. DataAsset 전환
-10. 메타 루프
+1. 적 공격 텔레그래프 분리
+2. 회피 무적 및 피드백
+3. Level 1 인카운터 안정화
+4. 전체 스테이지 흐름
+5. 최소 보스
+6. 결과 화면
+7. 전투 피드백 및 조준 연출 보강
+8. DataAsset 전환
+9. 메타 루프
 
 수직 슬라이스 전에는 다음을 우선하지 않습니다.
 
@@ -2001,8 +2012,10 @@ Content/DreamCatcher/
 완료 기준:
 
 - 짧은 클릭이 Scope를 안정적으로 토글
-- 길게 누르면 Shoulder Aim 시작
-- 해제 시 Hip 또는 이전 Scope로 복귀
+- Hip에서 길게 누르면 Shoulder Aim 시작
+- Scope에서 우클릭을 누르면 즉시 Hip으로 복귀
+- Shoulder에서 우클릭을 떼면 항상 Hip으로 복귀
+- Scope에서 Shoulder로 직접 전환되지 않음
 - 클릭과 Hold가 중복 실행되지 않음
 - 강제 취소 시 상태 초기화
 - 카메라 보간 안정
@@ -2095,9 +2108,10 @@ Content/DreamCatcher/
 
 - 짧은 우클릭은 Scope 토글
 - Hold 기준 기본값 0.18초
-- 기준 시간 이후 Shoulder 활성화
-- 우클릭 해제 시 Shoulder 종료
-- Shoulder 종료 후 이전 Scope 상태 복구
+- Hip에서 기준 시간 이후 Shoulder 활성화
+- Scope에서 우클릭을 누르면 Hip으로 전환하고 Hold 판정을 시작하지 않음
+- Shoulder에서 우클릭 해제 시 Hip으로 복귀
+- Scope에서 Shoulder로 직접 전환하지 않음
 - 회피, 궁극기, 사망, 입력 취소 시 상태 정리
 
 ## 제외 범위
@@ -2273,12 +2287,15 @@ Dream Core 생산 부산물로 발생하는 악몽 현상과 침식.
 
 ## 패키지 B — 조준 시스템
 
+상태: 2026-07-31 1차 기능 프로토타입 완료
+
 - C++ 입력 상태 머신
 - CombatComponent 조준 상태
 - Blueprint 이벤트
-- IA_Aim 및 IMC_Player 연결 문서
-- 카메라, HUD, AnimBP 연결
+- IA_Aim 및 IMC_Player 연결
+- 카메라 프로필, 감도 보간, HUD 상태 전달
 - 클릭 / Hold 기준 테스트
+- 후속: AnimBP, Aim Offset, Scope 최종 아트 및 전투 연동
 
 ## 패키지 C — 적 공격 텔레그래프
 

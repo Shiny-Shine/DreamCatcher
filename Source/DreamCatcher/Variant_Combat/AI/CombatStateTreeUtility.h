@@ -22,13 +22,16 @@ struct FStateTreeCharacterGroundedConditionInstanceData
 	
 	/** Character to check grounded status on */
 	UPROPERTY(EditAnywhere, Category = "Context")
-	ACharacter* Character;
+	ACharacter* Character = nullptr;
 
 	/** If true, the condition passes if the character is not grounded instead */
 	UPROPERTY(EditAnywhere, Category = "Condition")
 	bool bMustBeOnAir = false;
 };
-STATETREE_POD_INSTANCEDATA(FStateTreeCharacterGroundedConditionInstanceData);
+
+UE_STATETREE_CONSTRUCTED_TRIVIALLY_COPIED_NO_DESTRUCTOR_INSTANCEDATA(
+	FStateTreeCharacterGroundedConditionInstanceData
+);
 
 /**
  *  StateTree condition to check if the character is grounded
@@ -68,7 +71,7 @@ struct FStateTreeIsInDangerConditionInstanceData
 	
 	/** Character to check danger status on */
 	UPROPERTY(EditAnywhere, Category = "Context")
-	ACombatEnemy* Character;
+	ACombatEnemy* Character = nullptr;
 
 	/** Minimum time to wait before reacting to the danger event */
 	UPROPERTY(EditAnywhere, Category = "Parameters", meta = (Units = "s"))
@@ -82,7 +85,9 @@ struct FStateTreeIsInDangerConditionInstanceData
 	UPROPERTY(EditAnywhere, Category = "Parameters", meta = (Units = "degrees"))
 	float DangerSightConeAngle = 120.0f;
 };
-STATETREE_POD_INSTANCEDATA(FStateTreeIsInDangerConditionInstanceData);
+UE_STATETREE_CONSTRUCTED_TRIVIALLY_COPIED_NO_DESTRUCTOR_INSTANCEDATA(
+	FStateTreeIsInDangerConditionInstanceData
+);
 
 /**
  *  StateTree condition to check if the character is about to be hit by an attack

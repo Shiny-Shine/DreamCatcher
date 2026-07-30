@@ -16,11 +16,36 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCUltimateChargeChangedSignature, f
  * - 회피 쿨다운
  * - 궁극기 게이지 축적/소모
  *
- * 반대로 아래는 여기서 하지 않음.
+ * 아래는 여기서 하지 않음.
  * - 총알 Spawn
  * - 애니메이션 Montage 재생
  * - 사운드/VFX
  */
+
+/*
+ * 조준 상태를 정의, 리정희? 어딜만져! 멸공! 김정은 개새끼
+ * Scope가 꺼진 상태
+ * 긴 입력 → Shoulder
+ * 해제 → Hip
+ *	
+ * Scope가 켜진 상태
+ * 긴 입력 → Shoulder
+ * 해제 → Scope
+ */
+UENUM(BlueprintType)
+enum class EDCAimMode : uint8
+{
+	Hip,
+	Shoulder,
+	Scope
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+	FDCAimModeChangedSignature,
+	EDCAimMode,
+	NewAimMode
+);
+
 UCLASS(ClassGroup=(DreamCatcher), meta=(BlueprintSpawnableComponent))
 class DREAMCATCHER_API UDCCombatComponent : public UActorComponent
 {
@@ -58,6 +83,31 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Combat")
 	float GetUltimateChargeNormalized() const;
+	
+	// 조준 상태 정의
+	UPROPERTY(BlueprintAssignable, Category="Combat|Aim")
+	FDCAimModeChangedSignature OnAimModeChanged;
+
+	UFUNCTION(BlueprintCallable, Category="Combat|Aim")
+	void ToggleScopeAim();
+
+	UFUNCTION(BlueprintCallable, Category="Combat|Aim")
+	void BeginShoulderAim();
+
+	UFUNCTION(BlueprintCallable, Category="Combat|Aim")
+	void EndShoulderAim();
+
+	UFUNCTION(BlueprintCallable, Category="Combat|Aim")
+	void ClearAimState();
+
+	UFUNCTION(BlueprintCallable, Category="Combat|Aim")
+	void SetAimAllowed(bool bAllowed);
+
+	UFUNCTION(BlueprintPure, Category="Combat|Aim")
+	EDCAimMode GetAimMode() const { return CurrentAimMode; }
+
+	UFUNCTION(BlueprintPure, Category="Combat|Aim")
+	bool IsAimAllowed() const { return bAimAllowed; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -91,4 +141,13 @@ private:
 
 	FTimerHandle PrimaryFireTimerHandle;
 	FTimerHandle DodgeCooldownTimerHandle;
+	
+	//조준상태정의
+	void RefreshAimMode();
+
+	bool bScopeToggled = false;
+	bool bShoulderHeld = false;
+	bool bAimAllowed = true;
+
+	EDCAimMode CurrentAimMode = EDCAimMode::Hip;
 };

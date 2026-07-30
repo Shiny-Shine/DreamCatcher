@@ -2,10 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Components/DCCombatComponent.h"
 #include "DreamCatcherCharacter.generated.h"
 
 class UCameraComponent;
-class UDCCombatComponent;
 class UDCHealthComponent;
 class UInputAction;
 class USpringArmComponent;
@@ -20,6 +20,26 @@ struct FInputActionValue;
  * - 체력/전투 컴포넌트의 이벤트를 연결한다
  * - 블루프린트에 연출 훅을 넘긴다
  */
+
+// 조준 상태 정의를 위한 카메라 프로필 구조체
+USTRUCT(BlueprintType)
+struct FDCAimCameraProfile
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Aim Camera", meta=(ClampMin="5.0", ClampMax="170.0"))
+	float FieldOfView = 90.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Aim Camera", meta=(ClampMin="0.0", Units="cm"))
+	float TargetArmLength = 325.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Aim Camera")
+	FVector SocketOffset = FVector(0.0f, 55.0f, 65.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Aim Camera", meta=(ClampMin="0.01"))
+	float LookSensitivityMultiplier = 1.0f;
+};
+
 UCLASS()
 class DREAMCATCHER_API ADreamCatcherCharacter : public ACharacter
 {
@@ -39,6 +59,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	virtual void Tick(float DeltaSeconds) override;
+	virtual void UnPossessed() override;
 
 	// CameraBoom:
 	// 캐릭터 뒤에서 카메라를 따라오게 하는 스프링 암.
@@ -109,6 +131,28 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Character")
 	void BP_OnDamaged(float CurrentHealth, float MaxHealth, AActor* DamageCauser);
 
+	// 조준 상태 정의를 위한 카메라 프로필
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> AimAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim|Input", meta=(ClampMin="0.05", Units="s"))
+	float AimHoldThreshold = 0.18f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim|Camera")
+	FDCAimCameraProfile HipCameraProfile;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim|Camera")
+	FDCAimCameraProfile ShoulderCameraProfile;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim|Camera")
+	FDCAimCameraProfile ScopeCameraProfile;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim|Camera", meta=(ClampMin="0.1"))
+	float AimCameraBlendSpeed = 12.0f;
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Aim")
+	void BP_OnAimModeChanged(EDCAimMode NewAimMode);
+
 private:
 	// Enhanced Input에서 호출되는 실제 입력 함수들.
 	void Move(const FInputActionValue& Value);
@@ -117,6 +161,24 @@ private:
 	void StopPrimaryFire();
 	void Dodge();
 	void Ultimate();
+	
+	// 조준 상태 정의를 위한 카메라 프로필
+	void AimPressed();
+	void AimReleased();
+	void AimCanceled();
+	void ActivateShoulderAim();
+	void CancelAimInputAndState();
+
+	const FDCAimCameraProfile& GetAimCameraProfile(EDCAimMode AimMode) const;
+
+	UFUNCTION()
+	void HandleAimModeChanged(EDCAimMode NewAimMode);
+
+	bool bAimInputPressed = false;
+	bool bShoulderAimActivated = false;
+	float CurrentLookSensitivityMultiplier = 1.0f;
+
+	FTimerHandle AimHoldTimerHandle;
 
 	// 컴포넌트 이벤트를 받아 Character 레벨 동작으로 바꾸는 함수들.
 	UFUNCTION()
