@@ -48,7 +48,8 @@ class DREAMCATCHER_API ADreamCatcherCharacter : public ACharacter
 public:
 	// Unreal의 기본 데미지 파이프라인과 연결.
 	ADreamCatcherCharacter();
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator,
+	                         AActor* DamageCauser) override;
 
 	UFUNCTION(BlueprintPure, Category="Components")
 	UDCHealthComponent* GetHealthComponent() const { return HealthComponent; }
@@ -81,8 +82,16 @@ protected:
 
 	// 아래 InputAction들은 블루프린트 기본값에서 연결.
 	// Unity의 Input Action Asset 참조와 유사.
+
+	// 이동 입력.
+	// IMC_Player 안의 WASD 입력과 연결.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> MoveAction;
+
+	// 점프 입력.
+	// C++ 빌드 후 BP_DreamCatcherChracter에서 IA_Jump를 할당.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> JumpAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> LookAction;
@@ -96,6 +105,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> UltimateAction;
 
+
 	// 총구 소켓 이름.
 	// 블루프린트 메시에서 이 소켓을 만들어 두면 여기서 가져다 쓰는 구조.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat")
@@ -105,13 +115,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat", meta=(ClampMin="1000.0", Units="cm"))
 	float FireTraceDistance = 10000.0f;
 
-	// 회피 시 앞으로 밀어주는 힘.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement", meta=(ClampMin="0.0", Units="cm/s"))
-	float DodgeImpulse = 900.0f;
-
-	// 회피 시 살짝 띄워서 벽/바닥 마찰에 덜 걸리게 함.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement", meta=(ClampMin="0.0", Units="cm/s"))
-	float DodgeLiftImpulse = 120.0f;
+	// 구르기를 시작할 때 적용할 수평 속도.
+	// LaunchCharacter를 사용하지 않고 CharacterMovement의 수평 Velocity를
+	// 직접 설정하므로 캐릭터가 Falling 상태로 바뀌지 않음.
+	// 단위는 cm/s.
+	// 초기 테스트값 900은 약간 빠른 구르기용 속도입니다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement|Dodge", meta=(ClampMin="0.0", Units="cm/s"))
+	float DodgeSpeed = 900.0f;
 
 	// C++는 "언제 발사해야 하는지"까지만 결정하고,
 	// 실제 총알/VFX/사운드는 블루프린트에서 처리.
@@ -126,7 +136,7 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Character")
 	void BP_OnDeath();
-	
+
 	// 피격 연출은 블루프린트에서 처리.
 	UFUNCTION(BlueprintImplementableEvent, Category="Character")
 	void BP_OnDamaged(float CurrentHealth, float MaxHealth, AActor* DamageCauser);
@@ -157,11 +167,18 @@ private:
 	// Enhanced Input에서 호출되는 실제 입력 함수들.
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
+
+	// Space Bar를 누른 순간 호출됩니다.
+	void StartJump();
+
+	// Space Bar를 떼거나 입력이 취소될 때 호출됩니다.
+	void StopJump();
+
 	void StartPrimaryFire();
 	void StopPrimaryFire();
 	void Dodge();
 	void Ultimate();
-	
+
 	// 조준 상태 정의를 위한 카메라 프로필
 	void AimPressed();
 	void AimReleased();

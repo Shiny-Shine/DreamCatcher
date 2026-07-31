@@ -51,7 +51,7 @@ ADreamCatcherCharacter::ADreamCatcherCharacter()
 	// 나중에 적 캐릭터나 보스에도 재사용하기 쉽게 만ㄷ므.
 	HealthComponent = CreateDefaultSubobject<UDCHealthComponent>(TEXT("HealthComponent"));
 	CombatComponent = CreateDefaultSubobject<UDCCombatComponent>(TEXT("CombatComponent"));
-	
+
 	// 카메라 기본값 설정
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -84,7 +84,7 @@ void ADreamCatcherCharacter::BeginPlay()
 		CombatComponent->OnPrimaryFireRequested.AddDynamic(this, &ADreamCatcherCharacter::HandlePrimaryFireRequested);
 		CombatComponent->OnDodgeRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleDodgeRequested);
 		CombatComponent->OnUltimateRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleUltimateRequested);
-		
+
 		// 카메라 기본값 설정
 		CombatComponent->OnAimModeChanged.AddDynamic(this, &ADreamCatcherCharacter::HandleAimModeChanged);
 
@@ -139,6 +139,22 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		UE_LOG(LogDreamCatcher, Warning, TEXT("FireAction is not assigned on %s"), *GetName());
 	}
 
+	if (JumpAction)
+	{
+		// 스페이스바를 누른순간 한 번 호출.
+		EnhancedInput->BindAction(JumpAction, ETriggerEvent::Started, this, &ADreamCatcherCharacter::StartJump);
+
+		// 스페이스바를 뗐을 때 호출.
+		EnhancedInput->BindAction(JumpAction, ETriggerEvent::Completed, this, &ADreamCatcherCharacter::StopJump);
+
+		// 입력 컨텍스트가 제거되는 등 입력이 중간에 취소될 때 호출.
+		EnhancedInput->BindAction(JumpAction, ETriggerEvent::Canceled, this, &ADreamCatcherCharacter::StopJump);
+	}
+	else
+	{
+		UE_LOG(LogDreamCatcher, Warning, TEXT("JumpAction is not assigned on %s"), *GetName());
+	}
+
 	if (DodgeAction)
 	{
 		EnhancedInput->BindAction(DodgeAction, ETriggerEvent::Started, this, &ADreamCatcherCharacter::Dodge);
@@ -156,7 +172,7 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		UE_LOG(LogDreamCatcher, Warning, TEXT("UltimateAction is not assigned on %s"), *GetName());
 	}
-	
+
 	//조준 상태별 입력 바인딩
 	if (AimAction)
 	{
@@ -213,6 +229,17 @@ void ADreamCatcherCharacter::Look(const FInputActionValue& Value)
 	AddControllerPitchInput(Input.Y * CurrentLookSensitivityMultiplier);
 }
 
+void ADreamCatcherCharacter::StartJump()
+{
+	// 기본제공 Jump()를 사용.
+	Jump();
+}
+
+void ADreamCatcherCharacter::StopJump()
+{
+	StopJumping();
+}
+
 void ADreamCatcherCharacter::StartPrimaryFire()
 {
 	if (CombatComponent)
@@ -231,8 +258,18 @@ void ADreamCatcherCharacter::StopPrimaryFire()
 
 void ADreamCatcherCharacter::Dodge()
 {
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	
+	// 점프하거나 낙하 중이라면 여기서 종료되므로 공중 구르기는 발생하지 않음.
+	if (!Movement || !Movement->IsMovingOnGround())
+	{
+		return;
+	}
+
+	// CombatComponent는 구르기 쿨다운을 확인합니다.
 	if (CombatComponent && CombatComponent->TryDodge())
 	{
+		// 구르기가 실제로 성공한 경우 조준 상태를 해제합니다.
 		CancelAimInputAndState();
 	}
 }
@@ -276,7 +313,8 @@ void ADreamCatcherCharacter::HandlePrimaryFireRequested()
 
 	// 실제 총알/이펙트는 총구에서 시작해야 하므로 총구 소켓 위치를 구함.
 	FVector MuzzleLocation = GetActorLocation() + (GetActorForwardVector() * 100.0f);
-	if (USkeletalMeshComponent* CharacterMesh = GetMesh(); CharacterMesh && CharacterMesh->DoesSocketExist(MuzzleSocketName))
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh(); CharacterMesh && CharacterMesh->DoesSocketExist(
+		MuzzleSocketName))
 	{
 		MuzzleLocation = CharacterMesh->GetSocketLocation(MuzzleSocketName);
 	}
@@ -287,17 +325,35 @@ void ADreamCatcherCharacter::HandlePrimaryFireRequested()
 
 void ADreamCatcherCharacter::HandleDodgeRequested()
 {
-	// 마지막 이동 입력 방향으로 회피, 입력이 없으면 정면 회피로 처리.
-	FVector DodgeDirection = GetLastMovementInputVector().GetSafeNormal();
-	if (DodgeDirection.IsNearlyZero())
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+
+	if (!Movement)
 	{
-		DodgeDirection = GetActorForwardVector();
+		return;
 	}
 
-	// LaunchCharacter는 가장 빠르게 회피 프로토타입을 만들 수 있는 방법.
-	LaunchCharacter((DodgeDirection * DodgeImpulse) + (FVector::UpVector * DodgeLiftImpulse), true, true);
+	// 이번 프레임에 아직 CharacterMovement가 소비하지 않은 이동 입력을 먼저 확인.
+	FVector DodgeDirection = GetPendingMovementInputVector().GetSafeNormal2D();
 
-	// 회피 몽타주, 잔상, 무적 프레임 표시 등은 블루프린트에서.
+	// 현재 프레임의 입력을 이미 소비한 경우를 대비하여 직전 프레임의 이동 입력도 확인.
+	if (DodgeDirection.IsNearlyZero())
+	{
+		DodgeDirection = GetLastMovementInputVector().GetSafeNormal2D();
+	}
+
+	// Shift만 누른 경우에는 캐릭터가 바라보는 정면으로 구름.
+	if (DodgeDirection.IsNearlyZero())
+	{
+		DodgeDirection = GetActorForwardVector().GetSafeNormal2D();
+	}
+
+	// 기존 걷기 속도나 관성 제거.
+	Movement->StopMovementImmediately();
+
+	// 구르기 방향으로 수평 속도를 직접 설정.
+	Movement->Velocity = DodgeDirection * DodgeSpeed;
+
+	// 실제 구르기 애니메이션, 사운드, VFX는 BP_DreamCatcherChracter에서 구현.
 	BP_OnDodgeRequested(DodgeDirection);
 }
 
@@ -327,7 +383,8 @@ void ADreamCatcherCharacter::HandleDeath(AActor* /*DeadActor*/)
 	BP_OnDeath();
 }
 
-float ADreamCatcherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+float ADreamCatcherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
+                                         AController* EventInstigator, AActor* DamageCauser)
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
@@ -477,8 +534,8 @@ void ADreamCatcherCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	const EDCAimMode AimMode = CombatComponent
-		? CombatComponent->GetAimMode()
-		: EDCAimMode::Hip;
+		                           ? CombatComponent->GetAimMode()
+		                           : EDCAimMode::Hip;
 
 	const FDCAimCameraProfile& Profile = GetAimCameraProfile(AimMode);
 
