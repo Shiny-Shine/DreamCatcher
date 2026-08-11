@@ -108,6 +108,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Combat|Aim")
 	bool IsAimAllowed() const { return bAimAllowed; }
+	
+	UFUNCTION(BlueprintPure, Category="Combat|Fire")
+	float GetPrimaryFireDamage() const { return PrimaryFireDamage; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -118,6 +121,10 @@ protected:
 	// 자동 연사 간격.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Fire", meta=(ClampMin="0.05", Units="s"))
 	float FireInterval = 0.15f;
+	
+	// 플레이어 기본 사격 1발의 데미지 프로토타입 값.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Fire", meta=(ClampMin="0.0"))
+	float PrimaryFireDamage = 10.0f;
 
 	// 회피 쿨다운.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Dodge", meta=(ClampMin="0.1", Units="s"))

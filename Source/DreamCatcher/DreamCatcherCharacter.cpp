@@ -4,6 +4,8 @@
 #include "Components/DCCombatComponent.h"
 #include "Components/DCHealthComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "DreamCatcher.h"
 #include "EnhancedInputComponent.h"
 #include "Engine/World.h"
@@ -12,6 +14,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
+#include "DrawDebugHelpers.h"
+#include "GameFramework/DamageType.h"
+#include "Kismet/GameplayStatics.h"
 
 ADreamCatcherCharacter::ADreamCatcherCharacter()
 {
@@ -51,6 +56,22 @@ ADreamCatcherCharacter::ADreamCatcherCharacter()
 	// 나중에 적 캐릭터나 보스에도 재사용하기 쉽게 만ㄷ므.
 	HealthComponent = CreateDefaultSubobject<UDCHealthComponent>(TEXT("HealthComponent"));
 	CombatComponent = CreateDefaultSubobject<UDCCombatComponent>(TEXT("CombatComponent"));
+	
+	// 임시 무기 모델을 표시할 컴포넌트.
+	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+
+	// 캐릭터 Skeletal Mesh의 Weapon_R 소켓에 부착.
+	WeaponMesh->SetupAttachment(GetMesh(), WeaponSocketName);
+
+	// 임시 무기가 플레이어의 사격 LineTrace나 이동 충돌을 방해하지 않게 함.
+	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WeaponMesh->SetGenerateOverlapEvents(false);
+	WeaponMesh->SetCanEverAffectNavigation(false);
+
+	// 총구 위치를 나타내는 빈 Scene Component.
+	MuzzlePoint = CreateDefaultSubobject<USceneComponent>(TEXT("MuzzlePoint"));
+
+	MuzzlePoint->SetupAttachment(WeaponMesh);
 
 	// 카메라 기본값 설정
 	PrimaryActorTick.bCanEverTick = true;
@@ -285,13 +306,13 @@ void ADreamCatcherCharacter::Ultimate()
 void ADreamCatcherCharacter::HandlePrimaryFireRequested()
 {
 	UWorld* World = GetWorld();
-	if (!World)
+	if (!World || !FollowCamera || !CombatComponent)
 	{
 		return;
 	}
-
-	// 슈터에서는 "카메라 기준 조준점"과 "총구 위치"를 분리해서 생각하는 것이 중요.
-	// 먼저 카메라에서 쏘는 가상의 조준 레이를 계산.
+	
+	// 1단계: 카메라에서 LineTrace
+	// 3인칭 게임에서는 카메라와 총구 위치가 달라 화면 중앙의 크로스헤어가 가리키는 위치를 구함.
 	FVector ViewLocation = FollowCamera->GetComponentLocation();
 	FRotator ViewRotation = FollowCamera->GetComponentRotation();
 
@@ -300,27 +321,98 @@ void ADreamCatcherCharacter::HandlePrimaryFireRequested()
 		Controller->GetPlayerViewPoint(ViewLocation, ViewRotation);
 	}
 
-	const FVector TraceEnd = ViewLocation + (ViewRotation.Vector() * FireTraceDistance);
+	const FVector CameraTraceEnd =
+		ViewLocation + ViewRotation.Vector() * FireTraceDistance;
 
-	FHitResult Hit;
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(PlayerFireTrace), false, this);
-	Params.AddIgnoredActor(this);
+	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(PlayerFireTrace), false, this);
 
-	World->LineTraceSingleByChannel(Hit, ViewLocation, TraceEnd, ECC_Visibility, Params);
+	// 자신의 캡슐, Skeletal Mesh, WeaponMesh를 맞지 않도록
+	// 플레이어 Actor 전체를 Trace 대상에서 제외.
+	TraceParams.AddIgnoredActor(this);
 
-	// 크로스헤어가 가리키는 실제 목표 지점.
-	const FVector AimPoint = Hit.bBlockingHit ? Hit.ImpactPoint : TraceEnd;
+	FHitResult CameraHit;
 
-	// 실제 총알/이펙트는 총구에서 시작해야 하므로 총구 소켓 위치를 구함.
-	FVector MuzzleLocation = GetActorLocation() + (GetActorForwardVector() * 100.0f);
-	if (USkeletalMeshComponent* CharacterMesh = GetMesh(); CharacterMesh && CharacterMesh->DoesSocketExist(
-		MuzzleSocketName))
+	const bool bCameraBlocked = World->LineTraceSingleByChannel(CameraHit, ViewLocation, CameraTraceEnd, ECC_Visibility,TraceParams);
+
+	// 카메라 Trace가 무언가를 맞혔다면 그 위치를 조준점으로 사용.
+	// 맞히지 못했다면 최대 사거리 끝을 조준점으로 사용.
+	const FVector AimPoint = bCameraBlocked ? CameraHit.ImpactPoint : CameraTraceEnd;
+	
+	// 2단계: 실제 총구 위치 확인
+	FVector MuzzleLocation = GetActorLocation() + GetActorForwardVector() * 100.0f;
+
+	if (MuzzlePoint)
 	{
-		MuzzleLocation = CharacterMesh->GetSocketLocation(MuzzleSocketName);
+		MuzzleLocation = MuzzlePoint->GetComponentLocation();
 	}
 
-	// C++는 계산만 하고, 블루프린트가 여기서 탄 생성/VFX/사운드를 처리.
-	BP_OnPrimaryFireRequested(MuzzleLocation, AimPoint);
+	/*
+	 * 3단계: 총구에서 조준점까지 LineTrace
+	 *
+	 * 카메라 Trace만으로 데미지를 주면 총이 벽 뒤에 있는데도 카메라만 벽 너머를 보고
+	 * 적을 공격하는 문제가 생길 수 있어 최종 판정은 반드시 총구에서 다시 확인.
+	 */
+	const FVector ToAimPoint = AimPoint - MuzzleLocation;
+
+	if (ToAimPoint.IsNearlyZero())
+	{
+		return;
+	}
+
+	const FVector ShotDirection = ToAimPoint.GetSafeNormal();
+
+	// 조준점보다 100cm 뒤까지 검사.
+	// 표면 경계에서 부동소수점 오차로 명중이 누락되는 것을 줄여줌.
+	const FVector MuzzleTraceEnd = AimPoint + ShotDirection * 100.0f;
+
+	FHitResult MuzzleHit;
+
+	const bool bMuzzleBlocked = World->LineTraceSingleByChannel(MuzzleHit, MuzzleLocation, MuzzleTraceEnd, ECC_Visibility, TraceParams);
+
+	const FVector FireEnd = bMuzzleBlocked ? MuzzleHit.ImpactPoint : AimPoint;
+
+	AActor* HitActor = bMuzzleBlocked ? MuzzleHit.GetActor() : nullptr;
+	
+	// 4단계: 데미지 적용
+	float AppliedDamage = 0.0f;
+
+	if (HitActor)
+	{
+		const float RequestedDamage = CombatComponent->GetPrimaryFireDamage();
+
+		if (RequestedDamage > 0.0f)
+		{
+			AppliedDamage = UGameplayStatics::ApplyPointDamage(HitActor, RequestedDamage, ShotDirection, MuzzleHit, GetController(), this, UDamageType::StaticClass());
+		}
+	}
+
+	/*
+	 * 5단계: 테스트용 LineTrace 표시
+	 *
+	 * 초록색: 데미지 적용 성공
+	 * 빨간색: 무언가를 맞혔지만 데미지는 적용되지 않음
+	 * 흰색: 아무것도 맞히지 못함
+	 */
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	FColor DebugColor = FColor::White;
+
+	if (bMuzzleBlocked)
+	{
+		DebugColor = AppliedDamage > 0.0f ? FColor::Green : FColor::Red;
+	}
+
+	DrawDebugLine(World, MuzzleLocation, FireEnd, DebugColor, false, 0.75f, 0, 1.5f);
+
+	DrawDebugPoint(World, FireEnd, 10.0f, DebugColor, false, 0.75f);
+#endif
+
+	/*
+	 * 6단계: Blueprint에 결과 전달
+	 *
+	 * 여기서는 사운드만 연결하고,
+	 * 이후 총구 화염, 트레이서, 피격 VFX 등을 같은 이벤트에 연결.
+	 */
+	BP_OnPrimaryFireResolved(MuzzleLocation, FireEnd, HitActor,AppliedDamage);
 }
 
 void ADreamCatcherCharacter::HandleDodgeRequested()

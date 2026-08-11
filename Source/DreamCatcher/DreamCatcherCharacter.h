@@ -7,6 +7,8 @@
 
 class UCameraComponent;
 class UDCHealthComponent;
+class USceneComponent;
+class UStaticMeshComponent;
 class UInputAction;
 class USpringArmComponent;
 struct FInputActionValue;
@@ -56,6 +58,14 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Components")
 	UDCCombatComponent* GetCombatComponent() const { return CombatComponent; }
+	
+	// 임시 무기 모델을 표시하는 컴포넌트.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<UStaticMeshComponent> WeaponMesh;
+
+	// 총알과 사격 연출이 시작되는 총구 위치.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
+	TObjectPtr<USceneComponent> MuzzlePoint;
 
 protected:
 	virtual void BeginPlay() override;
@@ -106,10 +116,9 @@ protected:
 	TObjectPtr<UInputAction> UltimateAction;
 
 
-	// 총구 소켓 이름.
-	// 블루프린트 메시에서 이 소켓을 만들어 두면 여기서 가져다 쓰는 구조.
+	// 캐릭터 오른손에 무기를 부착할 소켓 이름.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat")
-	FName MuzzleSocketName = TEXT("Muzzle");
+	FName WeaponSocketName = TEXT("Weapon_R");
 
 	// 카메라에서 조준할 최대 거리.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat", meta=(ClampMin="1000.0", Units="cm"))
@@ -126,7 +135,7 @@ protected:
 	// C++는 "언제 발사해야 하는지"까지만 결정하고,
 	// 실제 총알/VFX/사운드는 블루프린트에서 처리.
 	UFUNCTION(BlueprintImplementableEvent, Category="Combat")
-	void BP_OnPrimaryFireRequested(const FVector& MuzzleLocation, const FVector& AimPoint);
+	void BP_OnPrimaryFireResolved(const FVector& MuzzleLocation, const FVector& FireEnd, AActor* HitActor, float AppliedDamage);
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Combat")
 	void BP_OnDodgeRequested(const FVector& DodgeDirection);
