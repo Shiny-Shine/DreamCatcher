@@ -20,6 +20,9 @@
 *.VC.db
 *.VC.opendb
 
+# Fab asset pack
+/Content/BlockingStarterPack/
+
 # Precompiled Assets
 SourceArt/**/*.png
 SourceArt/**/*.tga
