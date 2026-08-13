@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Components/DCCombatComponent.h"
+#include "Weapon/DCWeaponTypes.h"
 #include "DreamCatcherCharacter.generated.h"
 
 class UCameraComponent;
@@ -66,6 +67,12 @@ public:
 	// 총알과 사격 연출이 시작되는 총구 위치.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<USceneComponent> MuzzlePoint;
+	
+	UFUNCTION(BlueprintPure, Category = "Weapon|Animation")
+	EDCWeaponAnimationType GetWeaponAnimationType() const
+	{
+		return WeaponAnimationType;
+	}
 
 protected:
 	virtual void BeginPlay() override;
@@ -171,6 +178,10 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Aim")
 	void BP_OnAimModeChanged(EDCAimMode NewAimMode);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
+	EDCWeaponAnimationType WeaponAnimationType =
+		EDCWeaponAnimationType::Rifle;
 
 private:
 	// Enhanced Input에서 호출되는 실제 입력 함수들.
