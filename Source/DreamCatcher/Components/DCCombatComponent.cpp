@@ -1,10 +1,12 @@
 #include "Components/DCCombatComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UDCCombatComponent::UDCCombatComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 }
 
 void UDCCombatComponent::BeginPlay()
@@ -13,6 +15,10 @@ void UDCCombatComponent::BeginPlay()
 
 	// HUD가 시작부터 정확한 궁극기 게이지를 알 수 있도록 초기값을 보냄.
 	BroadcastUltimateCharge();
+
+	CurrentSpreadDegrees = WeaponHandlingProfile.BaseSpreadDegrees * GetAimSpreadMultiplier();
+
+	BroadcastCrosshairSpread(true);
 }
 
 void UDCCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -44,14 +50,7 @@ void UDCCombatComponent::StartPrimaryFire()
 	// 이후에는 일정 간격으로 자동 연사.
 	if (UWorld* World = GetWorld())
 	{
-		World->GetTimerManager().SetTimer(
-			PrimaryFireTimerHandle,
-			this,
-			&UDCCombatComponent::EmitPrimaryFire,
-			FireInterval,
-			true,
-			FireInterval
-		);
+		World->GetTimerManager().SetTimer(PrimaryFireTimerHandle, this, &UDCCombatComponent::EmitPrimaryFire, FireInterval, true, FireInterval);
 	}
 }
 
@@ -126,8 +125,20 @@ float UDCCombatComponent::GetUltimateChargeNormalized() const
 
 void UDCCombatComponent::EmitPrimaryFire()
 {
-	// 실제 탄환 생성은 모르고, "지금 발사하라"는 요청만 보냄.
+	// 현재 퍼짐으로 먼저 실제 사격 처리, 첫 발에는 이번 발의 Bloom이 적용되지 않음.
 	OnPrimaryFireRequested.Broadcast();
+
+	// 발사 후 다음 탄을 위해 퍼짐 누적.
+	CurrentShotSpreadDegrees = FMath::Clamp(CurrentShotSpreadDegrees + WeaponHandlingProfile.SpreadPerShotDegrees, 0.0f, WeaponHandlingProfile.MaxShotSpreadDegrees);
+
+	const float RecoilMultiplier = GetAimRecoilMultiplier();
+
+	const float PitchKick = FMath::FRandRange(WeaponHandlingProfile.RecoilPitchMin, WeaponHandlingProfile.RecoilPitchMax) * RecoilMultiplier;
+
+	const float YawKick = FMath::FRandRange(-WeaponHandlingProfile.RecoilYawMax, WeaponHandlingProfile.RecoilYawMax) * RecoilMultiplier;
+
+	// 카메라 반동 요청
+	OnRecoilRequested.Broadcast(PitchKick, YawKick);
 }
 
 void UDCCombatComponent::ResetDodge()
@@ -225,4 +236,116 @@ void UDCCombatComponent::RefreshAimMode()
 
 	CurrentAimMode = NewAimMode;
 	OnAimModeChanged.Broadcast(CurrentAimMode);
+}
+
+// 탄퍼짐 계산
+void UDCCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	UpdateWeaponSpread(DeltaTime);
+}
+
+// 탄퍼짐 전체 계산
+void UDCCombatComponent::UpdateWeaponSpread(float DeltaTime)
+{
+	const ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
+	if (!OwnerCharacter)
+	{
+		return;
+	}
+
+	const UCharacterMovementComponent* Movement = OwnerCharacter->GetCharacterMovement();
+
+	if (!Movement)
+	{
+		return;
+	}
+
+	// 수직 속도는 제외하고 평면 이동 속도만 사용합니다.
+	const float HorizontalSpeed =
+		OwnerCharacter->GetVelocity().Size2D();
+
+	const float MaximumSpeed = FMath::Max(Movement->GetMaxSpeed(), 1.0f);
+
+	const float MovementAlpha = FMath::Clamp(HorizontalSpeed / MaximumSpeed, 0.0f, 1.0f);
+
+	// 먼저 연사 누적 퍼짐을 회복시킵니다.
+	CurrentShotSpreadDegrees = FMath::FInterpConstantTo(CurrentShotSpreadDegrees, 0.0f, DeltaTime, WeaponHandlingProfile.SpreadRecoveryPerSecond);
+
+	float TargetSpread = WeaponHandlingProfile.BaseSpreadDegrees + WeaponHandlingProfile.MovementSpreadDegrees * MovementAlpha + CurrentShotSpreadDegrees;
+
+	if (Movement->IsFalling())
+	{
+		TargetSpread += WeaponHandlingProfile.AirborneSpreadDegrees;
+	}
+
+	TargetSpread *= GetAimSpreadMultiplier();
+
+	CurrentSpreadDegrees = FMath::FInterpTo(CurrentSpreadDegrees, TargetSpread, DeltaTime, WeaponHandlingProfile.SpreadInterpSpeed);
+
+	BroadcastCrosshairSpread();
+}
+
+// 실제 탄퍼짐
+float UDCCombatComponent::GetAimSpreadMultiplier() const
+{
+	switch (CurrentAimMode)
+	{
+	case EDCAimMode::Shoulder:
+		return WeaponHandlingProfile.ShoulderSpreadMultiplier;
+
+	case EDCAimMode::Scope:
+		return WeaponHandlingProfile.ScopeSpreadMultiplier;
+
+	case EDCAimMode::Hip:
+	default:
+		return 1.0f;
+	}
+}
+
+// 카메라 반동
+float UDCCombatComponent::GetAimRecoilMultiplier() const
+{
+	switch (CurrentAimMode)
+	{
+	case EDCAimMode::Shoulder:
+		return WeaponHandlingProfile.ShoulderRecoilMultiplier;
+
+	case EDCAimMode::Scope:
+		return WeaponHandlingProfile.ScopeRecoilMultiplier;
+
+	case EDCAimMode::Hip:
+	default:
+		return 1.0f;
+	}
+}
+
+// 크로스헤어 정규화 값
+float UDCCombatComponent::GetCrosshairSpreadNormalized() const
+{
+	const float FullScaleSpread = FMath::Max(
+		WeaponHandlingProfile.CrosshairFullScaleSpreadDegrees,
+		0.1f
+	);
+
+	return FMath::Clamp(
+		CurrentSpreadDegrees / FullScaleSpread,
+		0.0f,
+		1.0f
+	);
+}
+
+void UDCCombatComponent::BroadcastCrosshairSpread(bool bForce)
+{
+	const float NormalizedSpread = GetCrosshairSpreadNormalized();
+
+	if (!bForce && FMath::IsNearlyEqual(NormalizedSpread,LastBroadcastSpreadNormalized,0.001f))
+	{
+		return;
+	}
+
+	LastBroadcastSpreadNormalized = NormalizedSpread;
+
+	OnCrosshairSpreadChanged.Broadcast(NormalizedSpread,CurrentSpreadDegrees);
 }

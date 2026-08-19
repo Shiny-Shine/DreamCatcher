@@ -109,6 +109,8 @@ void ADreamCatcherCharacter::BeginPlay()
 		// 카메라 기본값 설정
 		CombatComponent->OnAimModeChanged.AddDynamic(this, &ADreamCatcherCharacter::HandleAimModeChanged);
 
+		CombatComponent->OnRecoilRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleRecoilRequested);
+		
 		HandleAimModeChanged(CombatComponent->GetAimMode());
 	}
 
@@ -116,6 +118,22 @@ void ADreamCatcherCharacter::BeginPlay()
 	{
 		HealthComponent->OnDeath.AddDynamic(this, &ADreamCatcherCharacter::HandleDeath);
 	}
+}
+
+// 반동 요청을 누적함.
+void ADreamCatcherCharacter::HandleRecoilRequested(float PitchKickDegrees, float YawKickDegrees)
+{
+	PendingRecoil.X = FMath::Clamp(
+		PendingRecoil.X + PitchKickDegrees,
+		0.0f,
+		MaxAccumulatedRecoilPitch
+	);
+
+	PendingRecoil.Y = FMath::Clamp(
+		PendingRecoil.Y + YawKickDegrees,
+		-MaxAccumulatedRecoilYaw,
+		MaxAccumulatedRecoilYaw
+	);
 }
 
 void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -321,8 +339,16 @@ void ADreamCatcherCharacter::HandlePrimaryFireRequested()
 		Controller->GetPlayerViewPoint(ViewLocation, ViewRotation);
 	}
 
-	const FVector CameraTraceEnd =
-		ViewLocation + ViewRotation.Vector() * FireTraceDistance;
+	const float SpreadDegrees = CombatComponent->GetCurrentSpreadDegrees();
+
+	const float SpreadRadians = FMath::DegreesToRadians(SpreadDegrees);
+
+	const FVector CameraShotDirection =
+		SpreadRadians > KINDA_SMALL_NUMBER
+			? FMath::VRandCone(ViewRotation.Vector(), SpreadRadians)
+			: ViewRotation.Vector();
+
+	const FVector CameraTraceEnd = ViewLocation + CameraShotDirection * FireTraceDistance;
 
 	FCollisionQueryParams TraceParams(SCENE_QUERY_STAT(PlayerFireTrace), false, this);
 
@@ -660,6 +686,46 @@ void ADreamCatcherCharacter::Tick(float DeltaSeconds)
 		DeltaSeconds,
 		AimCameraBlendSpeed
 	);
+	
+	UpdateCameraRecoil(DeltaSeconds);
+}
+
+void ADreamCatcherCharacter::UpdateCameraRecoil(float DeltaSeconds)
+{
+	if (!Controller)
+	{
+		PendingRecoil = FVector2d::ZeroVector;
+		return;
+	}
+	
+	if (PendingRecoil.IsNearlyZero())
+	{
+		return;
+	}
+
+	// 남아 있는 반동량의 일부만 이번 프레임에 적용, PendingRecoil은 아직 소비하지 않은 회전 입력.
+	const float ApplyAlpha = 1.0f - FMath::Exp(
+		-RecoilKickInterpSpeed * DeltaSeconds
+	);
+
+	const FVector2D AppliedRecoil =
+		PendingRecoil * ApplyAlpha;
+
+	PendingRecoil -= AppliedRecoil;
+
+	// 극히 작은 값이 무한히 남지 않도록 정리합니다.
+	if (PendingRecoil.SizeSquared() < 0.000001f)
+	{
+		PendingRecoil = FVector2D::ZeroVector;
+	}
+
+	FRotator NewControlRotation =
+		Controller->GetControlRotation();
+
+	NewControlRotation.Pitch += AppliedRecoil.X;
+	NewControlRotation.Yaw += AppliedRecoil.Y;
+
+	Controller->SetControlRotation(NewControlRotation);
 }
 
 void ADreamCatcherCharacter::HandleAimModeChanged(EDCAimMode NewAimMode)

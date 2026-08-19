@@ -182,6 +182,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
 	EDCWeaponAnimationType WeaponAnimationType =
 		EDCWeaponAnimationType::Rifle;
+	
+	
+	// 카메라 반동
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Recoil",
+	meta=(ClampMin="0.0"))
+	float RecoilKickInterpSpeed = 90.0f;	// 반동을 카메라에 얼마나 빠르게 적용할지
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Recoil",
+		meta=(ClampMin="0.0", Units="deg"))
+	float MaxAccumulatedRecoilPitch = 10.0f;	// 적용되지 않은 수직 반동의 최대치
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Recoil",
+		meta=(ClampMin="0.0", Units="deg"))
+	float MaxAccumulatedRecoilYaw = 1.0f;	// 적용되지 않은 좌우 반동의 최대치
 
 private:
 	// Enhanced Input에서 호출되는 실제 입력 함수들.
@@ -229,4 +243,13 @@ private:
 
 	UFUNCTION()
 	void HandleDeath(AActor* DeadActor);
+	
+	UFUNCTION()
+	void HandleRecoilRequested(float PitchKickDegrees, float YawKickDegrees);
+
+	void UpdateCameraRecoil(float DeltaSeconds);
+
+	// 아직 카메라 회전에 적용되지 않은 반동량.
+	// X = Pitch, Y = Yaw
+	FVector2D PendingRecoil = FVector2D::ZeroVector;
 };

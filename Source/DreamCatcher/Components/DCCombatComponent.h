@@ -2,12 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Weapon/DCWeaponTypes.h"
 #include "DCCombatComponent.generated.h"
-
-// 발사, 회피, 궁극기 요청은 "신호"만 보냄.
-// 실제 투사체 생성, 몽타주 재생, VFX 실행은 Character/BP 쪽에서 담당.
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDCCombatActionSignature);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCUltimateChargeChangedSignature, float, NormalizedCharge);
 
 /*
  * 이 컴포넌트는 전투 규칙을 담당.
@@ -23,7 +19,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCUltimateChargeChangedSignature, f
  */
 
 /*
- * 조준 상태를 정의, 리정희? 어딜만져! 멸공! 김정은 개새끼
+ * 조준 상태를 정의, 리정희? 어딜만져!
  * Scope가 꺼진 상태
  * 긴 입력 → Shoulder
  * 해제 → Hip
@@ -40,11 +36,16 @@ enum class EDCAimMode : uint8
 	Scope
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-	FDCAimModeChangedSignature,
-	EDCAimMode,
-	NewAimMode
-);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCAimModeChangedSignature, EDCAimMode, NewAimMode);
+
+// 발사, 회피, 궁극기 요청은 "신호"만 보냄.
+// 실제 투사체 생성, 몽타주 재생, VFX 실행은 Character/BP 쪽에서 담당.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDCCombatActionSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCUltimateChargeChangedSignature, float, NormalizedCharge);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCrosshairSpreadChangedSignature, float, NormalizedSpread, float, SpreadDegrees);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCRecoilRequestedSignature, float, PitchKickDegrees, float, YawKickDegrees);
 
 UCLASS(ClassGroup=(DreamCatcher), meta=(BlueprintSpawnableComponent))
 class DREAMCATCHER_API UDCCombatComponent : public UActorComponent
@@ -111,6 +112,21 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category="Combat|Fire")
 	float GetPrimaryFireDamage() const { return PrimaryFireDamage; }
+	
+	UPROPERTY(BlueprintAssignable, Category="Combat|Crosshair")
+	FDCCrosshairSpreadChangedSignature OnCrosshairSpreadChanged;
+
+	UPROPERTY(BlueprintAssignable, Category="Combat|Recoil")
+	FDCRecoilRequestedSignature OnRecoilRequested;
+
+	UFUNCTION(BlueprintPure, Category="Combat|Accuracy")
+	float GetCurrentSpreadDegrees() const
+	{
+		return CurrentSpreadDegrees;
+	}
+
+	UFUNCTION(BlueprintPure, Category="Combat|Accuracy")
+	float GetCrosshairSpreadNormalized() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -133,6 +149,11 @@ protected:
 	// 궁극기 최대 게이지.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Ultimate", meta=(ClampMin="1.0"))
 	float UltimateChargeMax = 100.0f;
+	
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Weapon")
+	FDCWeaponHandlingProfile WeaponHandlingProfile;
 
 private:
 	// 내부용 발사 요청 함수.
@@ -157,4 +178,14 @@ private:
 	bool bAimAllowed = true;
 
 	EDCAimMode CurrentAimMode = EDCAimMode::Hip;
+	
+	void UpdateWeaponSpread(float DeltaTime);
+	void BroadcastCrosshairSpread(bool bForce = false);
+
+	float GetAimSpreadMultiplier() const;
+	float GetAimRecoilMultiplier() const;
+
+	float CurrentShotSpreadDegrees = 0.0f;
+	float CurrentSpreadDegrees = 0.0f;
+	float LastBroadcastSpreadNormalized = -1.0f;
 };
