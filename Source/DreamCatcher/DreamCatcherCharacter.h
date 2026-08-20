@@ -233,8 +233,8 @@ private:
 
 	// 컴포넌트 이벤트를 받아 Character 레벨 동작으로 바꾸는 함수들.
 	UFUNCTION()
-	void HandlePrimaryFireRequested();
-
+	void HandleShotFired(float ShotSpreadDegrees, float PitchKickDegrees, float YawKickDegrees);
+	
 	UFUNCTION()
 	void HandleDodgeRequested();
 
@@ -243,9 +243,6 @@ private:
 
 	UFUNCTION()
 	void HandleDeath(AActor* DeadActor);
-	
-	UFUNCTION()
-	void HandleRecoilRequested(float PitchKickDegrees, float YawKickDegrees);
 
 	void UpdateCameraRecoil(float DeltaSeconds);
 

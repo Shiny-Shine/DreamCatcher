@@ -40,9 +40,8 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="HUD|Crosshair")
 	void BP_OnCrosshairSpreadChanged(float NormalizedSpread, float SpreadDegrees);
 	
-	// 실제 발사 순간 크로스헤어 펄스 연출을 실행, 크로스헤어가 발사 순간 튀는 연출.
 	UFUNCTION(BlueprintImplementableEvent, Category="HUD|Crosshair")
-	void BP_OnCrosshairFired();
+	void BP_OnShotFired(float ShotSpreadDegrees, float PitchKickDegrees, float YawKickDegrees);
 
 private:
 	void UnbindFromCurrentCharacter();
@@ -57,7 +56,10 @@ private:
 	void HandleCrosshairSpreadChanged(float NormalizedSpread,float SpreadDegrees);
 	
 	UFUNCTION()
-	void HandlePrimaryFireRequested();
+	void HandleShotFired(float ShotSpreadDegrees, float PitchKickDegrees, float YawKickDegrees);
+	// ShotSpreadDegrees = 이번 탄이 실제로 사용할 퍼짐 각도
+	// PitchKickDegrees = 이번 사격의 상하 카메라 반동
+	// YawKickDegrees = 이번 사격의 좌우 카메라 반동
 	
 	// CombatComponent의 OnAimModeChanged 델리게이트에 연결되는 내부 함수.
 	// 조준 모드가 바뀌면 호출되고, 변경된 값을 BP_OnAimModeChanged로 전달.

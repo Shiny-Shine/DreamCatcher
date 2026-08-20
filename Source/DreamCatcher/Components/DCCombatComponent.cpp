@@ -125,20 +125,35 @@ float UDCCombatComponent::GetUltimateChargeNormalized() const
 
 void UDCCombatComponent::EmitPrimaryFire()
 {
-	// 현재 퍼짐으로 먼저 실제 사격 처리, 첫 발에는 이번 발의 Bloom이 적용되지 않음.
-	OnPrimaryFireRequested.Broadcast();
-
-	// 발사 후 다음 탄을 위해 퍼짐 누적.
-	CurrentShotSpreadDegrees = FMath::Clamp(CurrentShotSpreadDegrees + WeaponHandlingProfile.SpreadPerShotDegrees, 0.0f, WeaponHandlingProfile.MaxShotSpreadDegrees);
+	// 이번 발이 실제로 사용할 탄 퍼짐, 이번 발의 Bloom이 추가되기 전 값을 저장.
+	const float ShotSpreadDegrees = CurrentSpreadDegrees;
 
 	const float RecoilMultiplier = GetAimRecoilMultiplier();
 
-	const float PitchKick = FMath::FRandRange(WeaponHandlingProfile.RecoilPitchMin, WeaponHandlingProfile.RecoilPitchMax) * RecoilMultiplier;
+	const float PitchKickDegrees = FMath::FRandRange(
+		WeaponHandlingProfile.RecoilPitchMin,
+		WeaponHandlingProfile.RecoilPitchMax
+	) * RecoilMultiplier;
 
-	const float YawKick = FMath::FRandRange(-WeaponHandlingProfile.RecoilYawMax, WeaponHandlingProfile.RecoilYawMax) * RecoilMultiplier;
+	const float YawKickDegrees = FMath::FRandRange(
+		-WeaponHandlingProfile.RecoilYawMax,
+		WeaponHandlingProfile.RecoilYawMax
+	) * RecoilMultiplier;
 
-	// 카메라 반동 요청
-	OnRecoilRequested.Broadcast(PitchKick, YawKick);
+	// 실제 사격, 카메라 반동, HUD 반동에 같은 값을 전달합니다.
+	OnShotFired.Broadcast(
+		ShotSpreadDegrees,
+		PitchKickDegrees,
+		YawKickDegrees
+	);
+
+	// 이번 발을 발사한 뒤 다음 탄을 위한 Bloom을 누적합니다.
+	CurrentShotSpreadDegrees = FMath::Clamp(
+		CurrentShotSpreadDegrees
+			+ WeaponHandlingProfile.SpreadPerShotDegrees,
+		0.0f,
+		WeaponHandlingProfile.MaxShotSpreadDegrees
+	);
 }
 
 void UDCCombatComponent::ResetDodge()

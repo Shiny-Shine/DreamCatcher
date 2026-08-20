@@ -20,67 +20,70 @@ struct FDCWeaponHandlingProfile
 	GENERATED_BODY()
 	
 	// 이 각도에서 크로스헤어가 최대로 벌어짐.
-	// 실제 탄 퍼짐 최대치와 UI 표시 최대치를 분리.
+	// 실제 탄 퍼짐 최대치와 UI 표시 최대치를 분리, 낮을수록 크게 벌어짐.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Crosshair",
 		meta=(ClampMin="0.1", Units="deg"))
-	float CrosshairFullScaleSpreadDegrees = 5.0f;
+	float CrosshairFullScaleSpreadDegrees = 7.0f;
 
-	// 정지 상태의 기본 탄 퍼짐 반각.
+	// 정지 상태의 기본 탄 퍼짐 반각, 낮을수록 반동 적음.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0", Units="deg"))
-	float BaseSpreadDegrees = 0.8f;
+	float BaseSpreadDegrees = 1.6f;
 
-	// 최대 이동 속도일 때 추가되는 탄 퍼짐.
+	// 최대 이동 속도일 때 추가되는 탄 퍼짐, 낮을수록 반동 적음.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0", Units="deg"))
-	float MovementSpreadDegrees = 2.4f;
+	float MovementSpreadDegrees = 4.8f;
 
-	// 점프 또는 낙하 중 추가되는 탄 퍼짐.
+	// 점프 또는 낙하 중 추가되는 탄 퍼짐, 낮을수록 반동 적음.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0", Units="deg"))
-	float AirborneSpreadDegrees = 6.0f;
+	float AirborneSpreadDegrees = 10.0f;
 
-	// 한 발 발사할 때 누적되는 퍼짐.
+	// 한 발 발사할 때 누적되는 퍼짐, 낮을수록 반동 적음.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0", Units="deg"))
-	float SpreadPerShotDegrees = 0.7f;
+	float SpreadPerShotDegrees = 1.4f;
 
-	// 연사로 누적될 수 있는 최대 추가 퍼짐.
+	// 연사로 누적될 수 있는 최대 추가 퍼짐, 낮을수록 반동 적음.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0", Units="deg"))
-	float MaxShotSpreadDegrees = 4.0f;
+	float MaxShotSpreadDegrees = 8.0f;
 
 	// 초당 회복되는 연사 퍼짐.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0"))
-	float SpreadRecoveryPerSecond = 0.4f;
+	float SpreadRecoveryPerSecond = 0.2f;
 
-	// 이동·조준 상태가 바뀔 때 퍼짐이 보간되는 속도.
+	// 이동·조준 상태가 바뀔 때 퍼짐이 보간되는 속도, 높을수록 크로스헤어 반응이 빠름.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0"))
 	float SpreadInterpSpeed = 22.0f;
 
+	// 기본 Hip 상태 대비 Shoulder 상태의 반동 배율.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0"))
 	float ShoulderSpreadMultiplier = 0.75f;
 
+	// 기본 Hip 상태 대비 Scope 상태의 반동 배율.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Accuracy",
 		meta=(ClampMin="0.0"))
 	float ScopeSpreadMultiplier = 0.6f;
 
-	// 한 발의 수직 반동 범위.
+	// 한 발의 최소 수직 반동 범위.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Recoil",
 		meta=(ClampMin="0.0", Units="deg"))
-	float RecoilPitchMin = 1.3f;
+	float RecoilPitchMin = 2.6f;
 
+	// 한 발의 최대 수직 반동 범위.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Recoil",
 		meta=(ClampMin="0.0", Units="deg"))
-	float RecoilPitchMax = 1.7f;
+	float RecoilPitchMax = 3.4f;
 
-	// 좌우 무작위 반동의 최대 크기.
+	// 좌우 카메라 반동의 최대 크기.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Recoil",
 		meta=(ClampMin="0.0", Units="deg"))
-	float RecoilYawMax = 0.24f;
+	float RecoilYawMax = 0.48f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Recoil",
 		meta=(ClampMin="0.0"))

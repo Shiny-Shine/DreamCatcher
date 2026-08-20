@@ -35,7 +35,7 @@ void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 		// HUD 퍼짐값 전달
 		BoundCombatComponent->OnCrosshairSpreadChanged.AddDynamic(this,&UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
 		// 매 발사 순간 HUD가 알림을 받음.
-		BoundCombatComponent->OnPrimaryFireRequested.AddDynamic(this, &UDCPlayerHUDWidget::HandlePrimaryFireRequested);
+		BoundCombatComponent->OnShotFired.AddDynamic(this, &UDCPlayerHUDWidget::HandleShotFired);
 
 		// HUD가 생성된 직후에도 현재 조준 모드에 맞는 UI를 표시.
 		HandleAimModeChanged(BoundCombatComponent->GetAimMode());
@@ -69,7 +69,7 @@ void UDCPlayerHUDWidget::UnbindFromCurrentCharacter()
 		
 		BoundCombatComponent->OnCrosshairSpreadChanged.RemoveDynamic(this,&UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
 		
-		BoundCombatComponent->OnPrimaryFireRequested.RemoveDynamic(this,&UDCPlayerHUDWidget::HandlePrimaryFireRequested);
+		BoundCombatComponent->OnShotFired.RemoveDynamic(this,&UDCPlayerHUDWidget::HandleShotFired);
 
 		BoundCombatComponent = nullptr;
 	}
@@ -98,7 +98,11 @@ void UDCPlayerHUDWidget::HandleCrosshairSpreadChanged(float NormalizedSpread, fl
 	BP_OnCrosshairSpreadChanged(NormalizedSpread, SpreadDegrees);
 }
 
-void UDCPlayerHUDWidget::HandlePrimaryFireRequested()
+
+// ShotSpreadDegrees = 이번 탄이 실제로 사용할 퍼짐 각도
+// PitchKickDegrees = 이번 사격의 상하 카메라 반동
+// YawKickDegrees = 이번 사격의 좌우 카메라 반동
+void UDCPlayerHUDWidget::HandleShotFired(float ShotSpreadDegrees, float PitchKickDegrees, float YawKickDegrees)
 {
-	BP_OnCrosshairFired();
+	BP_OnShotFired(ShotSpreadDegrees, PitchKickDegrees, YawKickDegrees);
 }

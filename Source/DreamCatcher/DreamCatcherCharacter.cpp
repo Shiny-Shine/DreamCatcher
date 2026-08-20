@@ -102,14 +102,13 @@ void ADreamCatcherCharacter::BeginPlay()
 	// 이벤트 바인딩을 여기서 해두는 것이 안전.
 	if (CombatComponent)
 	{
-		CombatComponent->OnPrimaryFireRequested.AddDynamic(this, &ADreamCatcherCharacter::HandlePrimaryFireRequested);
 		CombatComponent->OnDodgeRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleDodgeRequested);
 		CombatComponent->OnUltimateRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleUltimateRequested);
+		
+		CombatComponent->OnShotFired.AddDynamic(this, &ADreamCatcherCharacter::HandleShotFired);
 
 		// 카메라 기본값 설정
 		CombatComponent->OnAimModeChanged.AddDynamic(this, &ADreamCatcherCharacter::HandleAimModeChanged);
-
-		CombatComponent->OnRecoilRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleRecoilRequested);
 		
 		HandleAimModeChanged(CombatComponent->GetAimMode());
 	}
@@ -118,22 +117,6 @@ void ADreamCatcherCharacter::BeginPlay()
 	{
 		HealthComponent->OnDeath.AddDynamic(this, &ADreamCatcherCharacter::HandleDeath);
 	}
-}
-
-// 반동 요청을 누적함.
-void ADreamCatcherCharacter::HandleRecoilRequested(float PitchKickDegrees, float YawKickDegrees)
-{
-	PendingRecoil.X = FMath::Clamp(
-		PendingRecoil.X + PitchKickDegrees,
-		0.0f,
-		MaxAccumulatedRecoilPitch
-	);
-
-	PendingRecoil.Y = FMath::Clamp(
-		PendingRecoil.Y + YawKickDegrees,
-		-MaxAccumulatedRecoilYaw,
-		MaxAccumulatedRecoilYaw
-	);
 }
 
 void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -321,9 +304,15 @@ void ADreamCatcherCharacter::Ultimate()
 	}
 }
 
-void ADreamCatcherCharacter::HandlePrimaryFireRequested()
+void ADreamCatcherCharacter::HandleShotFired(float ShotSpreadDegrees, float PitchKickDegrees, float YawKickDegrees)
 {
+	// 카메라 반동 누적
+	PendingRecoil.X = FMath::Clamp(PendingRecoil.X + PitchKickDegrees, 0.0f, MaxAccumulatedRecoilPitch);
+
+	PendingRecoil.Y = FMath::Clamp(PendingRecoil.Y + YawKickDegrees, -MaxAccumulatedRecoilYaw, MaxAccumulatedRecoilYaw);
+
 	UWorld* World = GetWorld();
+
 	if (!World || !FollowCamera || !CombatComponent)
 	{
 		return;
@@ -339,9 +328,8 @@ void ADreamCatcherCharacter::HandlePrimaryFireRequested()
 		Controller->GetPlayerViewPoint(ViewLocation, ViewRotation);
 	}
 
-	const float SpreadDegrees = CombatComponent->GetCurrentSpreadDegrees();
-
-	const float SpreadRadians = FMath::DegreesToRadians(SpreadDegrees);
+	// 탄착 퍼짐 계산
+	const float SpreadRadians = FMath::DegreesToRadians(ShotSpreadDegrees);
 
 	const FVector CameraShotDirection =
 		SpreadRadians > KINDA_SMALL_NUMBER

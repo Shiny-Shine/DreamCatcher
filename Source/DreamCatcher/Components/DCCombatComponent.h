@@ -45,7 +45,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCUltimateChargeChangedSignature, f
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCrosshairSpreadChangedSignature, float, NormalizedSpread, float, SpreadDegrees);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCRecoilRequestedSignature, float, PitchKickDegrees, float, YawKickDegrees);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDCShotFiredSignature, float, ShotSpreadDegrees, float, PitchKickDegrees,float, YawKickDegrees);
 
 UCLASS(ClassGroup=(DreamCatcher), meta=(BlueprintSpawnableComponent))
 class DREAMCATCHER_API UDCCombatComponent : public UActorComponent
@@ -54,9 +54,6 @@ class DREAMCATCHER_API UDCCombatComponent : public UActorComponent
 
 public:
 	UDCCombatComponent();
-
-	UPROPERTY(BlueprintAssignable, Category="Combat")
-	FDCCombatActionSignature OnPrimaryFireRequested;
 
 	UPROPERTY(BlueprintAssignable, Category="Combat")
 	FDCCombatActionSignature OnDodgeRequested;
@@ -113,11 +110,11 @@ public:
 	UFUNCTION(BlueprintPure, Category="Combat|Fire")
 	float GetPrimaryFireDamage() const { return PrimaryFireDamage; }
 	
+	UPROPERTY(BlueprintAssignable, Category="Combat|Fire")
+	FDCShotFiredSignature OnShotFired;
+	
 	UPROPERTY(BlueprintAssignable, Category="Combat|Crosshair")
 	FDCCrosshairSpreadChangedSignature OnCrosshairSpreadChanged;
-
-	UPROPERTY(BlueprintAssignable, Category="Combat|Recoil")
-	FDCRecoilRequestedSignature OnRecoilRequested;
 
 	UFUNCTION(BlueprintPure, Category="Combat|Accuracy")
 	float GetCurrentSpreadDegrees() const
