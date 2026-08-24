@@ -32,6 +32,8 @@
 4. 현재 소스 코드 및 프로젝트 설정
 5. 오래된 README, 과거 문서, 이전 대화 내용
 
+GAS 및 Lyra 전환 작업은 `docs/specs/gas-lyra-migration.md`를 기능 명세로 사용합니다.
+
 실제로 구현된 상태는 현재 소스 코드가 기준입니다.  
 프로젝트가 앞으로 가야 할 방향은 이 문서와 기능별 명세가 기준입니다.
 
@@ -160,7 +162,11 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - 회피
 - 궁극기
 
-이 기능들의 손맛이 완성되기 전에는 대형 어빌리티 프레임워크를 추가하지 않습니다.
+이 핵심 행동은 Lyra Starter Game의 구조를 참고한 GAS 기반 Ability,
+GameplayEffect, AttributeSet, Gameplay Tag, AbilitySet 구조로 단계적으로 전환합니다.
+
+기존 전투 시스템은 GAS 구현이 동일한 기능을 정상적으로 수행하는 것이
+검증된 뒤 단계적으로 제거합니다.
 
 ## 2.3 목표 스테이지 흐름
 
@@ -1436,22 +1442,27 @@ DataAsset 적용 순서:
 
 현재 권장 순서:
 
-1. 적 공격 텔레그래프 분리
-2. 회피 무적 및 피드백
-3. Level 1 인카운터 안정화
-4. 전체 스테이지 흐름
-5. 최소 보스
-6. 결과 화면
-7. 전투 피드백 및 조준 연출 보강
-8. DataAsset 전환
-9. 메타 루프
+현재 권장 순서:
+
+1. GAS Foundation
+2. PlayerState ASC와 Pawn 초기화
+3. Input Tag와 AbilitySet
+4. AttributeSet 기반 체력, 데미지, 죽음
+5. GAS 기반 조준과 CameraMode
+6. Equipment와 WeaponInstance
+7. 사격, 탄 퍼짐, 크로스헤어, GameplayCue
+8. 회피 무적과 궁극기
+9. 적 공격 텔레그래프 Ability
+10. Level 1 전체 흐름
+11. 최소 보스
+12. Inventory와 메타 시스템
 
 수직 슬라이스 전에는 다음을 우선하지 않습니다.
 
 - 미니맵
-- 대형 인벤토리
-- GAS
-- 멀티플레이
+- 대형 인벤토리 및 복잡한 아이템 경제
+- 멀티플레이 완성
+- Lyra 또는 ShooterCore 전체 복제
 - 복잡한 AI 프레임워크
 
 ---
@@ -1716,16 +1727,29 @@ Codex는 작업 전에 다음을 수행합니다.
 - 명확한 상태 전이
 - 기존 이름 규칙 유지
 
+현재 승인된 아키텍처 방향:
+
+- Gameplay Ability System 도입
+- Lyra Starter Game의 GAS, AbilitySet, PawnData 구조 참고
+- PlayerState가 플레이어 ASC 소유
+- Gameplay Tag 기반 입력과 상태 관리
+- AttributeSet 기반 체력, 데미지, 자원 관리
+- Equipment와 WeaponInstance 기반 무기 구조
+- GameplayCue 기반 VFX, SFX, Camera Shake 연출
+- 기존 시스템과 병행 구현 후 검증된 기능부터 단계적으로 교체
+- 사용 가능한 Lyra 에셋은 의존성을 확인한 뒤 Migrate
+- Lyra C++ 코드는 그대로 복사하지 않고 DreamCatcher용으로 직접 구현
+
 명시적 요청 없이는 피할 것:
 
-- GAS
-- 멀티플레이 복제 아키텍처
-- 대형 Ability / Attribute 프레임워크
+- 멀티플레이 복제 아키텍처 확장
+- 현재 전투 범위를 벗어난 대형 Ability / Attribute 확장
 - Behavior Tree 중심 구조 전환
 - 과도한 Subsystem 추가
-- 전체 폴더 재구성
+- 전체 폴더 일괄 재구성
 - 대량 에셋 이름 변경
 - Variant 샘플 구조로 교체
+- Lyra 또는 ShooterCore 전체 소스와 플러그인 복제
 
 ## 18.3 C++ 규칙
 
@@ -2183,7 +2207,9 @@ ChatGPT 프로젝트
 
 # 25. 명시적 승인 없이 하지 말 것
 
-- GAS 도입
+- Lyra C++ 소스 또는 ShooterCore 전체를 의존성 검토 없이 복사
+- GAS 전환이 검증되기 전에 기존 전투 시스템 삭제
+- Lyra Blueprint의 부모 클래스 의존성을 확인하지 않고 Migrate
 - 멀티플레이 복제 설계
 - 대형 Behavior Tree 프레임워크
 - 수직 슬라이스 전에 큰 인벤토리 개발
