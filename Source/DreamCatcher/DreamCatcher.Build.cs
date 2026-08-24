@@ -14,6 +14,11 @@ public class DreamCatcher : ModuleRules
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
+
+			"GameplayAbilities",
+			"GameplayTags",
+			"GameplayTasks",
+
 			"AIModule",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
