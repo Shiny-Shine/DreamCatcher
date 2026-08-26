@@ -2,7 +2,11 @@
 
 namespace DCGameplayTags
 {
-	// Input
+	// Native Input
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Move, "InputTag.Move", "Character movement input.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Look, "InputTag.Look", "Camera look input.");
+
+	// Ability Input
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Jump, "InputTag.Jump", "Jump input.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Aim, "InputTag.Aim", "Aim input.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Dodge, "InputTag.Dodge", "Dodge input.");
@@ -31,19 +35,15 @@ namespace DCGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Attack_Recovery, "State.Attack.Recovery", "Enemy attack recovery.");
 
 	// Gameplay
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(
-		Gameplay_DamageImmunity,
-		"Gameplay.DamageImmunity",
-		"Actor ignores normal incoming damage."
-	);
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Gameplay_DamageImmunity, "Gameplay.DamageImmunity",
+	                               "Actor ignores normal incoming damage.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Gameplay_AbilityInputBlocked, "Gameplay.AbilityInputBlocked",
+	                               "Ability input processing is blocked.");
 
 	// Event
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Death, "GameplayEvent.Death", "Death event.");
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(
-		GameplayEvent_Dodge_Success,
-		"GameplayEvent.Dodge.Success",
-		"Damage was successfully avoided during dodge."
-	);
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Dodge_Success, "GameplayEvent.Dodge.Success",
+	                               "Damage was successfully avoided during dodge.");
 
 	// Cooldown
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_Dodge, "Cooldown.Dodge", "Dodge cooldown.");

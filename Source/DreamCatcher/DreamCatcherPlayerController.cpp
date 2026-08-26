@@ -1,10 +1,13 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "DreamCatcherPlayerController.h"
+
+#include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "DreamCatcherCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
+#include "Player/DCPlayerState.h"
 #include "UI/DCPlayerHUDWidget.h"
 
 void ADreamCatcherPlayerController::BeginPlay()
@@ -29,6 +32,20 @@ void ADreamCatcherPlayerController::OnPossess(APawn* InPawn)
 	BindHUDToCurrentPawn();
 }
 
+// 현재 컨트롤러와 연결된 ADCPlayerState와 전용 ASC를 가져온 후 ASC에 입력되있는 입력을 처리
+void ADreamCatcherPlayerController::PostProcessInput(float DeltaTime, bool bGamePaused)
+{
+	if (ADCPlayerState* DCPlayerState = GetPlayerState<ADCPlayerState>())
+	{
+		if (UDCAbilitySystemComponent* AbilitySystemComponent = DCPlayerState->GetDCAbilitySystemComponent())
+		{
+			AbilitySystemComponent->ProcessAbilityInput(DeltaTime, bGamePaused);
+		}
+	}
+
+	Super::PostProcessInput(DeltaTime, bGamePaused);
+}
+
 void ADreamCatcherPlayerController::ApplyInputMappingContexts()
 {
 	if (!IsLocalController())
@@ -36,7 +53,8 @@ void ADreamCatcherPlayerController::ApplyInputMappingContexts()
 		return;
 	}
 
-	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
+		GetLocalPlayer()))
 	{
 		for (UInputMappingContext* MappingContext : DefaultMappingContexts)
 		{

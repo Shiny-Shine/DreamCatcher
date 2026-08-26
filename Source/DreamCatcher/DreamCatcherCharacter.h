@@ -1,22 +1,27 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "Components/DCCombatComponent.h"
 #include "Weapon/DCWeaponTypes.h"
 #include "DreamCatcherCharacter.generated.h"
 
+class UAbilitySystemComponent;
 class UCameraComponent;
+class UDCAbilitySystemComponent;
 class UDCHealthComponent;
+class UDCPawnExtensionComponent;
 class USceneComponent;
 class UStaticMeshComponent;
 class UInputAction;
 class USpringArmComponent;
-struct FInputActionValue;
 
+struct FGameplayTag;
+struct FInputActionValue;
 /*
  * Character는 플레이어 몸체.
- * 이동, 카메라, 메시, 애니메이션 기준점이 여기에 붙는다.
+ * 이동, 카메라, 메시, 애니메이션 기준점이 여기에 붙음.
  *
  * 이 클래스의 역할:
  * - 입력을 받는다
@@ -44,13 +49,22 @@ struct FDCAimCameraProfile
 };
 
 UCLASS()
-class DREAMCATCHER_API ADreamCatcherCharacter : public ACharacter
+class DREAMCATCHER_API ADreamCatcherCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
 public:
 	// Unreal의 기본 데미지 파이프라인과 연결.
 	ADreamCatcherCharacter();
+
+	// IAbilitySystemInterface 구현.
+	// 실제 ASC는 PlayerState가 소유하고 Character는 Avatar로만 연결.
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	// DreamCatcher 전용 ASC 타입으로 반환.
+	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Ability System")
+	UDCAbilitySystemComponent* GetDCAbilitySystemComponent() const;
+
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator,
 	                         AActor* DamageCauser) override;
 
@@ -59,7 +73,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="Components")
 	UDCCombatComponent* GetCombatComponent() const { return CombatComponent; }
-	
+
 	// 임시 무기 모델을 표시하는 컴포넌트.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UStaticMeshComponent> WeaponMesh;
@@ -67,7 +81,7 @@ public:
 	// 총알과 사격 연출이 시작되는 총구 위치.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<USceneComponent> MuzzlePoint;
-	
+
 	UFUNCTION(BlueprintPure, Category = "Weapon|Animation")
 	EDCWeaponAnimationType GetWeaponAnimationType() const
 	{
@@ -76,7 +90,15 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	// 서버에서 Controller가 이 Character를 Possess한 직후 호출.
+	virtual void PossessedBy(AController* NewController) override;
+
+	// 클라이언트에서 PlayerState가 복제된 뒤 호출.
+	virtual void OnRep_PlayerState() override;
+
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void UnPossessed() override;
 
@@ -88,6 +110,11 @@ protected:
 	// 실제 플레이 카메라.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UCameraComponent> FollowCamera;
+
+	// PlayerState ASC와 현재 Character Avatar의 연결을 관리.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UDCPawnExtensionComponent>
+	PawnExtensionComponent;
 
 	// 체력 규칙을 담당하는 컴포넌트.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
@@ -142,7 +169,8 @@ protected:
 	// C++는 "언제 발사해야 하는지"까지만 결정하고,
 	// 실제 총알/VFX/사운드는 블루프린트에서 처리.
 	UFUNCTION(BlueprintImplementableEvent, Category="Combat")
-	void BP_OnPrimaryFireResolved(const FVector& MuzzleLocation, const FVector& FireEnd, AActor* HitActor, float AppliedDamage);
+	void BP_OnPrimaryFireResolved(const FVector& MuzzleLocation, const FVector& FireEnd, AActor* HitActor,
+	                              float AppliedDamage);
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Combat")
 	void BP_OnDodgeRequested(const FVector& DodgeDirection);
@@ -178,26 +206,35 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Aim")
 	void BP_OnAimModeChanged(EDCAimMode NewAimMode);
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
 	EDCWeaponAnimationType WeaponAnimationType =
 		EDCWeaponAnimationType::Rifle;
-	
-	
+
+
 	// 카메라 반동
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Recoil",
-	meta=(ClampMin="0.0"))
-	float RecoilKickInterpSpeed = 90.0f;	// 반동을 카메라에 얼마나 빠르게 적용할지
+		meta=(ClampMin="0.0"))
+	float RecoilKickInterpSpeed = 90.0f; // 반동을 카메라에 얼마나 빠르게 적용할지
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Recoil",
 		meta=(ClampMin="0.0", Units="deg"))
-	float MaxAccumulatedRecoilPitch = 10.0f;	// 적용되지 않은 수직 반동의 최대치
+	float MaxAccumulatedRecoilPitch = 10.0f; // 적용되지 않은 수직 반동의 최대치
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Combat|Recoil",
 		meta=(ClampMin="0.0", Units="deg"))
-	float MaxAccumulatedRecoilYaw = 1.0f;	// 적용되지 않은 좌우 반동의 최대치
+	float MaxAccumulatedRecoilYaw = 1.0f; // 적용되지 않은 좌우 반동의 최대치
 
 private:
+	// 현재 Character의 PlayerState에서 ASC를 가져와 PawnExtensionComponent에 연결.
+	void InitializeAbilitySystem();
+	
+	// Ability 입력이 시작됐을 때 해당 InputTag를 ASC에 전달.
+	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
+
+	// Ability 입력이 해제되거나 취소됐을 때 해당 InputTag를 ASC에 전달.
+	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
+	
 	// Enhanced Input에서 호출되는 실제 입력 함수들.
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
@@ -227,6 +264,11 @@ private:
 
 	bool bAimInputPressed = false;
 	bool bShoulderAimActivated = false;
+	
+	// UDCInputComponent가 생성한 Ability 입력 Binding Handle.
+	// UnPossessed 시 남아 있는 바인딩을 제거하기 위해 보관.
+	TArray<uint32> AbilityInputBindHandles;
+	
 	float CurrentLookSensitivityMultiplier = 1.0f;
 
 	FTimerHandle AimHoldTimerHandle;
@@ -234,7 +276,7 @@ private:
 	// 컴포넌트 이벤트를 받아 Character 레벨 동작으로 바꾸는 함수들.
 	UFUNCTION()
 	void HandleShotFired(float ShotSpreadDegrees, float PitchKickDegrees, float YawKickDegrees);
-	
+
 	UFUNCTION()
 	void HandleDodgeRequested();
 

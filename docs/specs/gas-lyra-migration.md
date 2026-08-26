@@ -291,7 +291,7 @@ DCRangedWeaponInstance
 
 - [x] 0단계: 명세와 GAS 테스트 에셋 준비
 - [x] 1단계: GAS Foundation
-- [ ] 2단계: PawnData와 Input Tag
+- [x] 2단계: PawnData와 Input Tag
 - [ ] 3단계: Attribute, Damage, Death
 - [ ] 4단계: Aim과 CameraMode
 - [ ] 5단계: Equipment와 WeaponInstance
