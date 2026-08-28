@@ -40,6 +40,13 @@ namespace DCGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Gameplay_AbilityInputBlocked, "Gameplay.AbilityInputBlocked",
 	                               "Ability input processing is blocked.");
 
+	// SetByCaller
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage, "SetByCaller.Damage",
+	                               "Damage magnitude supplied when creating a GameplayEffect spec.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Healing, "SetByCaller.Healing",
+	                               "Healing magnitude supplied when creating a GameplayEffect spec.");
+
 	// Event
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Death, "GameplayEvent.Death", "Death event.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayEvent_Dodge_Success, "GameplayEvent.Dodge.Success",

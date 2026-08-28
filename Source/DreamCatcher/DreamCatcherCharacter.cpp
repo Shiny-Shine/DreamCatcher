@@ -643,7 +643,8 @@ float ADreamCatcherCharacter::TakeDamage(float DamageAmount, FDamageEvent const&
 	}
 
 	const float AppliedDamage = HealthComponent->ApplyDamage(DamageAmount, DamageCauser);
-	if (AppliedDamage > 0.0f)
+
+	if (AppliedDamage > 0.0f && !HealthComponent->IsDeadOrDying())
 	{
 		BP_OnDamaged(HealthComponent->GetCurrentHealth(), HealthComponent->GetMaxHealth(), DamageCauser);
 	}

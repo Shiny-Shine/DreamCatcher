@@ -2,6 +2,9 @@
 
 #include "AbilitySystem/DCAbilitySet.h"
 #include "AbilitySystem/DCAbilitySystemComponent.h"
+#include "AbilitySystem/Attributes/DCHealthSet.h"
+#include "AbilitySystem/Attributes/DCCombatSet.h"
+#include "AbilitySystem/Attributes/DCResourceSet.h"
 
 ADCPlayerState::ADCPlayerState(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -11,12 +14,16 @@ ADCPlayerState::ADCPlayerState(const FObjectInitializer& ObjectInitializer) : Su
 
 	AbilitySystemComponent->SetIsReplicated(true);
 
-	/*
-	 * Mixed 모드는 플레이어 ASC에 적합한 복제 모드.
-	 *
-	 * 소유자는 상세한 Effect 정보를 받고, 다른 클라이언트는 필요한 Tag와 Cue 중심으로 받음.
-	 */
+	// Mixed 모드는 플레이어 ASC에 적합한 복제 모드.
+	// 소유자는 상세한 Effect 정보를 받고, 다른 클라이언트는 필요한 Tag와 Cue 중심으로 받음.
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// ASC가 InitializeComponent를 실행할 때 소유 Actor의 AttributeSet Subobject를 자동으로 감지.
+	HealthSet = ObjectInitializer.CreateDefaultSubobject<UDCHealthSet>(this,TEXT("HealthSet"));
+
+	CombatSet = ObjectInitializer.CreateDefaultSubobject<UDCCombatSet>(this,TEXT("CombatSet"));
+
+	ResourceSet = ObjectInitializer.CreateDefaultSubobject<UDCResourceSet>(this, TEXT("ResourceSet"));
 
 	// ASC 상태가 빠르게 갱신될 수 있도록 설정합니다.
 	SetNetUpdateFrequency(100.0f);
@@ -32,6 +39,9 @@ void ADCPlayerState::PostInitializeComponents()
 	Super::PostInitializeComponents();
 
 	check(AbilitySystemComponent);
+	check(HealthSet);
+	check(CombatSet);
+	check(ResourceSet);
 
 	/*
 	 * 현재는 Pawn이 아직 없을 수 있음.
@@ -56,6 +66,11 @@ void ADCPlayerState::PostInitializeComponents()
 	}
 
 	// Foundation 단계에서 Ability 부여 여부를 확인하는 로그.
-	UE_LOG(LogTemp, Log, TEXT("DCPlayerState [%s] ASC initialized. Granted Ability count: %d"),
-	       *GetNameSafe(this), AbilitySystemComponent->GetActivatableAbilities().Num());
+	UE_LOG(LogTemp, Log,
+	       TEXT("DCPlayerState [%s] ASC initialized. ""Granted Ability count: %d, ""Health: %.1f / %.1f, "
+		       "BaseDamage: %.1f, ""Ultimate: %.1f / %.1f"),
+	       *GetNameSafe(this), AbilitySystemComponent->GetActivatableAbilities().Num(), HealthSet->GetHealth(),
+	       HealthSet->GetMaxHealth(), CombatSet->GetBaseDamage(), ResourceSet->GetUltimateCharge(),
+	       ResourceSet->GetMaxUltimateCharge()
+	);
 }
