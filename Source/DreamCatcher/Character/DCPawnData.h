@@ -7,6 +7,7 @@
 class APawn;
 class UDCAbilitySet;
 class UDCInputConfig;
+class UDCCameraMode;
 
 /**
  * Pawn 하나를 구성하는 데이터 묶음.
@@ -36,4 +37,16 @@ public:
 	// 이 Pawn이 사용할 InputAction → InputTag 설정.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Input")
 	TObjectPtr<UDCInputConfig> InputConfig;
+
+	// 이 Pawn이 기본적으로 사용할 CameraMode.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Camera")
+	TSubclassOf<UDCCameraMode> DefaultCameraMode;
+
+	// Shoulder 조준 상태에서 사용할 CameraMode.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Camera")
+	TSubclassOf<UDCCameraMode> ShoulderCameraMode;
+
+	// Scope 조준 상태에서 사용할 CameraMode.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Camera")
+	TSubclassOf<UDCCameraMode> ScopeCameraMode;
 };

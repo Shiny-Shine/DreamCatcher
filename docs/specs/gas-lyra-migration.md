@@ -293,7 +293,7 @@ DCRangedWeaponInstance
 - [x] 1단계: GAS Foundation
 - [x] 2단계: PawnData와 Input Tag
 - [x] 3단계: Attribute, Damage, Death
-- [ ] 4단계: Aim과 CameraMode
+- [x] 4단계: Aim과 CameraMode
 - [ ] 5단계: Equipment와 WeaponInstance
 - [ ] 6단계: Ranged Fire와 GameplayCue
 - [ ] 7단계: Reticle과 HUD

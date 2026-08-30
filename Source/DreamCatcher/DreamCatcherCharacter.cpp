@@ -2,7 +2,10 @@
 
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "AbilitySystem/DCGameplayTags.h"
+#include "Animation/DCAnimInstance.h"
 #include "Camera/CameraComponent.h"
+#include "Camera/DCCameraComponent.h"
+#include "Camera/DCCameraMode.h"
 #include "Character/DCPawnData.h"
 #include "Character/DCPawnExtensionComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -57,6 +60,19 @@ ADreamCatcherCharacter::ADreamCatcherCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	// CameraMode Stack을 사용할 새 카메라.
+	// CameraMode가 직접 World Transform을 계산하므로 SpringArm 끝이 아니라 RootComponent에 부착.
+	ModeCamera = CreateDefaultSubobject<UDCCameraComponent>(TEXT("ModeCamera"));
+
+	ModeCamera->SetupAttachment(RootComponent);
+
+	// CameraMode가 Controller 회전을 읽어 직접 View를 계산하므로
+	// CameraComponent 자체가 PawnControlRotation을 중복 적용하지 않게 함.
+	ModeCamera->bUsePawnControlRotation = false;
+
+	// DefaultCameraMode가 없는 기존 Character에서는 자동으로 활성화되지 않도록 함.
+	ModeCamera->SetAutoActivate(false);
 
 	// 체력, 전투를 컴포넌트로 분리해
 	// 나중에 적 캐릭터나 보스에도 재사용하기 쉽게 만ㄷ므.
@@ -159,25 +175,233 @@ void ADreamCatcherCharacter::InitializeAbilitySystem()
 	}
 
 	PawnExtensionComponent->InitializeAbilitySystem(AbilitySystemComponent, DCPlayerState);
+
+	InitializeGASAimStateListeners();
+}
+
+void ADreamCatcherCharacter::InitializeCameraModeSystem()
+{
+	const UDCPawnData* PawnData = PawnExtensionComponent ? PawnExtensionComponent->GetPawnData() : nullptr;
+
+	const bool bCanUseCameraModeSystem = ModeCamera && PawnData && PawnData->DefaultCameraMode;
+
+	if (!bCanUseCameraModeSystem)
+	{
+		// DefaultCameraMode가 없는 기존 Character는 Legacy FollowCamera를 계속 사용.
+		if (ModeCamera)
+		{
+			ModeCamera->DetermineCameraModeDelegate.Unbind();
+
+			ModeCamera->Deactivate();
+		}
+
+		if (FollowCamera)
+		{
+			FollowCamera->Activate(true);
+		}
+
+		UE_LOG(LogDreamCatcher, Verbose, TEXT("Character [%s] is using ""the Legacy FollowCamera."),
+		       *GetNameSafe(this));
+
+		return;
+	}
+
+	// DCCameraComponent가 매 프레임 사용할 CameraMode를 Character에 질의하도록 연결.
+	ModeCamera->DetermineCameraModeDelegate.BindUObject(this, &ThisClass::DetermineCameraMode);
+
+	// 새 카메라를 먼저 활성화.
+	ModeCamera->Activate(true);
+
+	// Actor::CalcCamera가 Legacy 카메라를 선택하지 않도록 비활성화.
+	if (FollowCamera)
+	{
+		FollowCamera->Deactivate();
+	}
+
+	UE_LOG(LogDreamCatcher, Log, TEXT("Character [%s] activated CameraMode ""system. Default Mode: [%s]"),
+	       *GetNameSafe(this), *GetNameSafe(PawnData->DefaultCameraMode));
+}
+
+bool ADreamCatcherCharacter::IsUsingCameraModeSystem() const
+{
+	return ModeCamera && ModeCamera->IsActive();
+}
+
+void ADreamCatcherCharacter::InitializeGASAimStateListeners()
+{
+	UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent();
+
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	if (BoundAimAbilitySystemComponent.Get() == AbilitySystemComponent)
+	{
+		RefreshGASAimMode(true);
+		return;
+	}
+
+	UninitializeGASAimStateListeners();
+
+	BoundAimAbilitySystemComponent = AbilitySystemComponent;
+
+	if (UDCAnimInstance* DCAnimInstance = Cast<UDCAnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		DCAnimInstance->InitializeWithAbilitySystem(AbilitySystemComponent);
+	}
+
+	ShoulderAimTagDelegateHandle =
+		AbilitySystemComponent->
+		RegisterGameplayTagEvent(DCGameplayTags::State_Aim_Shoulder, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::HandleGASAimStateTagChanged);
+
+	ScopeAimTagDelegateHandle =
+		AbilitySystemComponent->
+		RegisterGameplayTagEvent(DCGameplayTags::State_Aim_Scope, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::HandleGASAimStateTagChanged);
+
+	RefreshGASAimMode(true);
+}
+
+void ADreamCatcherCharacter::UninitializeGASAimStateListeners()
+{
+	UDCAbilitySystemComponent* AbilitySystemComponent = BoundAimAbilitySystemComponent.Get();
+
+	if (AbilitySystemComponent)
+	{
+		if (ShoulderAimTagDelegateHandle.IsValid())
+		{
+			AbilitySystemComponent->UnregisterGameplayTagEvent(
+				ShoulderAimTagDelegateHandle,
+				DCGameplayTags::State_Aim_Shoulder,
+				EGameplayTagEventType::NewOrRemoved
+			);
+		}
+
+		if (ScopeAimTagDelegateHandle.IsValid())
+		{
+			AbilitySystemComponent->UnregisterGameplayTagEvent(
+				ScopeAimTagDelegateHandle,
+				DCGameplayTags::State_Aim_Scope,
+				EGameplayTagEventType::NewOrRemoved
+			);
+		}
+	}
+
+	ShoulderAimTagDelegateHandle = FDelegateHandle();
+
+	ScopeAimTagDelegateHandle = FDelegateHandle();
+
+	BoundAimAbilitySystemComponent.Reset();
+
+	CurrentGASAimMode = EDCAimMode::Hip;
+}
+
+void ADreamCatcherCharacter::HandleGASAimStateTagChanged(const FGameplayTag ChangedTag, int32 NewCount)
+{
+	(void)ChangedTag;
+	(void)NewCount;
+
+	RefreshGASAimMode(false);
+}
+
+void ADreamCatcherCharacter::RefreshGASAimMode(bool bForceBroadcast)
+{
+	const UDCAbilitySystemComponent* AbilitySystemComponent = BoundAimAbilitySystemComponent.Get();
+
+	EDCAimMode NewAimMode = EDCAimMode::Hip;
+
+	if (AbilitySystemComponent)
+	{
+		if (AbilitySystemComponent->HasMatchingGameplayTag(DCGameplayTags::State_Aim_Scope))
+		{
+			NewAimMode = EDCAimMode::Scope;
+		}
+		else if (AbilitySystemComponent->HasMatchingGameplayTag(DCGameplayTags::State_Aim_Shoulder))
+		{
+			NewAimMode = EDCAimMode::Shoulder;
+		}
+	}
+
+	if (!bForceBroadcast && CurrentGASAimMode == NewAimMode)
+	{
+		return;
+	}
+
+	CurrentGASAimMode = NewAimMode;
+
+	OnGASAimModeChanged.Broadcast(CurrentGASAimMode);
+
+	/*
+	 * 기존 Character Blueprint 연출 훅을 재사용.
+	 *
+	 * 단, BP_DC_Player_GAS_Test에서 이 이벤트가 Legacy CameraBoom을 직접 움직이고 있다면
+	 * 해당 카메라 노드는 제거해야함.
+	 */
+	BP_OnAimModeChanged(CurrentGASAimMode);
+}
+
+TSubclassOf<UDCCameraMode> ADreamCatcherCharacter::DetermineCameraMode() const
+{
+	const UDCPawnData* PawnData = PawnExtensionComponent ? PawnExtensionComponent->GetPawnData() : nullptr;
+
+	if (!PawnData)
+	{
+		return nullptr;
+	}
+
+	const UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent();
+
+	if (AbilitySystemComponent)
+	{
+		/*
+		 * Scope를 Shoulder보다 먼저 검사.
+		 *
+		 * 정상 상태에서는 두 태그가 동시에 존재하지 않지만,
+		 * 데이터 설정 오류나 Effect 제거 실패가 발생했을 때도 결과가 항상 결정적이도록 Scope가 우선.
+		 */
+		if (PawnData->ScopeCameraMode && AbilitySystemComponent->
+			HasMatchingGameplayTag(DCGameplayTags::State_Aim_Scope))
+		{
+			return PawnData->ScopeCameraMode;
+		}
+
+		if (PawnData->ShoulderCameraMode && AbilitySystemComponent->HasMatchingGameplayTag(
+			DCGameplayTags::State_Aim_Shoulder))
+		{
+			return PawnData->ShoulderCameraMode;
+		}
+	}
+
+	return PawnData->DefaultCameraMode;
 }
 
 void ADreamCatcherCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	InitializeCameraModeSystem();
+
 	// BeginPlay 시점에는 컴포넌트와 런타임 객체들이 모두 살아 있으므로
 	// 이벤트 바인딩을 여기서 해두는 것이 안전.
 	if (CombatComponent)
 	{
+		// 사격, 회피, 궁극기는 아직 Legacy 시스템을 사용하므로 기존 Delegate를 유지.
 		CombatComponent->OnDodgeRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleDodgeRequested);
+
 		CombatComponent->OnUltimateRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleUltimateRequested);
 
 		CombatComponent->OnShotFired.AddDynamic(this, &ADreamCatcherCharacter::HandleShotFired);
 
-		// 카메라 기본값 설정
-		CombatComponent->OnAimModeChanged.AddDynamic(this, &ADreamCatcherCharacter::HandleAimModeChanged);
+		// CameraMode 시스템이 없는 기존 Character만 Legacy 이벤트를 사용.
+		// GAS 테스트 Character는 RefreshGASAimMode()에서 BP 이벤트를 호출합니다.
+		if (!IsUsingCameraModeSystem())
+		{
+			CombatComponent->OnAimModeChanged.AddDynamic(this, &ADreamCatcherCharacter::HandleAimModeChanged);
 
-		HandleAimModeChanged(CombatComponent->GetAimMode());
+			HandleAimModeChanged(CombatComponent->GetAimMode());
+		}
 	}
 
 	if (HealthComponent)
@@ -306,26 +530,11 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	//조준 상태별 입력 바인딩
 	if (AimAction)
 	{
-		EnhancedInput->BindAction(
-			AimAction,
-			ETriggerEvent::Started,
-			this,
-			&ADreamCatcherCharacter::AimPressed
-		);
+		EnhancedInput->BindAction(AimAction, ETriggerEvent::Started, this, &ADreamCatcherCharacter::AimPressed);
 
-		EnhancedInput->BindAction(
-			AimAction,
-			ETriggerEvent::Completed,
-			this,
-			&ADreamCatcherCharacter::AimReleased
-		);
+		EnhancedInput->BindAction(AimAction, ETriggerEvent::Completed, this, &ADreamCatcherCharacter::AimReleased);
 
-		EnhancedInput->BindAction(
-			AimAction,
-			ETriggerEvent::Canceled,
-			this,
-			&ADreamCatcherCharacter::AimCanceled
-		);
+		EnhancedInput->BindAction(AimAction, ETriggerEvent::Canceled, this, &ADreamCatcherCharacter::AimCanceled);
 	}
 	else
 	{
@@ -386,9 +595,15 @@ void ADreamCatcherCharacter::Look(const FInputActionValue& Value)
 {
 	const FVector2D Input = Value.Get<FVector2D>();
 
-	// 마우스/패드 입력을 컨트롤러 회전에 반영.
-	AddControllerYawInput(Input.X * CurrentLookSensitivityMultiplier);
-	AddControllerPitchInput(Input.Y * CurrentLookSensitivityMultiplier);
+	// CameraMode 시스템이 활성화된 GAS 테스트 Character는 CameraMode Stack에서 계산된 감도를 사용.
+	// 기존 Character는 Legacy 감도를 유지.
+	const float LookSensitivity = ModeCamera && ModeCamera->IsActive()
+		                              ? ModeCamera->GetCurrentLookSensitivityMultiplier()
+		                              : CurrentLookSensitivityMultiplier;
+
+	AddControllerYawInput(Input.X * LookSensitivity);
+
+	AddControllerPitchInput(Input.Y * LookSensitivity);
 }
 
 void ADreamCatcherCharacter::StartJump()
@@ -660,8 +875,7 @@ void ADreamCatcherCharacter::AimPressed()
 		return;
 	}
 
-	const EDCAimMode CurrentAimMode =
-		CombatComponent->GetAimMode();
+	const EDCAimMode CurrentAimMode = CombatComponent->GetAimMode();
 
 	// Scope 상태에서는 우클릭을 누르는 즉시 Hip으로 돌아감.
 	if (CurrentAimMode == EDCAimMode::Scope)
@@ -691,13 +905,8 @@ void ADreamCatcherCharacter::AimPressed()
 	}
 
 	// 설정된 시간 동안 우클릭을 유지하면 Shoulder로 전환.
-	GetWorldTimerManager().SetTimer(
-		AimHoldTimerHandle,
-		this,
-		&ADreamCatcherCharacter::ActivateShoulderAim,
-		AimHoldThreshold,
-		false
-	);
+	GetWorldTimerManager().SetTimer(AimHoldTimerHandle, this, &ADreamCatcherCharacter::ActivateShoulderAim,
+	                                AimHoldThreshold, false);
 }
 
 void ADreamCatcherCharacter::AimReleased()
@@ -728,7 +937,7 @@ void ADreamCatcherCharacter::AimReleased()
 	}
 	else if (CombatComponent->GetAimMode() == EDCAimMode::Hip)
 	{
-		// Shoulder 진입 전에 버튼을 뗐다면 짧은 클릭이므로 Scope로 전환합니다.
+		// Shoulder 진입 전에 버튼을 뗐다면 짧은 클릭이므로 Scope로 전환.
 		CombatComponent->ToggleScopeAim();
 	}
 }
@@ -756,9 +965,17 @@ void ADreamCatcherCharacter::CancelAimInputAndState()
 	bAimInputPressed = false;
 	bShoulderAimActivated = false;
 
+	// Legacy Aim 상태 초기화.
 	if (CombatComponent)
 	{
 		CombatComponent->ClearAimState();
+	}
+
+	// GAS Aim 상태 초기화.
+	// Scope Ability는 짧은 클릭 후 끝났지만 Infinite Scope GameplayEffect는 남아 있어 명시적으로 제거해야 함.
+	if (UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent())
+	{
+		AbilitySystemComponent->ClearAimState();
 	}
 }
 
@@ -783,41 +1000,28 @@ void ADreamCatcherCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	const EDCAimMode AimMode = CombatComponent
-		                           ? CombatComponent->GetAimMode()
-		                           : EDCAimMode::Hip;
+	// 새 시스템을 사용하지 않는 기존 Character만 Legacy CameraBoom/FOV/감도 보간을 실행합니다.
+	if (!IsUsingCameraModeSystem())
+	{
+		const EDCAimMode AimMode = CombatComponent ? CombatComponent->GetAimMode() : EDCAimMode::Hip;
 
-	const FDCAimCameraProfile& Profile = GetAimCameraProfile(AimMode);
+		const FDCAimCameraProfile& Profile = GetAimCameraProfile(AimMode);
 
-	CameraBoom->TargetArmLength = FMath::FInterpTo(
-		CameraBoom->TargetArmLength,
-		Profile.TargetArmLength,
-		DeltaSeconds,
-		AimCameraBlendSpeed
-	);
+		CameraBoom->TargetArmLength =
+			FMath::FInterpTo(CameraBoom->TargetArmLength, Profile.TargetArmLength, DeltaSeconds, AimCameraBlendSpeed);
 
-	CameraBoom->SocketOffset = FMath::VInterpTo(
-		CameraBoom->SocketOffset,
-		Profile.SocketOffset,
-		DeltaSeconds,
-		AimCameraBlendSpeed
-	);
+		CameraBoom->SocketOffset =
+			FMath::VInterpTo(CameraBoom->SocketOffset, Profile.SocketOffset, DeltaSeconds, AimCameraBlendSpeed);
 
-	const float NewFieldOfView = FMath::FInterpTo(
-		FollowCamera->FieldOfView,
-		Profile.FieldOfView,
-		DeltaSeconds,
-		AimCameraBlendSpeed
-	);
+		const float NewFieldOfView =
+			FMath::FInterpTo(FollowCamera->FieldOfView, Profile.FieldOfView, DeltaSeconds, AimCameraBlendSpeed);
 
-	FollowCamera->SetFieldOfView(NewFieldOfView);
+		FollowCamera->SetFieldOfView(NewFieldOfView);
 
-	CurrentLookSensitivityMultiplier = FMath::FInterpTo(
-		CurrentLookSensitivityMultiplier,
-		Profile.LookSensitivityMultiplier,
-		DeltaSeconds,
-		AimCameraBlendSpeed
-	);
+		CurrentLookSensitivityMultiplier =
+			FMath::FInterpTo(CurrentLookSensitivityMultiplier, Profile.LookSensitivityMultiplier, DeltaSeconds,
+			                 AimCameraBlendSpeed);
+	}
 
 	UpdateCameraRecoil(DeltaSeconds);
 }
@@ -836,12 +1040,9 @@ void ADreamCatcherCharacter::UpdateCameraRecoil(float DeltaSeconds)
 	}
 
 	// 남아 있는 반동량의 일부만 이번 프레임에 적용, PendingRecoil은 아직 소비하지 않은 회전 입력.
-	const float ApplyAlpha = 1.0f - FMath::Exp(
-		-RecoilKickInterpSpeed * DeltaSeconds
-	);
+	const float ApplyAlpha = 1.0f - FMath::Exp(-RecoilKickInterpSpeed * DeltaSeconds);
 
-	const FVector2D AppliedRecoil =
-		PendingRecoil * ApplyAlpha;
+	const FVector2D AppliedRecoil = PendingRecoil * ApplyAlpha;
 
 	PendingRecoil -= AppliedRecoil;
 
@@ -851,8 +1052,7 @@ void ADreamCatcherCharacter::UpdateCameraRecoil(float DeltaSeconds)
 		PendingRecoil = FVector2D::ZeroVector;
 	}
 
-	FRotator NewControlRotation =
-		Controller->GetControlRotation();
+	FRotator NewControlRotation = Controller->GetControlRotation();
 
 	NewControlRotation.Pitch += AppliedRecoil.X;
 	NewControlRotation.Yaw += AppliedRecoil.Y;
@@ -879,6 +1079,8 @@ void ADreamCatcherCharacter::UnPossessed()
 	{
 		AbilityInputBindHandles.Reset();
 	}
+
+	UninitializeGASAimStateListeners();
 
 	// PlayerState ASC에서 현재 Character Avatar와 PawnData AbilitySet을 제거.
 	if (PawnExtensionComponent)

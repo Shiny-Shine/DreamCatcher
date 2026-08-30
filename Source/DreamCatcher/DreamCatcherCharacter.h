@@ -9,6 +9,8 @@
 
 class UAbilitySystemComponent;
 class UCameraComponent;
+class UDCCameraComponent;
+class UDCCameraMode;
 class UDCAbilitySystemComponent;
 class UDCHealthComponent;
 class UDCPawnExtensionComponent;
@@ -47,6 +49,8 @@ struct FDCAimCameraProfile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Aim Camera", meta=(ClampMin="0.01"))
 	float LookSensitivityMultiplier = 1.0f;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCGASAimModeChangedSignature, EDCAimMode, NewAimMode);
 
 UCLASS()
 class DREAMCATCHER_API ADreamCatcherCharacter : public ACharacter, public IAbilitySystemInterface
@@ -88,6 +92,16 @@ public:
 		return WeaponAnimationType;
 	}
 
+	// GAS 조준 태그에서 계산된 AimMode가 변경될 때 발생.
+	UPROPERTY(BlueprintAssignable, Category = "DreamCatcher|Aim")
+	FDCGASAimModeChangedSignature OnGASAimModeChanged;
+
+	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Aim")
+	EDCAimMode GetGASAimMode() const
+	{
+		return CurrentGASAimMode;
+	}
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -110,6 +124,10 @@ protected:
 	// 실제 플레이 카메라.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UCameraComponent> FollowCamera;
+
+	// CameraMode Stack을 사용하는 DreamCatcher 카메라.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UDCCameraComponent> ModeCamera;
 
 	// PlayerState ASC와 현재 Character Avatar의 연결을 관리.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -228,13 +246,13 @@ protected:
 private:
 	// 현재 Character의 PlayerState에서 ASC를 가져와 PawnExtensionComponent에 연결.
 	void InitializeAbilitySystem();
-	
+
 	// Ability 입력이 시작됐을 때 해당 InputTag를 ASC에 전달.
 	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
 
 	// Ability 입력이 해제되거나 취소됐을 때 해당 InputTag를 ASC에 전달.
 	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
-	
+
 	// Enhanced Input에서 호출되는 실제 입력 함수들.
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
@@ -264,11 +282,11 @@ private:
 
 	bool bAimInputPressed = false;
 	bool bShoulderAimActivated = false;
-	
+
 	// UDCInputComponent가 생성한 Ability 입력 Binding Handle.
 	// UnPossessed 시 남아 있는 바인딩을 제거하기 위해 보관.
 	TArray<uint32> AbilityInputBindHandles;
-	
+
 	float CurrentLookSensitivityMultiplier = 1.0f;
 
 	FTimerHandle AimHoldTimerHandle;
@@ -291,4 +309,33 @@ private:
 	// 아직 카메라 회전에 적용되지 않은 반동량.
 	// X = Pitch, Y = Yaw
 	FVector2D PendingRecoil = FVector2D::ZeroVector;
+
+	// PawnData에 유효한 DefaultCameraMode가 있으면 새 ModeCamera를 활성화.
+	void InitializeCameraModeSystem();
+
+	// 현재 CameraMode Stack 최상단에 올릴 Mode를 결정.
+	TSubclassOf<UDCCameraMode> DetermineCameraMode() const;
+
+	// 현재 ASC의 Aim 태그 변경 이벤트에 연결.
+	void InitializeGASAimStateListeners();
+
+	// 이전 ASC의 Aim 태그 이벤트 연결 해제.
+	void UninitializeGASAimStateListeners();
+
+	// Scope 또는 Shoulder 태그가 추가·제거될 때 호출.
+	void HandleGASAimStateTagChanged(const FGameplayTag ChangedTag, int32 NewCount);
+
+	// 현재 ASC 태그에서 파생 AimMode를 다시 계산.
+	void RefreshGASAimMode(bool bForceBroadcast);
+
+	TWeakObjectPtr<UDCAbilitySystemComponent> BoundAimAbilitySystemComponent;
+
+	FDelegateHandle ShoulderAimTagDelegateHandle;
+
+	FDelegateHandle ScopeAimTagDelegateHandle;
+
+	EDCAimMode CurrentGASAimMode = EDCAimMode::Hip;
+	
+	// 이 Character가 현재 새 CameraMode 시스템을 사용하는지 반환.
+	bool IsUsingCameraModeSystem() const;
 };

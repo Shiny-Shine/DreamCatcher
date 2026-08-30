@@ -64,6 +64,9 @@ protected:
 private:
 	void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const;
 	
+	// OnOutOfHealth가 중복 발생하지 않게 관리.
+	bool bOutOfHealth = false;
+	
 	// GameplayEffect 적용 직전 값을 저장.
 	float HealthBeforeAttributeChange = 0.0f;
 	float MaxHealthBeforeAttributeChange = 0.0f;
@@ -96,7 +99,4 @@ private:
 	 */
 	UPROPERTY(BlueprintReadOnly, Category = "DreamCatcher|Health", meta = (AllowPrivateAccess = "true"))
 	FGameplayAttributeData Healing;
-
-	// OnOutOfHealth가 중복 발생하지 않게 관리.
-	bool bOutOfHealth = false;
 };

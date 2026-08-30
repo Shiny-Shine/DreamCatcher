@@ -42,7 +42,10 @@ void UDCGameplayAbility_Death::ActivateAbility(
 	// 현재 실행 중인 다른 Ability를 모두 취소. 추후 Ability.Behavior.SurvivesDeath 태그를 추가하면 일부 수동 Ability 제외 가능.
 	DCAbilitySystem->CancelAbilities(nullptr, nullptr, this);
 
+	// 남아 있는 입력 상태 제거.
 	DCAbilitySystem->ClearAbilityInput();
+	// Scope와 Shoulder GameplayEffect 제거.
+	DCAbilitySystem->ClearAimState();
 
 	SetCanBeCanceled(false);
 	

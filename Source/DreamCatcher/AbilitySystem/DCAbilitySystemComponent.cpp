@@ -174,7 +174,7 @@ void UDCAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec& Sp
 
 	/*
 	 * WaitInputPress 같은 AbilityTask가 입력 이벤트를 받을 수 있도록
-	 * GAS Generic Replicated Event를 발생시킵니다.
+	 * GAS Generic Replicated Event를 발생시킴.
 	 */
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
 	const UGameplayAbility* AbilityInstance = Spec.GetPrimaryInstance();
@@ -209,4 +209,14 @@ void UDCAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& S
 	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 	InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, PredictionKey);
+}
+
+void UDCAbilitySystemComponent::ClearAimState()
+{
+	FGameplayTagContainer AimStateTags;
+	AimStateTags.AddTag(DCGameplayTags::State_Aim_Shoulder);
+	AimStateTags.AddTag(DCGameplayTags::State_Aim_Scope);
+
+	// 지정한 태그 중 하나라도 부여하는 활성 GameplayEffect를 제거.
+	RemoveActiveEffectsWithGrantedTags(AimStateTags);
 }

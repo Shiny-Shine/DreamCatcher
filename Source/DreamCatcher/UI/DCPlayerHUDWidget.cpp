@@ -17,6 +17,10 @@ void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 		return;
 	}
 
+	NewCharacter->OnGASAimModeChanged.AddDynamic(this, &ThisClass::HandleAimModeChanged);
+
+	HandleAimModeChanged(NewCharacter->GetGASAimMode());
+
 	BoundHealthComponent = NewCharacter->GetHealthComponent();
 	BoundCombatComponent = NewCharacter->GetCombatComponent();
 
@@ -29,11 +33,13 @@ void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 	if (BoundCombatComponent)
 	{
 		// 궁극기 게이지가 변경됐을 때 HUD가 알림을 받도록 등록.
-		BoundCombatComponent->OnUltimateChargeChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
+		BoundCombatComponent->OnUltimateChargeChanged.
+		                      AddDynamic(this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
 		// 조준 모드가 변경됐을 때 HUD가 알림을 받도록 등록.
 		BoundCombatComponent->OnAimModeChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleAimModeChanged);
 		// HUD 퍼짐값 전달
-		BoundCombatComponent->OnCrosshairSpreadChanged.AddDynamic(this,&UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
+		BoundCombatComponent->OnCrosshairSpreadChanged.AddDynamic(
+			this, &UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
 		// 매 발사 순간 HUD가 알림을 받음.
 		BoundCombatComponent->OnShotFired.AddDynamic(this, &UDCPlayerHUDWidget::HandleShotFired);
 
@@ -42,7 +48,8 @@ void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 		// HUD가 생성된 직후에도 현재 궁극기 게이지를 표시.
 		HandleUltimateChargeChanged(BoundCombatComponent->GetUltimateChargeNormalized());
 
-		HandleCrosshairSpreadChanged(BoundCombatComponent->GetCrosshairSpreadNormalized(), BoundCombatComponent->GetCurrentSpreadDegrees());
+		HandleCrosshairSpreadChanged(BoundCombatComponent->GetCrosshairSpreadNormalized(),
+		                             BoundCombatComponent->GetCurrentSpreadDegrees());
 	}
 }
 
@@ -63,15 +70,22 @@ void UDCPlayerHUDWidget::UnbindFromCurrentCharacter()
 	if (BoundCombatComponent)
 	{
 		// 궁극기 게이지 변경 알림 등록 해제.
-		BoundCombatComponent->OnUltimateChargeChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
+		BoundCombatComponent->OnUltimateChargeChanged.RemoveDynamic(
+			this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
 		// 조준 모드 변경 알림 등록 해제.
 		BoundCombatComponent->OnAimModeChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleAimModeChanged);
-		
-		BoundCombatComponent->OnCrosshairSpreadChanged.RemoveDynamic(this,&UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
-		
-		BoundCombatComponent->OnShotFired.RemoveDynamic(this,&UDCPlayerHUDWidget::HandleShotFired);
+
+		BoundCombatComponent->OnCrosshairSpreadChanged.RemoveDynamic(
+			this, &UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
+
+		BoundCombatComponent->OnShotFired.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleShotFired);
 
 		BoundCombatComponent = nullptr;
+	}
+
+	if (ObservedCharacter.IsValid())
+	{
+		ObservedCharacter->OnGASAimModeChanged.RemoveDynamic(this, &ThisClass::HandleAimModeChanged);
 	}
 
 	ObservedCharacter = nullptr;

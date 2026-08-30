@@ -55,4 +55,12 @@ namespace DCGameplayTags
 	// Cooldown
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_Dodge, "Cooldown.Dodge", "Dodge cooldown.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Cooldown_Ultimate, "Cooldown.Ultimate", "Ultimate cooldown.");
+
+	// Camera
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Camera_Type_Hip, "Camera.Type.Hip", "Default third-person hip camera.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Camera_Type_Shoulder, "Camera.Type.Shoulder",
+	                               "Third-person shoulder aiming camera.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Camera_Type_Scope, "Camera.Type.Scope", "Scoped aiming camera.");
 }
