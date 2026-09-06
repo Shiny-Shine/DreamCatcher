@@ -8,6 +8,7 @@ class APawn;
 class UDCAbilitySet;
 class UDCInputConfig;
 class UDCCameraMode;
+class UDCEquipmentDefinition;
 
 /**
  * Pawn 하나를 구성하는 데이터 묶음.
@@ -49,4 +50,9 @@ public:
 	// Scope 조준 상태에서 사용할 CameraMode.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Camera")
 	TSubclassOf<UDCCameraMode> ScopeCameraMode;
+	
+	// ASC 준비가 끝나면 자동으로 장착할 기본 무기. None이면 자동 장착 X.
+	// Inventory와 QuickBar를 구현하기 전까지 사용하는 초기 장비 설정.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Equipment")
+	TSubclassOf<UDCEquipmentDefinition> DefaultWeaponDefinition;
 };

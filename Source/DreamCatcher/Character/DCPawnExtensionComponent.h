@@ -63,6 +63,19 @@ public:
 	// ASC 연결이 해제될 때 호출되는 이벤트에 등록.
 	void OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate Delegate);
 
+	// ASC의 Avatar와 Pawn AbilitySet을 제거하기 전에 호출되는 이벤트.
+	// 장비처럼 ASC 연결이 살아 있을 때 정리해야 하는 시스템이 구독.
+	void OnAbilitySystemUninitializing_Register(FSimpleMulticastDelegate::FDelegate Delegate);
+
+	// 구독자가 종료될 때 자신이 등록한 ASC 관련 이벤트를 해제.
+	void UnregisterAbilitySystemDelegates(UObject* Listener);
+
+	// 연결 해제 처리 중에는 새 장비 장착 등의 요청을 막음.
+	bool IsAbilitySystemUninitializing() const
+	{
+		return bUninitializingAbilitySystem;
+	}
+
 protected:
 	virtual void OnRegister() override;
 
@@ -93,4 +106,8 @@ private:
 
 	FSimpleMulticastDelegate OnAbilitySystemInitialized;
 	FSimpleMulticastDelegate OnAbilitySystemUninitialized;
+	FSimpleMulticastDelegate OnAbilitySystemUninitializing;
+
+	// Ability 취소나 Blueprint 콜백에서 연결 해제가 중복 호출되는 것을 방지.
+	bool bUninitializingAbilitySystem = false;
 };

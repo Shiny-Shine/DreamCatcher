@@ -46,6 +46,13 @@ void FDCAbilitySet_GrantedHandles::TakeFromAbilitySystem(UDCAbilitySystemCompone
 	{
 		if (Handle.IsValid())
 		{
+			// 장착 해제 후 이전 무기의 입력 기록이 남지 않도록 함.
+			AbilitySystemComponent->ClearAbilityInputForHandle(Handle);
+
+			// 실행 중인 사격, 재장전 등의 작업을 먼저 취소.
+			AbilitySystemComponent->CancelAbilityHandle(Handle);
+
+			// 이후 Ability 자체를 ASC에서 제거.
 			AbilitySystemComponent->ClearAbility(Handle);
 		}
 	}
@@ -88,7 +95,7 @@ void UDCAbilitySet::GiveToAbilitySystem(
 	{
 		return;
 	}
-	
+
 	// AttributeSet을 먼저 생성.
 	// Ability나 Effect가 활성화될 때 Attribute가 이미 존재하도록Ability보다 먼저 처리.
 	for (int32 Index = 0; Index < GrantedAttributes.Num(); ++Index)
@@ -97,11 +104,13 @@ void UDCAbilitySet::GiveToAbilitySystem(
 
 		if (!AttributeToGrant.AttributeSet)
 		{
-			UE_LOG(LogTemp, Error, TEXT("AbilitySet [%s]: GrantedAttributes[%d] is invalid."), *GetNameSafe(this), Index);
+			UE_LOG(LogTemp, Error, TEXT("AbilitySet [%s]: GrantedAttributes[%d] is invalid."), *GetNameSafe(this),
+			       Index);
 			continue;
 		}
 
-		UAttributeSet* NewAttributeSet =NewObject<UAttributeSet>(AbilitySystemComponent->GetOwner(), AttributeToGrant.AttributeSet);
+		UAttributeSet* NewAttributeSet = NewObject<UAttributeSet>(AbilitySystemComponent->GetOwner(),
+		                                                          AttributeToGrant.AttributeSet);
 
 		AbilitySystemComponent->AddAttributeSetSubobject(NewAttributeSet);
 
@@ -118,7 +127,8 @@ void UDCAbilitySet::GiveToAbilitySystem(
 
 		if (!AbilityToGrant.Ability)
 		{
-			UE_LOG(LogTemp, Error, TEXT("AbilitySet [%s]: GrantedGameplayAbilities[%d] is invalid."), *GetNameSafe(this), Index);
+			UE_LOG(LogTemp, Error, TEXT("AbilitySet [%s]: GrantedGameplayAbilities[%d] is invalid."),
+			       *GetNameSafe(this), Index);
 			continue;
 		}
 
@@ -128,7 +138,7 @@ void UDCAbilitySet::GiveToAbilitySystem(
 
 		// 어떤 장비나 시스템이 Ability를 부여했는지 기록.
 		AbilitySpec.SourceObject = SourceObject;
-		
+
 		// Ability Spec에 InputTag를 넣음.
 		// 이후 ASC가 입력 태그와 동일한 Ability를 찾아활성화할 때 사용. 
 		if (AbilityToGrant.InputTag.IsValid())
@@ -151,7 +161,8 @@ void UDCAbilitySet::GiveToAbilitySystem(
 
 		if (!EffectToGrant.GameplayEffect)
 		{
-			UE_LOG(LogTemp, Error, TEXT("AbilitySet [%s]: GrantedGameplayEffects[%d] is invalid."), *GetNameSafe(this), Index);
+			UE_LOG(LogTemp, Error, TEXT("AbilitySet [%s]: GrantedGameplayEffects[%d] is invalid."), *GetNameSafe(this),
+			       Index);
 			continue;
 		}
 

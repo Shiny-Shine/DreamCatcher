@@ -30,18 +30,10 @@ public:
 	void BindNativeAction(const UDCInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent,
 	                      UserClass* Object, FuncType Func, bool bLogIfNotFound = true);
 
-	/**
-	 * AbilityInputActions 배열 전체를 입력 태그 전달 함수에 연결.
-	 *
-	 * Started:
-	 *   Input_AbilityInputTagPressed(InputTag)
-	 *
-	 * Completed 또는 Canceled:
-	 *   Input_AbilityInputTagReleased(InputTag)
-	 */
-	template <class UserClass, typename PressedFuncType, typename ReleasedFuncType>
+	// 정상 해제와 입력 취소를 서로 다른 함수에 연결합니다.
+	template <class UserClass, typename PressedFuncType, typename ReleasedFuncType, typename CanceledFuncType>
 	void BindAbilityActions(const UDCInputConfig* InputConfig, UserClass* Object, PressedFuncType PressedFunc,
-	                        ReleasedFuncType ReleasedFunc, TArray<uint32>& BindHandles);
+	                        ReleasedFuncType ReleasedFunc, CanceledFuncType CanceledFunc, TArray<uint32>& BindHandles);
 
 	// BindHandles에 기록된 입력 바인딩을 모두 제거.
 	void RemoveBinds(TArray<uint32>& BindHandles);
@@ -67,10 +59,10 @@ void UDCInputComponent::BindNativeAction(const UDCInputConfig* InputConfig, cons
 	}
 }
 
-template <class UserClass, typename PressedFuncType, typename ReleasedFuncType>
+template <class UserClass, typename PressedFuncType, typename ReleasedFuncType, typename CanceledFuncType>
 void UDCInputComponent::BindAbilityActions(const UDCInputConfig* InputConfig, UserClass* Object,
                                            PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc,
-                                           TArray<uint32>& BindHandles)
+                                           CanceledFuncType CanceledFunc, TArray<uint32>& BindHandles)
 {
 	check(InputConfig);
 	check(Object);
@@ -82,25 +74,25 @@ void UDCInputComponent::BindAbilityActions(const UDCInputConfig* InputConfig, Us
 			continue;
 		}
 
+		// 버튼을 누른 순간.
 		if (PressedFunc)
 		{
-			const FEnhancedInputActionEventBinding& PressedBinding = BindAction(
-				Action.InputAction, ETriggerEvent::Started, Object, PressedFunc, Action.InputTag);
-
-			BindHandles.Add(PressedBinding.GetHandle());
+			BindHandles.Add(BindAction(Action.InputAction,
+			                           ETriggerEvent::Started, Object, PressedFunc, Action.InputTag).GetHandle());
 		}
 
+		// 정상적으로 입력을 끝낸 경우.
 		if (ReleasedFunc)
 		{
-			const FEnhancedInputActionEventBinding& CompletedBinding = BindAction(
-				Action.InputAction, ETriggerEvent::Completed, Object, ReleasedFunc, Action.InputTag);
+			BindHandles.Add(BindAction(Action.InputAction, ETriggerEvent::Completed, Object, ReleasedFunc,
+			                           Action.InputTag).GetHandle());
+		}
 
-			BindHandles.Add(CompletedBinding.GetHandle());
-
-			const FEnhancedInputActionEventBinding& CanceledBinding = BindAction(
-				Action.InputAction, ETriggerEvent::Canceled, Object, ReleasedFunc, Action.InputTag);
-
-			BindHandles.Add(CanceledBinding.GetHandle());
+		// 입력 처리가 취소된 경우. Aim에서는 이 이벤트로 Scope를 켜면 X.
+		if (CanceledFunc)
+		{
+			BindHandles.Add(BindAction(Action.InputAction, ETriggerEvent::Canceled, Object, CanceledFunc,
+			                           Action.InputTag).GetHandle());
 		}
 	}
 }

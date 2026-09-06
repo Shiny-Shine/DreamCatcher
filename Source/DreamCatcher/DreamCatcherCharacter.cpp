@@ -446,6 +446,7 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		// Jump, Aim, Dodge, Ultimate, Fire는 InputTag를 ASC에 전달.
 		DCInputComponent->BindAbilityActions(InputConfig, this, &ADreamCatcherCharacter::Input_AbilityInputTagPressed,
 		                                     &ADreamCatcherCharacter::Input_AbilityInputTagReleased,
+		                                     &ADreamCatcherCharacter::Input_AbilityInputTagCanceled,
 		                                     AbilityInputBindHandles);
 
 		UE_LOG(LogDreamCatcher, Log, TEXT("Character [%s] bound GAS input ""using InputConfig [%s]."),
@@ -572,6 +573,19 @@ void ADreamCatcherCharacter::Input_AbilityInputTagReleased(FGameplayTag InputTag
 	}
 
 	AbilitySystemComponent->AbilityInputTagReleased(InputTag);
+}
+
+void ADreamCatcherCharacter::Input_AbilityInputTagCanceled(FGameplayTag InputTag)
+{
+	if (InputTag == DCGameplayTags::InputTag_Aim)
+	{
+		// 취소된 우클릭은 짧은 클릭으로 취급 X.
+		CancelAimInputAndState();
+		return;
+	}
+
+	// 다른 입력은 현재 단계의 해제 동작을 유지.
+	Input_AbilityInputTagReleased(InputTag);
 }
 
 void ADreamCatcherCharacter::Move(const FInputActionValue& Value)
@@ -975,7 +989,7 @@ void ADreamCatcherCharacter::CancelAimInputAndState()
 	// Scope Ability는 짧은 클릭 후 끝났지만 Infinite Scope GameplayEffect는 남아 있어 명시적으로 제거해야 함.
 	if (UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent())
 	{
-		AbilitySystemComponent->ClearAimState();
+		AbilitySystemComponent->CancelAimInputAndState();
 	}
 }
 

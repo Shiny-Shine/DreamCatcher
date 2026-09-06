@@ -60,6 +60,12 @@ void UDCGameplayAbility_Aim::ActivateAbility(
 	WaitInputReleaseTask->OnRelease.AddDynamic(this, &ThisClass::HandleInputReleased);
 
 	WaitInputReleaseTask->ReadyForActivation();
+	
+	// 이미 입력이 해제된 상태라면 Task 활성화 중에 HandleInputReleased가 즉시 실행되어 Ability가 끝날 수 있음.
+	if (!IsActive())
+	{
+		return;
+	}
 
 	if (ShoulderHoldThreshold <= 0.0f)
 	{

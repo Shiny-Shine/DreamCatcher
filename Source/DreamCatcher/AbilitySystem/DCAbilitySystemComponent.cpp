@@ -64,18 +64,16 @@ void UDCAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGameP
 
 	if (HasMatchingGameplayTag(DCGameplayTags::Gameplay_AbilityInputBlocked))
 	{
+		// 입력이 차단되면 조준 대기 작업과 Scope 유지 상태도 종료.
+		CancelAimInputAndState();
 		ClearAbilityInput();
 		return;
 	}
 
 	TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
 
-	/*
-	 * WhileInputActive Ability 처리.
-	 *
-	 * 입력을 누르고 있으며 Ability가 비활성 상태라면
-	 * 매 프레임 활성화를 다시 시도합니다.
-	 */
+	// WhileInputActive Ability 처리.
+	// 입력을 누르고 있으며 Ability가 비활성 상태라면 매 프레임 활성화를 다시 시도.
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputHeldSpecHandles)
 	{
 		const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle);
@@ -93,9 +91,7 @@ void UDCAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGameP
 		}
 	}
 
-	/*
-	 * 이번 프레임에 새로 누른 입력을 처리.
-	 */
+	// 이번 프레임에 새로 누른 입력을 처리.
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
 	{
 		FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle);
@@ -122,10 +118,7 @@ void UDCAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGameP
 		}
 	}
 
-	/*
-	 * Held와 Pressed 양쪽에서 같은 Ability가 발견될 수 있으므로
-	 * AddUnique로 모은 뒤 한 번씩만 활성화를 시도.
-	 */
+	// Held와 Pressed 양쪽에서 같은 Ability가 발견될 수 있으므로 AddUnique로 모은 뒤 한 번씩만 활성화를 시도.
 	for (const FGameplayAbilitySpecHandle& SpecHandle : AbilitiesToActivate)
 	{
 		TryActivateAbility(SpecHandle);
@@ -196,10 +189,7 @@ void UDCAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& S
 		return;
 	}
 
-	/*
-	 * WaitInputRelease가 사용하는 Release 이벤트를 발생시킴.
-	 * 이후 GA_DC_Aim의 짧은 클릭/Hold 구분에 필요.
-	 */
+	// WaitInputRelease가 사용하는 Release 이벤트를 발생시킴. 이후 GA_DC_Aim의 짧은 클릭/Hold 구분에 필요.
 	PRAGMA_DISABLE_DEPRECATION_WARNINGS
 	const UGameplayAbility* AbilityInstance = Spec.GetPrimaryInstance();
 
@@ -219,4 +209,50 @@ void UDCAbilitySystemComponent::ClearAimState()
 
 	// 지정한 태그 중 하나라도 부여하는 활성 GameplayEffect를 제거.
 	RemoveActiveEffectsWithGrantedTags(AimStateTags);
+}
+
+void UDCAbilitySystemComponent::CancelAimInputAndState()
+{
+	TArray<FGameplayAbilitySpecHandle> AimHandles;
+
+	// Ability를 취소하면 실행 상태가 바뀔 수 있으므로 먼저 대상 Handle만 별도 배열에 모음.
+	for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		if (Spec.Ability && Spec.GetDynamicSpecSourceTags().HasTagExact(DCGameplayTags::InputTag_Aim))
+		{
+			AimHandles.Add(Spec.Handle);
+		}
+	}
+
+	for (const FGameplayAbilitySpecHandle& Handle : AimHandles)
+	{
+		// 취소 직후 남은 입력으로 Aim이 다시 시작되지 않게 함.
+		InputPressedSpecHandles.Remove(Handle);
+		InputReleasedSpecHandles.Remove(Handle);
+		InputHeldSpecHandles.Remove(Handle);
+
+		if (FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(Handle))
+		{
+			Spec->InputPressed = false;
+		}
+
+		// WaitDelay와 WaitInputRelease도 Ability 종료와 함께 정리됨.
+		CancelAbilityHandle(Handle);
+	}
+
+	// Scope는 Ability 종료 후에도 Effect가 유지되므로 별도 제거.
+	ClearAimState();
+}
+
+void UDCAbilitySystemComponent::ClearAbilityInputForHandle(const FGameplayAbilitySpecHandle& Handle)
+{
+	InputPressedSpecHandles.Remove(Handle);
+	InputReleasedSpecHandles.Remove(Handle);
+	InputHeldSpecHandles.Remove(Handle);
+
+	if (FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(Handle))
+	{
+		// 입력 해제 이벤트를 발생시키지 않고 기록만 초기화. 실행 중인 Ability의 취소는 호출한 쪽에서 처리.
+		Spec->InputPressed = false;
+	}
 }

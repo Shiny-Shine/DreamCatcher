@@ -4,6 +4,7 @@
 #include "Character/DCPawnData.h"
 #include "DreamCatcher.h"
 #include "GameFramework/Pawn.h"
+#include "Misc/ScopeExit.h"
 
 UDCPawnExtensionComponent::UDCPawnExtensionComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -42,6 +43,15 @@ void UDCPawnExtensionComponent::InitializeAbilitySystem(UDCAbilitySystemComponen
 	check(InAbilitySystemComponent);
 	check(InOwnerActor);
 
+	// 연결 해제 콜백 안에서 다시 초기화하여 ASC 참조가 바뀌는 것을 막음.
+	if (bUninitializingAbilitySystem)
+	{
+		UE_LOG(LogDreamCatcher, Warning, TEXT("PawnExtension [%s]: initialization requested during uninitialization."),
+		       *GetNameSafe(this));
+
+		return;
+	}
+
 	APawn* Pawn = CastChecked<APawn>(GetOwner());
 
 	// 같은 ASC와 Pawn이 이미 연결되어 있다면 AbilitySet을 중복 부여하지 않음.
@@ -73,10 +83,7 @@ void UDCPawnExtensionComponent::InitializeAbilitySystem(UDCAbilitySystemComponen
 
 	AbilitySystemComponent = InAbilitySystemComponent;
 
-	/*
-	 * ASC Owner  = PlayerState
-	 * ASC Avatar = 현재 Character
-	 */
+	// ASC Owner  = PlayerState ASC Avatar = 현재 Character
 	AbilitySystemComponent->InitAbilityActorInfo(InOwnerActor, Pawn);
 
 	// Ability 부여는 Authority에서만 수행.
@@ -120,14 +127,31 @@ void UDCPawnExtensionComponent::InitializeAbilitySystem(UDCAbilitySystemComponen
 
 void UDCPawnExtensionComponent::UninitializeAbilitySystem()
 {
-	if (!AbilitySystemComponent)
+	if (!AbilitySystemComponent || bUninitializingAbilitySystem)
 	{
 		return;
 	}
 
+	bUninitializingAbilitySystem = true;
+
+	// 중간에 함수가 종료되더라도 재진입 방지 상태는 반드시 복구.
+	ON_SCOPE_EXIT
+	{
+		bUninitializingAbilitySystem = false;
+	};
+
+	// 중요: ASC의 Avatar와 Pawn AbilitySet이 살아 있는 동안 장비부터 정리.
+	OnAbilitySystemUninitializing.Broadcast();
+
 	APawn* Pawn = Cast<APawn>(GetOwner());
 
-	// PawnData가 부여했던 Ability, Effect, Attribute만 제거.
+	// PawnData의 Ability를 회수하기 전에 조준 입력과 상태를 정리.
+	if (Pawn && AbilitySystemComponent->GetAvatarActor() == Pawn)
+	{
+		AbilitySystemComponent->CancelAimInputAndState();
+	}
+
+	// 이 PawnData가 부여했던 GAS 항목만 회수.
 	for (FDCAbilitySet_GrantedHandles& GrantedHandles : PawnDataGrantedHandles)
 	{
 		GrantedHandles.TakeFromAbilitySystem(AbilitySystemComponent);
@@ -135,7 +159,7 @@ void UDCPawnExtensionComponent::UninitializeAbilitySystem()
 
 	PawnDataGrantedHandles.Reset();
 
-	// 현재 Pawn이 아직 ASC의 Avatar인 경우에만 Pawn 관련 실행 상태를 정리.
+	// 다른 Pawn이 이미 사용 중인 ASC의 Avatar를 지우지 않도록 확인.
 	if (Pawn && AbilitySystemComponent->GetAvatarActor() == Pawn)
 	{
 		AbilitySystemComponent->CancelAbilities();
@@ -143,7 +167,7 @@ void UDCPawnExtensionComponent::UninitializeAbilitySystem()
 
 		if (AbilitySystemComponent->GetOwnerActor())
 		{
-			// PlayerState Owner 정보는 유지하고 Avatar만 제거.
+			// PlayerState Owner는 유지하고 현재 Pawn Avatar만 제거.
 			AbilitySystemComponent->SetAvatarActor(nullptr);
 		}
 		else
@@ -152,9 +176,10 @@ void UDCPawnExtensionComponent::UninitializeAbilitySystem()
 		}
 	}
 
+	// 기존 HealthComponent 등의 연결 해제 처리는 그대로 유지.
 	OnAbilitySystemUninitialized.Broadcast();
 
-	UE_LOG(LogDreamCatcher, Log, TEXT("PawnExtension [%s] uninitialized ASC [%s] ""from Pawn [%s]."),
+	UE_LOG(LogDreamCatcher, Log, TEXT("PawnExtension [%s] uninitialized ASC [%s] from Pawn [%s]."),
 	       *GetNameSafe(this), *GetNameSafe(AbilitySystemComponent), *GetNameSafe(Pawn));
 
 	AbilitySystemComponent = nullptr;
@@ -167,9 +192,10 @@ void UDCPawnExtensionComponent::OnAbilitySystemInitialized_RegisterAndCall(FSimp
 		OnAbilitySystemInitialized.Add(Delegate);
 	}
 
-	if (AbilitySystemComponent)
+	// 연결 해제 중인 ASC를 준비 완료 상태로 전달 X.
+	if (AbilitySystemComponent && !bUninitializingAbilitySystem)
 	{
-		Delegate.Execute();
+		Delegate.ExecuteIfBound();
 	}
 }
 
@@ -179,4 +205,25 @@ void UDCPawnExtensionComponent::OnAbilitySystemUninitialized_Register(FSimpleMul
 	{
 		OnAbilitySystemUninitialized.Add(Delegate);
 	}
+}
+
+void UDCPawnExtensionComponent::OnAbilitySystemUninitializing_Register(FSimpleMulticastDelegate::FDelegate Delegate)
+{
+	// 동일한 객체가 같은 수명 이벤트에 중복 등록되는 것을 방지.
+	if (!OnAbilitySystemUninitializing.IsBoundToObject(Delegate.GetUObject()))
+	{
+		OnAbilitySystemUninitializing.Add(Delegate);
+	}
+}
+
+void UDCPawnExtensionComponent::UnregisterAbilitySystemDelegates(UObject* Listener)
+{
+	if (!Listener)
+	{
+		return;
+	}
+
+	OnAbilitySystemInitialized.RemoveAll(Listener);
+	OnAbilitySystemUninitializing.RemoveAll(Listener);
+	OnAbilitySystemUninitialized.RemoveAll(Listener);
 }

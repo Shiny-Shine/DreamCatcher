@@ -338,4 +338,7 @@ private:
 	
 	// 이 Character가 현재 새 CameraMode 시스템을 사용하는지 반환.
 	bool IsUsingCameraModeSystem() const;
+	
+	// 정상적인 입력 해제와 구분되는 취소 이벤트.
+	void Input_AbilityInputTagCanceled(FGameplayTag InputTag);
 };

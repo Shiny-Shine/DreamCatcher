@@ -28,10 +28,18 @@ public:
 
 	// Possession 해제나 입력 차단 시 모든 입력 상태를 초기화.
 	void ClearAbilityInput();
-	
+
 	// Scope와 Shoulder 조준 GameplayEffect를 모두 제거하여 Hip으로 돌아감.
 	UFUNCTION(BlueprintCallable, Category = "DreamCatcher|Aim")
 	void ClearAimState();
+
+	// 외부 행동이나 입력 취소로 조준을 완전히 종료.
+	// 대기 중인 Aim Ability, 입력 기록, 남아 있는 조준 Effect를 함께 정리.
+	UFUNCTION(BlueprintCallable, Category = "DreamCatcher|Aim")
+	void CancelAimInputAndState();
+
+	// 장비 해제 등으로 Ability를 제거하기 전에 해당 Ability의 입력 기록만 정리.
+	void ClearAbilityInputForHandle(const FGameplayAbilitySpecHandle& Handle);
 
 protected:
 	// 활성화된 Ability에 WaitInputPress 이벤트를 전달.

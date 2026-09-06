@@ -5,8 +5,10 @@
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 
-UDCHealthSet::UDCHealthSet() : Health(100.0f), MaxHealth(100.0f), Damage(0.0f), Healing(0.0f), bOutOfHealth(false),
-                               HealthBeforeAttributeChange(0.0f), MaxHealthBeforeAttributeChange(0.0f)
+UDCHealthSet::UDCHealthSet() :
+	bOutOfHealth(false), HealthBeforeAttributeChange(0.0f), MaxHealthBeforeAttributeChange(0.0f),
+	Health(100.0f), MaxHealth(100.0f), Damage(0.0f), Healing(0.0f)
+
 {
 }
 
