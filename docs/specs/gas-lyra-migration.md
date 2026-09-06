@@ -294,7 +294,7 @@ DCRangedWeaponInstance
 - [x] 2단계: PawnData와 Input Tag
 - [x] 3단계: Attribute, Damage, Death
 - [x] 4단계: Aim과 CameraMode
-- [ ] 5단계: Equipment와 WeaponInstance
+- [x] 5단계: Equipment와 WeaponInstance
 - [ ] 6단계: Ranged Fire와 GameplayCue
 - [ ] 7단계: Reticle과 HUD
 - [ ] 8단계: Dodge와 Ultimate
