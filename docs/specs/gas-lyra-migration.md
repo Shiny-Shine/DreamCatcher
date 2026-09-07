@@ -295,7 +295,7 @@ DCRangedWeaponInstance
 - [x] 3단계: Attribute, Damage, Death
 - [x] 4단계: Aim과 CameraMode
 - [x] 5단계: Equipment와 WeaponInstance
-- [ ] 6단계: Ranged Fire와 GameplayCue
+- [x] 6단계: Ranged Fire와 GameplayCue
 - [ ] 7단계: Reticle과 HUD
 - [ ] 8단계: Dodge와 Ultimate
 - [ ] 9단계: Enemy Attack Telegraph
