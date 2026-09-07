@@ -63,4 +63,8 @@ namespace DCGameplayTags
 	                               "Third-person shoulder aiming camera.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Camera_Type_Scope, "Camera.Type.Scope", "Scoped aiming camera.");
+
+	// GameplayCue
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Weapon_Rifle_Fire, "GameplayCue.Weapon.Rifle.Fire",
+	                               "Cosmetic feedback for a committed rifle shot.");
 }
