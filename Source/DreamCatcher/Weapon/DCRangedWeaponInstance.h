@@ -59,6 +59,16 @@ public:
 		return CurrentSpreadAngle;
 	}
 
+	// 현재 무기가 첫발 정확도 상태인지 확인.
+	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Weapon|Spread")
+	bool HasFirstShotAccuracy() const
+	{
+		return IsEquipped() && bHasFirstShotAccuracy;
+	}
+
+	// Heat를 증가시키거나 회복시키지 않고, 현재 상태를 기준으로 첫발 정확도와 최종 퍼짐각만 다시 계산.
+	void RefreshSpreadAngle();
+
 	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Weapon|Spread")
 	float GetCurrentHeat() const
 	{
@@ -119,6 +129,19 @@ protected:
 		meta = (ClampMin = "0.0", Units = "s"))
 	float SpreadRecoveryCooldownDelay = 0.2f;
 
+	// 무기별로 첫발 정확도를 사용할지 설정.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Weapon|First Shot Accuracy")
+	bool bAllowFirstShotAccuracy = false;
+
+	// true: Shoulder 또는 Scope에서만 허용. false: 다른 조건을 만족하면 Hip에서도 허용.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Weapon|First Shot Accuracy")
+	bool bFirstShotAccuracyRequiresAim = false;
+
+	// 이 속도 이하를 거의 정지한 상태로 판단. DreamCatcher용 초기값이며, Lyra에서 그대로 가져온 수치는 아님.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Weapon|First Shot Accuracy",
+		meta = (ClampMin = "0.0", Units = "cm/s"))
+	float FirstShotAccuracyMaxSpeed = 5.0f;
+
 	// 최대 이동 속도일 때의 배율. 정지 시에는 1배.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Weapon|Multipliers",
 		meta = (ClampMin = "0.0"))
@@ -149,9 +172,6 @@ private:
 	// 현재 이동·공중·조준 상태로 목표 배율을 계산.
 	float CalculateTargetSpreadMultiplier() const;
 
-	// Heat와 현재 배율에서 최종 퍼짐각을 다시 계산.
-	void RefreshSpreadAngle();
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DreamCatcher|Weapon|Runtime",
 		meta = (AllowPrivateAccess = "true"))
 	float CurrentHeat = 0.0f;
@@ -163,4 +183,11 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DreamCatcher|Weapon|Runtime",
 		meta = (AllowPrivateAccess = "true"))
 	float CurrentSpreadAngle = 0.0f;
+
+	// 상태 배율 적용 전 퍼짐각을 받아 첫발 정확도 조건을 검사.
+	bool CanUseFirstShotAccuracy(float BaseSpreadAngle) const;
+
+	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = "DreamCatcher|Weapon|Runtime",
+		meta = (AllowPrivateAccess = "true"))
+	bool bHasFirstShotAccuracy = false;
 };

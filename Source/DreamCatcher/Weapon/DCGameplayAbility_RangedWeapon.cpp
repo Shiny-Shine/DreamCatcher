@@ -186,8 +186,10 @@ void UDCGameplayAbility_RangedWeapon::ActivateAbility(
 	const float MaxRange = WeaponInstance->GetMaxDamageRange();
 	const float FireInterval = WeaponInstance->GetFireInterval();
 
-	// 이번 탄이 사용할 값을 먼저 고정.
-	// 이 값에는 이동·공중·조준 배율이 이미 포함되어 있음.
+	// 입력이나 이동 상태가 이번 프레임에 바뀌었을 수 있으므로 첫발 정확도와 최종 퍼짐을 발사 직전에 다시 판단.
+	WeaponInstance->RefreshSpreadAngle();
+
+	// 이번 탄에 사용할 값은 발사 전 상태로 고정. 첫발 정확도가 활성화되어 있으면 0도가 반환됨.
 	const float ShotSpreadDegrees = WeaponInstance->GetCurrentSpreadAngle();
 
 	const float HalfSpreadRadians = FMath::DegreesToRadians(ShotSpreadDegrees * 0.5f);

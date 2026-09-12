@@ -44,6 +44,11 @@ public class DreamCatcher : ModuleRules
 			"DreamCatcher/Variant_SideScrolling/Interfaces",
 			"DreamCatcher/Variant_SideScrolling/UI"
 		});
+		
+		PublicDependencyModuleNames.Add("PhysicsCore");
+		PrivateDependencyModuleNames.Add("NetCore");
+
+		SetupIrisSupport(Target);
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

@@ -39,6 +39,8 @@ void UDCRangedWeaponInstance::OnEquipped()
 
 	// 모든 초기값이 준비된 뒤 Blueprint 장착 이벤트를 실행.
 	Super::OnEquipped();
+	// Super 호출 후 실제 장착 상태가 되었으므로 정확도 조건도 갱신.
+	RefreshSpreadAngle();
 }
 
 void UDCRangedWeaponInstance::TickEquipment(float DeltaSeconds)
@@ -150,13 +152,115 @@ float UDCRangedWeaponInstance::CalculateTargetSpreadMultiplier() const
 	return FMath::Max(MovementMultiplier * AirMultiplier * AimMultiplier, 0.0f);
 }
 
+bool UDCRangedWeaponInstance::CanUseFirstShotAccuracy(float BaseSpreadAngle) const
+{
+	if (!bAllowFirstShotAccuracy || !IsEquipped())
+	{
+		return false;
+	}
+
+	const ACharacter* Character = Cast<ACharacter>(GetPawn());
+	const UWorld* World = GetWorld();
+
+	if (!IsValid(Character) || !World)
+	{
+		return false;
+	}
+
+	const UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+
+	// 지상 이동 상태에서만 허용. 점프 입력을 새로 구현하는 것이 아니라 낙하 등의 상태를 검사.
+	if (!Movement || !Movement->IsMovingOnGround())
+	{
+		return false;
+	}
+
+	const float MaxAllowedSpeed = FMath::Max(FirstShotAccuracyMaxSpeed, 0.0f);
+
+	if (Character->GetVelocity().Size2D() > MaxAllowedSpeed)
+	{
+		return false;
+	}
+
+	const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
+
+	if (!IsValid(ASC))
+	{
+		return false;
+	}
+
+	if (ASC->HasMatchingGameplayTag(DCGameplayTags::State_Dead) || ASC->HasMatchingGameplayTag(
+		DCGameplayTags::State_Dodging))
+	{
+		return false;
+	}
+
+	const bool bScope = ASC->HasMatchingGameplayTag(DCGameplayTags::State_Aim_Scope);
+
+	const bool bShoulder = ASC->HasMatchingGameplayTag(DCGameplayTags::State_Aim_Shoulder);
+
+	if (bFirstShotAccuracyRequiresAim && !bScope && !bShoulder)
+	{
+		return false;
+	}
+
+	// 발사 직후 바로 다시 정확도가 활성화되지 않도록, 기존 퍼짐 회복 지연이 끝났는지도 확인.
+	if (LastFireTime >= 0.0)
+	{
+		const double TimeSinceFired = World->GetTimeSeconds() - LastFireTime;
+
+		if (TimeSinceFired <= FMath::Max(SpreadRecoveryCooldownDelay, 0.0f))
+		{
+			return false;
+		}
+	}
+
+	const FRichCurve* SpreadCurve = HeatToSpreadCurve.GetRichCurveConst();
+
+	if (!SpreadCurve || !SpreadCurve->HasAnyData())
+	{
+		return false;
+	}
+
+	float MinCurveSpread = 0.0f;
+	float MaxCurveSpread = 0.0f;
+	SpreadCurve->GetValueRange(MinCurveSpread, MaxCurveSpread);
+
+	// 현재 기본 퍼짐이 곡선의 최소 퍼짐까지 회복되었는지 검사.
+	if (!FMath::IsNearlyEqual(BaseSpreadAngle, FMath::Max(MinCurveSpread, 0.0f),KINDA_SMALL_NUMBER))
+	{
+		return false;
+	}
+
+	// 현재 조준 모드에서 정지했을 때의 목표 배율.
+	float StationaryAimMultiplier = 1.0f;
+
+	if (bScope)
+	{
+		StationaryAimMultiplier = ScopeSpreadMultiplier;
+	}
+	else if (bShoulder)
+	{
+		StationaryAimMultiplier = ShoulderSpreadMultiplier;
+	}
+
+	StationaryAimMultiplier = FMath::Max(StationaryAimMultiplier, 0.0f);
+
+	// 이동/조준 전환 중 남아 있는 배율이 충분히 안정됐는지 검사.
+	constexpr float MultiplierTolerance = 0.01f;
+
+	return FMath::IsNearlyEqual(CurrentSpreadMultiplier, StationaryAimMultiplier, MultiplierTolerance);
+}
+
 void UDCRangedWeaponInstance::RefreshSpreadAngle()
 {
 	const float BaseSpreadAngle = FMath::Max(HeatToSpreadCurve.GetRichCurveConst()->Eval(CurrentHeat, 2.0f), 0.0f);
 
-	// 최종 퍼짐각을 한곳에서 계산.
-	// 반각이 90도에 도달하지 않도록 전체 각도를 제한.
-	CurrentSpreadAngle = FMath::Clamp(BaseSpreadAngle * CurrentSpreadMultiplier, 0.0f, 179.0f);
+	bHasFirstShotAccuracy = CanUseFirstShotAccuracy(BaseSpreadAngle);
+
+	const float EffectiveMultiplier = bHasFirstShotAccuracy ? 0.0f : CurrentSpreadMultiplier;
+
+	CurrentSpreadAngle = FMath::Clamp(BaseSpreadAngle * EffectiveMultiplier, 0.0f, 179.0f);
 }
 
 float UDCRangedWeaponInstance::GetDistanceDamageMultiplier(float DistanceCm) const

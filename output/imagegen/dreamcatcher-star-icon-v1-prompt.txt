@@ -1,0 +1,12 @@
+Generation mode: Built-in image_gen
+Asset: dreamcatcher-star-icon-v1.png
+Assumption: General-purpose DreamCatcher UI emblem, without a specific gameplay meaning.
+
+Use case: logo-brand
+Asset type: One small game UI emblem PNG for the Unreal Engine project DreamCatcher, a bright youthful near-future anime-style third-person shooter.
+Primary request: Create a single compact original dream-star icon, suitable for display at 32–64 pixels. One bold four-point star captured inside an open circular ring, subtly suggesting a dreamcatcher without literal feathers or webbing. Integrate the ring and star into one balanced distinctive symbol with generous negative space and thick clean shapes.
+Style: Polished flat graphic game UI art, precise silhouette, gently softened geometric corners, minimal visual detail.
+Palette: Fresh sky cyan and periwinkle purple, with a small clean white highlight; restrained dark indigo edge only if needed for contrast. Solid colors, no elaborate shading.
+Composition: Square 1:1 canvas, centered isolated symbol, approximately 80 percent of canvas, even clear margins.
+Background: Genuinely transparent alpha background, including empty space within the ring. Output a transparent PNG.
+Constraints: Exactly one icon, no text, no letters, no wordmark, no icon sheet, no scene, no rounded-square app tile, no checkerboard baked into pixels, no drop shadow, no glow, no 3D, no mockup, no watermark. Keep the silhouette clear at small sizes.
