@@ -1,60 +1,119 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
+#include "Abilities/DCGameplayAbility.h"
 #include "AbilitySystemComponent.h"
+#include "NativeGameplayTags.h"
+
 #include "DCAbilitySystemComponent.generated.h"
 
+#define UE_API DREAMCATCHER_API
+
+class AActor;
+class UGameplayAbility;
+class UDCAbilityTagRelationshipMapping;
+class UObject;
+struct FFrame;
+struct FGameplayAbilityTargetDataHandle;
+
+DREAMCATCHER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Gameplay_AbilityInputBlocked);
+
 /**
- * DreamCatcher의 공통 Ability System Component.
+ * UDCAbilitySystemComponent
  *
- * PlayerState가 소유하거나 적/보스 Character가 직접 소유할 수 있음.
- * 입력 태그를 Ability Spec Handle로 변환하고 매 프레임 처리.
+ *	Base ability system component class used by this project.
  */
-UCLASS()
-class DREAMCATCHER_API UDCAbilitySystemComponent : public UAbilitySystemComponent
+UCLASS(MinimalAPI)
+class UDCAbilitySystemComponent : public UAbilitySystemComponent
 {
 	GENERATED_BODY()
 
 public:
-	UDCAbilitySystemComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	// InputTag와 연결된 Ability를 Pressed/Held 상태로 기록.
-	void AbilityInputTagPressed(const FGameplayTag& InputTag);
+	UE_API UDCAbilitySystemComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	// InputTag와 연결된 Ability를 Released 상태로 기록.
-	void AbilityInputTagReleased(const FGameplayTag& InputTag);
+	//~UActorComponent interface
+	UE_API virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	//~End of UActorComponent interface
 
-	// 기록된 입력 상태를 이용해 Ability를 활성화하거나 입력 이벤트를 전달.
-	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
+	UE_API virtual void InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor) override;
 
-	// Possession 해제나 입력 차단 시 모든 입력 상태를 초기화.
-	void ClearAbilityInput();
+	typedef TFunctionRef<bool(const UDCGameplayAbility* DCAbility, FGameplayAbilitySpecHandle Handle)> TShouldCancelAbilityFunc;
+	UE_API void CancelAbilitiesByFunc(TShouldCancelAbilityFunc ShouldCancelFunc, bool bReplicateCancelAbility);
 
-	// Scope와 Shoulder 조준 GameplayEffect를 모두 제거하여 Hip으로 돌아감.
+	UE_API void CancelInputActivatedAbilities(bool bReplicateCancelAbility);
+
+	UE_API void AbilityInputTagPressed(const FGameplayTag& InputTag);
+	UE_API void AbilityInputTagReleased(const FGameplayTag& InputTag);
+
+	UE_API void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
+	UE_API void ClearAbilityInput();
+
+	UE_API bool IsActivationGroupBlocked(EDCAbilityActivationGroup Group) const;
+	UE_API void AddAbilityToActivationGroup(EDCAbilityActivationGroup Group, UDCGameplayAbility* DCAbility);
+	UE_API void RemoveAbilityFromActivationGroup(EDCAbilityActivationGroup Group, UDCGameplayAbility* DCAbility);
+	UE_API void CancelActivationGroupAbilities(EDCAbilityActivationGroup Group, UDCGameplayAbility* IgnoreDCAbility, bool bReplicateCancelAbility);
+
+	// Uses a gameplay effect to add the specified dynamic granted tag.
+	UE_API void AddDynamicTagGameplayEffect(const FGameplayTag& Tag);
+
+	// Removes all active instances of the gameplay effect that was used to add the specified dynamic granted tag.
+	UE_API void RemoveDynamicTagGameplayEffect(const FGameplayTag& Tag);
+
+	/** Gets the ability target data associated with the given ability handle and activation info */
+	UE_API void GetAbilityTargetData(const FGameplayAbilitySpecHandle AbilityHandle, FGameplayAbilityActivationInfo ActivationInfo, FGameplayAbilityTargetDataHandle& OutTargetDataHandle);
+
+	/** Sets the current tag relationship mapping, if null it will clear it out */
+	UE_API void SetTagRelationshipMapping(UDCAbilityTagRelationshipMapping* NewMapping);
+	
+	/** Looks at ability tags and gathers additional required and blocking tags */
+	UE_API void GetAdditionalActivationTagRequirements(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer& OutActivationRequired, FGameplayTagContainer& OutActivationBlocked) const;
+
+	UE_API void TryActivateAbilitiesOnSpawn();
+	
+	// 과도기: 기존 조준·입력 호출부를 위한 호환 API.
 	UFUNCTION(BlueprintCallable, Category = "DreamCatcher|Aim")
 	void ClearAimState();
 
-	// 외부 행동이나 입력 취소로 조준을 완전히 종료.
-	// 대기 중인 Aim Ability, 입력 기록, 남아 있는 조준 Effect를 함께 정리.
 	UFUNCTION(BlueprintCallable, Category = "DreamCatcher|Aim")
 	void CancelAimInputAndState();
 
-	// 장비 해제 등으로 Ability를 제거하기 전에 해당 Ability의 입력 기록만 정리.
 	void ClearAbilityInputForHandle(const FGameplayAbilitySpecHandle& Handle);
 
 protected:
-	// 활성화된 Ability에 WaitInputPress 이벤트를 전달.
-	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
 
-	// 활성화된 Ability에 WaitInputRelease 이벤트를 전달.
-	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
+	UE_API virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
+	UE_API virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
 
-private:
-	// 이번 프레임에 누른 Ability.
+	UE_API virtual void NotifyAbilityActivated(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability) override;
+	UE_API virtual void NotifyAbilityFailed(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason) override;
+	UE_API virtual void NotifyAbilityEnded(FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability, bool bWasCancelled) override;
+	UE_API virtual void ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags) override;
+	UE_API virtual void HandleChangeAbilityCanBeCanceled(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bCanBeCanceled) override;
+
+	/** Notify client that an ability failed to activate */
+	UFUNCTION(Client, Unreliable)
+	UE_API void ClientNotifyAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason);
+
+	UE_API void HandleAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason);
+protected:
+
+	// If set, this table is used to look up tag relationships for activate and cancel
+	UPROPERTY()
+	TObjectPtr<UDCAbilityTagRelationshipMapping> TagRelationshipMapping;
+
+	// Handles to abilities that had their input pressed this frame.
 	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
 
-	// 이번 프레임에 해제한 Ability.
+	// Handles to abilities that had their input released this frame.
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 
-	// 현재 계속 누르고 있는 Ability.
+	// Handles to abilities that have their input held.
 	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
+
+	// Number of abilities running in each activation group.
+	int32 ActivationGroupCounts[(uint8)EDCAbilityActivationGroup::MAX];
 };
+
+#undef UE_API

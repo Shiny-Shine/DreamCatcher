@@ -5,6 +5,9 @@
 #include "AbilitySystem/Attributes/DCHealthSet.h"
 #include "AbilitySystem/Attributes/DCCombatSet.h"
 #include "AbilitySystem/Attributes/DCResourceSet.h"
+#include "DCLogChannels.h"
+#include "Net/UnrealNetwork.h"
+#include "Net/Core/PushModel/PushModel.h"
 
 ADCPlayerState::ADCPlayerState(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -27,6 +30,7 @@ ADCPlayerState::ADCPlayerState(const FObjectInitializer& ObjectInitializer) : Su
 
 	// ASC 상태가 빠르게 갱신될 수 있도록 설정합니다.
 	SetNetUpdateFrequency(100.0f);
+	MyTeamID = FGenericTeamId::NoTeam;
 }
 
 UAbilitySystemComponent* ADCPlayerState::GetAbilitySystemComponent() const
@@ -61,7 +65,7 @@ void ADCPlayerState::PostInitializeComponents()
 		if (AbilitySet)
 		{
 			// PlayerState AbilitySet은 PlayerState와 함께 유지하므로 제거용 Handle은 현재 저장하지 않음. 
-			AbilitySet->GiveToAbilitySystem(AbilitySystemComponent);
+			AbilitySet->GiveToAbilitySystem(AbilitySystemComponent, nullptr);
 		}
 	}
 
@@ -73,4 +77,72 @@ void ADCPlayerState::PostInitializeComponents()
 	       HealthSet->GetMaxHealth(), CombatSet->GetBaseDamage(), ResourceSet->GetUltimateCharge(),
 	       ResourceSet->GetMaxUltimateCharge()
 	);
+}
+
+void ADCPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	FDoRepLifetimeParams SharedParams;
+	SharedParams.bIsPushBased = true;
+
+	DOREPLIFETIME_WITH_PARAMS_FAST(ThisClass, MyTeamID, SharedParams);
+
+	DOREPLIFETIME(ThisClass, StatTags);
+}
+
+void ADCPlayerState::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	if (HasAuthority())
+	{
+		const FGenericTeamId OldTeamID = MyTeamID;
+
+		MARK_PROPERTY_DIRTY_FROM_NAME(ThisClass, MyTeamID, this);
+
+		MyTeamID = NewTeamID;
+
+		ConditionalBroadcastTeamChanged(this, OldTeamID, NewTeamID);
+	}
+	else
+	{
+		UE_LOG(LogDCTeams, Error, TEXT("Cannot set team for %s on non-authority"), *GetPathName(this));
+	}
+}
+
+FGenericTeamId ADCPlayerState::GetGenericTeamId() const
+{
+	return MyTeamID;
+}
+
+FOnDCTeamIndexChangedDelegate*
+ADCPlayerState::GetOnTeamIndexChangedDelegate()
+{
+	return &OnTeamChangedDelegate;
+}
+
+void ADCPlayerState::OnRep_MyTeamID(FGenericTeamId OldTeamID)
+{
+	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
+}
+
+void ADCPlayerState::AddStatTagStack(FGameplayTag Tag, int32 StackCount)
+{
+	StatTags.AddStack(Tag, StackCount);
+}
+
+void ADCPlayerState::RemoveStatTagStack(FGameplayTag Tag, int32 StackCount)
+{
+	StatTags.RemoveStack(Tag, StackCount);
+}
+
+int32 ADCPlayerState::GetStatTagStackCount(
+	FGameplayTag Tag) const
+{
+	return StatTags.GetStackCount(Tag);
+}
+
+bool ADCPlayerState::HasStatTag(
+	FGameplayTag Tag) const
+{
+	return StatTags.ContainsTag(Tag);
 }

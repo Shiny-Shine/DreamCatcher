@@ -1,58 +1,70 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+
 #include "DCPawnData.generated.h"
+
+#define UE_API DREAMCATCHER_API
 
 class APawn;
 class UDCAbilitySet;
-class UDCInputConfig;
+class UDCAbilityTagRelationshipMapping;
 class UDCCameraMode;
+class UDCInputConfig;
+class UObject;
 class UDCEquipmentDefinition;
 
+
 /**
- * Pawn 하나를 구성하는 데이터 묶음.
+ * UDCPawnData
  *
- * 초기 단계에서는 Pawn 클래스와 기본 AbilitySet만 보관.
- * InputConfig, CameraMode, TagRelationshipMapping은 각 클래스가
- * 실제로 구현되는 단계에서 추가.
+ *	Non-mutable data asset that contains properties used to define a pawn.
  */
-UCLASS(BlueprintType, Const,
-	Meta = ( DisplayName = "DreamCatcher Pawn Data", ShortTooltip = "Data asset used to configure a DreamCatcher Pawn."
-	))
-class DREAMCATCHER_API UDCPawnData : public UPrimaryDataAsset
+UCLASS(MinimalAPI, BlueprintType, Const,
+	Meta = (DisplayName = "DC Pawn Data", ShortTooltip = "Data asset used to define a Pawn."))
+class UDCPawnData : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
 public:
-	UDCPawnData(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	UE_API UDCPawnData(const FObjectInitializer& ObjectInitializer);
 
-	// 이 PawnData를 사용할 Pawn 또는 Character 클래스.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Pawn")
+public:
+	// Class to instantiate for this pawn (should usually derive from ADCPawn or ADreamCatcherCharacter).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DC|Pawn")
 	TSubclassOf<APawn> PawnClass;
 
-	// 이 Pawn이 기본적으로 받을 AbilitySet 목록.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Abilities")
+	// Ability sets to grant to this pawn's ability system.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DC|Abilities")
 	TArray<TObjectPtr<UDCAbilitySet>> AbilitySets;
 
-	// 이 Pawn이 사용할 InputAction → InputTag 설정.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Input")
+	// What mapping of ability tags to use for actions taking by this pawn
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DC|Abilities")
+	TObjectPtr<UDCAbilityTagRelationshipMapping> TagRelationshipMapping;
+
+	// Input configuration used by player controlled pawns to create input mappings and bind input actions.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DC|Input")
 	TObjectPtr<UDCInputConfig> InputConfig;
 
-	// 이 Pawn이 기본적으로 사용할 CameraMode.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Camera")
+	// Default camera mode used by player controlled pawns.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DC|Camera")
 	TSubclassOf<UDCCameraMode> DefaultCameraMode;
 
-	// Shoulder 조준 상태에서 사용할 CameraMode.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Camera")
+	// 과도기 필드: 현재 Character의 견착 카메라 선택에 사용합니다.
+	// 원본 카메라 연결의 대체 검증 이후 제거합니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Legacy")
 	TSubclassOf<UDCCameraMode> ShoulderCameraMode;
 
-	// Scope 조준 상태에서 사용할 CameraMode.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Camera")
+	// 과도기 필드: 현재 Character의 Scope 카메라 선택에 사용합니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Legacy")
 	TSubclassOf<UDCCameraMode> ScopeCameraMode;
-	
-	// ASC 준비가 끝나면 자동으로 장착할 기본 무기. None이면 자동 장착 X.
-	// Inventory와 QuickBar를 구현하기 전까지 사용하는 초기 장비 설정.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Equipment")
+
+	// 과도기 필드: 현재 EquipmentManager의 초기 장착에 사용합니다.
+	// 원본 Inventory / QuickBar / Equipment 연결 검증 이후 제거합니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Legacy")
 	TSubclassOf<UDCEquipmentDefinition> DefaultWeaponDefinition;
 };
+
+#undef UE_API

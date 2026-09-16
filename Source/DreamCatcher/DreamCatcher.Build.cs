@@ -18,15 +18,26 @@ public class DreamCatcher : ModuleRules
 			"GameplayAbilities",
 			"GameplayTags",
 			"GameplayTasks",
+			
+			"ModularGameplay",
+			"GameFeatures",
 
 			"AIModule",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			
+			"ModularGameplayActors",
+			"CommonUser",
+			"CommonGame",
+			"CommonUI"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[] {
+			"GameplayMessageRuntime",
+			"Niagara"
+		});
 
 		PublicIncludePaths.AddRange(new string[] {
 			"DreamCatcher",
@@ -44,18 +55,21 @@ public class DreamCatcher : ModuleRules
 			"DreamCatcher/Variant_SideScrolling/Interfaces",
 			"DreamCatcher/Variant_SideScrolling/UI"
 		});
-		
+
 		PublicDependencyModuleNames.Add("PhysicsCore");
 		PrivateDependencyModuleNames.Add("NetCore");
 
 		SetupIrisSupport(Target);
 
 		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		// PrivateDependencyModuleNames.AddRange(new string[] {
+		//     "Slate", "SlateCore"
+		// });
 
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
 
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
+		// To include OnlineSubsystemSteam, add it to the plugins section
+		// in your uproject file with the Enabled attribute set to true.
 	}
 }

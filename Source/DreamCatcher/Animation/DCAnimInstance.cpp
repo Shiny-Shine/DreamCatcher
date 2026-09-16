@@ -1,36 +1,65 @@
-#include "Animation/DCAnimInstance.h"
+// Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "AbilitySystemComponent.h"
+#include "DCAnimInstance.h"
 #include "AbilitySystemGlobals.h"
+#include "DreamCatcherCharacter.h"
+#include "Character/DCCharacterMovementComponent.h"
 
-UDCAnimInstance::UDCAnimInstance(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+#if WITH_EDITOR
+#include "Misc/DataValidation.h"
+#endif
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(DCAnimInstance)
+
+
+UDCAnimInstance::UDCAnimInstance(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 }
 
-void UDCAnimInstance::InitializeWithAbilitySystem(UAbilitySystemComponent* AbilitySystemComponent)
+void UDCAnimInstance::InitializeWithAbilitySystem(UAbilitySystemComponent* ASC)
 {
-	if (!AbilitySystemComponent)
-	{
-		return;
-	}
+	check(ASC);
 
-	GameplayTagPropertyMap.Initialize(this, AbilitySystemComponent);
+	GameplayTagPropertyMap.Initialize(this, ASC);
 }
+
+#if WITH_EDITOR
+EDataValidationResult UDCAnimInstance::IsDataValid(FDataValidationContext& Context) const
+{
+	Super::IsDataValid(Context);
+
+	GameplayTagPropertyMap.IsDataValid(this, Context);
+
+	return ((Context.GetNumErrors() > 0) ? EDataValidationResult::Invalid : EDataValidationResult::Valid);
+}
+#endif // WITH_EDITOR
 
 void UDCAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
 
-	AActor* OwningActor = GetOwningActor();
+	if (AActor* OwningActor = GetOwningActor())
+	{
+		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OwningActor))
+		{
+			InitializeWithAbilitySystem(ASC);
+		}
+	}
+}
 
-	if (!OwningActor)
+void UDCAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
+{
+	Super::NativeUpdateAnimation(DeltaSeconds);
+
+	const ADreamCatcherCharacter* Character = Cast<ADreamCatcherCharacter>(GetOwningActor());
+	if (!Character)
 	{
 		return;
 	}
 
-	if (UAbilitySystemComponent* AbilitySystemComponent =
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OwningActor))
-	{
-		InitializeWithAbilitySystem(AbilitySystemComponent);
-	}
+	UDCCharacterMovementComponent* CharMoveComp = CastChecked<UDCCharacterMovementComponent>(Character->GetCharacterMovement());
+	const FDCCharacterGroundInfo& GroundInfo = CharMoveComp->GetGroundInfo();
+	GroundDistance = GroundInfo.GroundDistance;
 }
+

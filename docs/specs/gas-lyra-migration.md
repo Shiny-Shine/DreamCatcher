@@ -4,6 +4,7 @@
 
 - 결정 상태: 승인됨
 - 이식 정책 갱신: 2026-09-10 KST, 사용자 승인
+- 진행 현황 갱신: 2026-09-15 KST, R2-1 소스·기존 빌드/실행 로그 점검 반영
 - 엔진 버전: Unreal Engine 5.8
 - 기준 프로젝트: DreamCatcher
 - 참고 프로젝트: Lyra Starter Game 5.8
@@ -38,10 +39,26 @@
 | 기존 7-A Linked Anim Layer | Idle 연결까지만 완료 | 전체 완료 아님. R8에서 원본 계층으로 교체 |
 | Lyra 크로스헤어 시각 에셋 | Migrate 진행됨 | 원본 Widget 및 UI C++ 기능 연동 완료와 구분 |
 | 원본 UI C++·Reticle Widget 이식 | 중단 상태, 완료 아님 | R5~R6 의존성 준비 후 R7에서 재개 |
-| `DCAbilityTagRelationshipMapping.h/.cpp` | 직전 채팅에서 절차만 안내. 2026-09-10 점검 시 대상 파일 없음 | 다음 구현 작업 R1-1. 다른 채팅에서 진행했는지 시작 전 재확인 |
+| R1 보조 타입·공통 의존성 | 태그 관계표, EffectContext/Globals, AbilityCost, GlobalAbilitySystem, AssetManager/GameData, 메시지·플러그인 등 준비 | R1-1부터 다시 시작하지 않음. 개별 기능 전체 검증과는 구분 |
+| R2-1 AbilitySet·GameplayAbility·ASC | 원본 기반 본체 이식 및 기존 실행 경로 연결 확인 | 최종 기능 검증 대기 |
+| Hero·입력·카메라 선행 코드 | Hero 클래스와 원본 API 준비 | PawnExtension의 원본 InitState 전환 및 실제 입력·카메라 경로 교체는 남아 있음 |
 
-다음 구현 채팅은 **R1-1 — Ability Tag Relationship Mapping 원본 두 파일 이식**부터 시작한다.
-정책·계획 기록인 R0와 일부 C++ 대조는 수행했지만, 모든 원본 Blueprint 그래프와 런타임 감사가 끝난 것은 아니다.
+현재 재개 지점은 **R2-1 최종 검증 마무리 → R2-2 원본 Pawn 초기화 연결**이다.
+기존 2026-09-10의 R1-1 시작 안내보다 이 진행 현황을 우선한다. 모든 원본 Blueprint 그래프와 런타임 감사가 끝난 것은 아니다.
+
+### 2026-09-15 점검 요약
+
+- **본체 이식 확인:** GameplayAbility의 OnGiveAbility/OnSpawn·실행 그룹·추가 비용·실패 메시지·EffectContext·Hero 카메라 API, ASC의 Avatar 변경·OnSpawn·입력·태그 관계·GlobalAbilitySystem 연결이 구현되어 있다.
+- **기존 검증 기록:** 2026-09-15 23:05경 `DreamCatcherEditor Win64 Development` 빌드 성공 기록이 있다. `Saved/Logs/DreamCatcher.log`에는 ASC/Avatar 연결, 기존 라이플 발사, 확장 EffectContext 할당, `R2 OnSpawn activated`, PawnExtension 해제 기록이 있다. 이번 문서 갱신에서 빌드·PIE를 새로 실행한 것은 아니다.
+- **검증 한계:** 테스트 Ability 출력은 확인했지만, 테스트 BP의 부여 방식·그래프를 직접 확인하지 않았으므로 OnSpawn의 두 자동 활성화 경로가 모두 검증됐다고 처리하지 않는다.
+- **R2-2 남은 연결:** PawnExtension은 아직 자체 UActorComponent이며 InitState 기능 이름만 추가되어 있다. Hero는 PawnExtension의 DataInitialized 상태를 기다리므로, 원본 InitState 등록·진행과 PlayerState/PawnData 부여 수명 전환이 필요하다. 테스트 Character BP의 Hero 부착 여부도 확인 대상이다.
+- **현재 활성 경로:** Character의 PossessedBy/OnRep_PlayerState → 기존 PawnExtension → 새 ASC 초기화. 입력은 Character의 BindLegacyAbilityActions, 카메라 선택 Delegate도 Character 경로다. Hero 전환 시 중복 바인딩·Delegate 덮어쓰기를 방지한다.
+- **R2-4 남은 연결:** PawnData의 TagRelationshipMapping 필드와 ASC setter/처리 함수는 있지만, 현재 프로젝트 C++에는 관계표를 ASC에 전달하는 호출이 없다.
+- **의존성 경고:** 기존 빌드 로그에 CommonUI 모듈 사용 대비 `.uproject`의 직접 플러그인 의존성 미선언 경고가 있다. 빌드는 성공했으며 선언 정리 대상으로 남긴다.
+- **후속 단계 선행 준비:** Damage/Heal Execution·Teams 및 AnimInstance/CharacterMovement 지원 코드도 들어와 있다. R3·R8 전체 기능 이식 완료로 처리하지 않는다.
+
+R2-1 마무리에서는 Avatar 연결 전 부여 / Avatar 준비 후 부여의 OnSpawn 동작, 실행 그룹·추가 비용 등 본체 기능과 기존 호출부 호환성을 확인한다.
+이후 R2-2에서 원본 초기화 체계를 연결하고, R2-3 입력 전환 및 R2-4 태그 관계·수명 검증으로 이어간다.
 
 ## 목표
 
@@ -496,14 +513,14 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 | ID | 작업 | 완료 시 확인할 결과 | 현재 상태 |
 |---|---|---|---|
 | R0 | 정책·현재 상태·작업 단위 기록 | 원본 교체 범위와 다음 작업이 문서로 고정 | 문서 갱신 완료, 전체 원본 감사는 아님 |
-| R1 | GAS 보조 타입 및 의존성 준비 | 원본 기반 클래스 이식에 필요한 타입·모듈 목록과 독립 파일 준비 | 미착수. R1-1 절차만 안내됨 |
-| R2 | GAS·Pawn 초기화·입력 공통 기반 교체 | 원본 ASC/Ability/AbilitySet, OnSpawn, 초기화·입력 동작 | 미착수 |
-| R3 | 체력·데미지·사망 교체 | 원본 Attribute/Context/Execution/Health/Death 경로 동작 | 미착수 |
-| R4 | 원본 카메라·조준 연결 | 원본 카메라와 확정 우클릭 규칙의 통합 | 미착수 |
+| R1 | GAS 보조 타입 및 의존성 준비 | 원본 기반 클래스 이식에 필요한 타입·모듈 목록과 독립 파일 준비 | 다수 준비 및 R2-1 빌드 연결 확인. 개별 기능 검증은 구분 |
+| R2 | GAS·Pawn 초기화·입력 공통 기반 교체 | 원본 ASC/Ability/AbilitySet, OnSpawn, 초기화·입력 동작 | R2-1 본체 이식·기존 경로 연결 확인, 최종 검증 대기. R2-2~4 연결 남음 |
+| R3 | 체력·데미지·사망 교체 | 원본 Attribute/Context/Execution/Health/Death 경로 동작 | Execution·Teams 등 선행 코드 준비. 전체 경로 검증 미완료 |
+| R4 | 원본 카메라·조준 연결 | 원본 카메라와 확정 우클릭 규칙의 통합 | Hero 카메라 API 준비. 실제 카메라 선택은 기존 Character 경로 |
 | R5 | Inventory·QuickBar·Equipment·라이플 데이터 | 실제 Inventory 아이템에서 장비와 UI 데이터가 연결 | 미착수 |
 | R6 | 원본 퍼짐·발사·GameplayCue·반동 | 원본 무기 계산·탄약 비용·발사·연출 동작 | 미착수 |
 | R7 | 원본 Reticle·HUD·명중 표시 | 원본 Widget/C++/Slate가 같은 무기·아이템을 표시 | 기존 자체 기능·시각 에셋은 있음. 원본 통합 미완료 |
-| R8 | 전체 AnimBP·Linked Layer·재장전 | Idle 이외 이동·조준·발사·재장전·무기 계층 연결 | 기존 Idle 연결만 있음. 원본 통합 미완료 |
+| R8 | 전체 AnimBP·Linked Layer·재장전 | Idle 이외 이동·조준·발사·재장전·무기 계층 연결 | AnimInstance/CharacterMovement 지원 C++ 선행 준비. 기존 Idle 연결 외 전체 원본 계층 통합은 미완료 |
 | R9 | Lyra Dash·회피 방어·궁극기 | 원본 Dash 검증 후 방어 효과와 프로젝트 궁극기 분리 연동 | 미착수 |
 | R10 | 적 GAS·공격 텔레그래프 | 공격 의도부터 후딜까지 중단 가능한 전투 흐름 | 미착수 |
 | R11 | Level 1 빈 흐름 완주 | 전투 1 → 전투 2 → 보스 Placeholder → 결과 Placeholder | 새 전투 경로 통합 미검증 |
@@ -722,7 +739,7 @@ Lyra에 동일한 보스 패턴 시스템이 있다고 단정하지 않는다. �
 
 | 확인 대상 | 원본 경로 | 현재 근거/주의 |
 |---|---|---|
-| OnSpawn·Ability 기반 | `Source/LyraGame/AbilitySystem/Abilities/LyraGameplayAbility.cpp`, `Source/LyraGame/AbilitySystem/LyraAbilitySystemComponent.cpp` | C++ 실행 경로 확인. DC에는 enum만 있음 |
+| OnSpawn·Ability 기반 | `Source/LyraGame/AbilitySystem/Abilities/LyraGameplayAbility.cpp`, `Source/LyraGame/AbilitySystem/LyraAbilitySystemComponent.cpp` | 2026-09-15 DC 본체에 원본 기반 실행 경로 이식 확인. 두 자동 활성화 경로의 전체 검증은 대기 |
 | 태그 관계표 | `Source/LyraGame/AbilitySystem/LyraAbilityTagRelationshipMapping.h`, `Source/LyraGame/AbilitySystem/LyraAbilityTagRelationshipMapping.cpp` | 두 파일 본문 확인. R1-1 원본 |
 | Pawn 초기화 | `Source/LyraGame/Character/LyraPawnExtensionComponent.h`, `Source/LyraGame/Character/LyraHeroComponent.cpp`, `Source/LyraGame/Player/LyraPlayerState.cpp` | InitState·PlayerState 부여와 현재 자체 수명 차이 확인 |
 | EffectContext | `Source/LyraGame/AbilitySystem/LyraAbilitySystemGlobals.cpp`, `Source/LyraGame/AbilitySystem/LyraGameplayEffectContext.h` | 원본 Ability가 확장 Context를 요구. Config/호출부를 함께 준비 |
@@ -760,8 +777,10 @@ Lyra에 동일한 보스 패턴 시스템이 있다고 단정하지 않는다. �
 
 ```text
 DreamCatcher의 AGENTS.md와 docs/specs/gas-lyra-migration.md를 읽고
-R1-1 — Ability Tag Relationship Mapping 원본 두 파일 이식을 진행하겠습니다.
-기존에 안내만 받았으므로 실제 파일 존재 여부부터 확인해 주세요.
+R2-1의 최종 검증을 마무리하겠습니다. 완료 확인 후 다음 작업은 R2-2입니다.
+AbilitySet·GameplayAbility·ASC 본체와 공통 의존성은 준비되어 있으며,
+원본 Hero 클래스는 있지만 PawnExtension의 InitState 연결은 아직 남아 있습니다.
+명세의 2026-09-15 점검 요약과 현재 파일·로그를 대조하고, R1-1부터 다시 시작하지 말아 주세요.
 Lyra 원본 재사용 → 최소 수정 이식 → 불가피한 부분만 직접 구현 원칙을 적용해 주세요.
 기존 자체 구현은 교체 대상이며, 프로젝트 파일은 직접 수정하지 말고 제가 작업할 절차를 설명해 주세요.
 원본 경로, 바꿀 이름, 의존성, 빌드/Editor 검증 기준과 미검증 내용을 구분해 주세요.

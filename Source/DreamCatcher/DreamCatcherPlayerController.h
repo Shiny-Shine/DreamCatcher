@@ -8,11 +8,21 @@
 
 class UDCPlayerHUDWidget;
 class UInputMappingContext;
+class UDCAbilitySystemComponent;
 
 UCLASS()
 class DREAMCATCHER_API ADreamCatcherPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+	
+public:
+	UDCAbilitySystemComponent* GetDCAbilitySystemComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = "DC|Character")
+	void SetIsAutoRunning(bool bEnabled);
+
+	UFUNCTION(BlueprintCallable, Category = "DC|Character")
+	bool GetIsAutoRunning() const;
 
 protected:
 	// 로컬 플레이어에 적용할 기본 입력 매핑.
@@ -33,4 +43,13 @@ protected:
 	void ApplyInputMappingContexts();
 	void CreateHUD();
 	void BindHUDToCurrentPawn();
+	
+	void OnStartAutoRun();
+	void OnEndAutoRun();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnStartAutoRun"))
+	void K2_OnStartAutoRun();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnEndAutoRun"))
+	void K2_OnEndAutoRun();
 };

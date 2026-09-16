@@ -9,6 +9,7 @@
 #include "InputMappingContext.h"
 #include "Player/DCPlayerState.h"
 #include "UI/DCPlayerHUDWidget.h"
+#include "AbilitySystem/DCGameplayTags.h"
 
 void ADreamCatcherPlayerController::BeginPlay()
 {
@@ -32,15 +33,18 @@ void ADreamCatcherPlayerController::OnPossess(APawn* InPawn)
 	BindHUDToCurrentPawn();
 }
 
-// 현재 컨트롤러와 연결된 ADCPlayerState와 전용 ASC를 가져온 후 ASC에 입력되있는 입력을 처리
-void ADreamCatcherPlayerController::PostProcessInput(float DeltaTime, bool bGamePaused)
+void ADreamCatcherPlayerController::PostProcessInput(float DeltaTime,bool bGamePaused)
 {
-	if (ADCPlayerState* DCPlayerState = GetPlayerState<ADCPlayerState>())
+	if (UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent())
 	{
-		if (UDCAbilitySystemComponent* AbilitySystemComponent = DCPlayerState->GetDCAbilitySystemComponent())
+		// 과도기: 기존 프로젝트의 입력 차단 시 조준 해제 정책.
+		if (ASC->HasMatchingGameplayTag(TAG_Gameplay_AbilityInputBlocked))
 		{
-			AbilitySystemComponent->ProcessAbilityInput(DeltaTime, bGamePaused);
+			ASC->CancelAimInputAndState();
 		}
+
+		// 원본 ASC 입력 처리.
+		ASC->ProcessAbilityInput(DeltaTime, bGamePaused);
 	}
 
 	Super::PostProcessInput(DeltaTime, bGamePaused);
@@ -88,4 +92,59 @@ void ADreamCatcherPlayerController::BindHUDToCurrentPawn()
 	}
 
 	HUDWidget->BindToCharacter(Cast<ADreamCatcherCharacter>(GetPawn()));
+}
+
+UDCAbilitySystemComponent* ADreamCatcherPlayerController::GetDCAbilitySystemComponent() const
+{
+	const ADCPlayerState* DCPlayerState = GetPlayerState<ADCPlayerState>();
+	return DCPlayerState
+		       ? DCPlayerState->GetDCAbilitySystemComponent()
+		       : nullptr;
+}
+
+void ADreamCatcherPlayerController::SetIsAutoRunning(bool bEnabled)
+{
+	const bool bIsAutoRunning = GetIsAutoRunning();
+
+	if (bEnabled != bIsAutoRunning)
+	{
+		if (!bEnabled)
+		{
+			OnEndAutoRun();
+		}
+		else
+		{
+			OnStartAutoRun();
+		}
+	}
+}
+
+bool ADreamCatcherPlayerController::GetIsAutoRunning() const
+{
+	bool bIsAutoRunning = false;
+
+	if (const UDCAbilitySystemComponent* DCASC = GetDCAbilitySystemComponent())
+	{
+		bIsAutoRunning = DCASC->GetTagCount(DCGameplayTags::Status_AutoRunning) > 0;
+	}
+
+	return bIsAutoRunning;
+}
+
+void ADreamCatcherPlayerController::OnStartAutoRun()
+{
+	if (UDCAbilitySystemComponent* DCASC = GetDCAbilitySystemComponent())
+	{
+		DCASC->SetLooseGameplayTagCount(DCGameplayTags::Status_AutoRunning, 1);
+		K2_OnStartAutoRun();
+	}
+}
+
+void ADreamCatcherPlayerController::OnEndAutoRun()
+{
+	if (UDCAbilitySystemComponent* DCASC = GetDCAbilitySystemComponent())
+	{
+		DCASC->SetLooseGameplayTagCount(DCGameplayTags::Status_AutoRunning, 0);
+		K2_OnEndAutoRun();
+	}
 }

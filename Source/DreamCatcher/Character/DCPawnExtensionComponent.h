@@ -75,6 +75,10 @@ public:
 	{
 		return bUninitializingAbilitySystem;
 	}
+	
+	// 원본 Hero가 참조하는 기능 이름.
+	// 실제 InitState 등록·진행 구현은 R2-2에서 연결.
+	static const FName NAME_ActorFeatureName;
 
 protected:
 	virtual void OnRegister() override;

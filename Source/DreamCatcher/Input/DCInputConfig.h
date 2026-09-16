@@ -1,81 +1,61 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
+
 #include "DCInputConfig.generated.h"
 
 class UInputAction;
+class UObject;
+struct FFrame;
 
 /**
- * InputAction과 GameplayTag 한 쌍.
+ * FDCInputAction
  *
- * 예:
- * IA_Move  → InputTag.Move
- * IA_Fire  → InputTag.Weapon.Fire
+ *	Struct used to map a input action to a gameplay input tag.
  */
 USTRUCT(BlueprintType)
 struct FDCInputAction
 {
 	GENERATED_BODY()
 
-	// Enhanced Input의 InputAction 에셋.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+public:
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TObjectPtr<const UInputAction> InputAction = nullptr;
 
-	// InputAction을 식별할 Gameplay Tag.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input", meta = (Categories = "InputTag"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "InputTag"))
 	FGameplayTag InputTag;
 };
 
 /**
- * 플레이어 입력 설정 DataAsset.
+ * UDCInputConfig
  *
- * NativeInputActions:
- *   Move, Look처럼 C++ 함수에 직접 연결할 입력.
- *
- * AbilityInputActions:
- *   Jump, Aim, Dodge, Fire처럼 ASC에 전달할 입력.
+ *	Non-mutable data asset that contains input configuration properties.
  */
-UCLASS(BlueprintType, Const,
-	Meta = (DisplayName = "DreamCatcher Input Config", ShortTooltip = "Maps Input Actions to Gameplay Input Tags."))
-class DREAMCATCHER_API UDCInputConfig : public UDataAsset
+UCLASS(BlueprintType, Const)
+class UDCInputConfig : public UDataAsset
 {
 	GENERATED_BODY()
 
 public:
-	UDCInputConfig(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	// NativeInputActions에서 해당 태그의 InputAction을 찾음.
-	UFUNCTION(BlueprintCallable, Category = "DreamCatcher|Input")
+	UDCInputConfig(const FObjectInitializer& ObjectInitializer);
+
+	UFUNCTION(BlueprintCallable, Category = "DC|Pawn")
 	const UInputAction* FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 
-	// AbilityInputActions에서 해당 태그의 InputAction을 찾음.
-	UFUNCTION(BlueprintCallable, Category = "DreamCatcher|Input")
+	UFUNCTION(BlueprintCallable, Category = "DC|Pawn")
 	const UInputAction* FindAbilityInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 
-	/**
-	 * C++ 함수에 직접 연결할 입력.
-	 *
-	 * 현재 대상:
-	 * - Move
-	 * - Look
-	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Input",
-		meta = (TitleProperty = "InputAction"))
+public:
+	// List of input actions used by the owner.  These input actions are mapped to a gameplay tag and must be manually bound.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputAction"))
 	TArray<FDCInputAction> NativeInputActions;
 
-	/**
-	 * ASC에 InputTag를 전달할 입력.
-	 *
-	 * 현재 대상:
-	 * - Jump
-	 * - Aim
-	 * - Dodge
-	 * - Ultimate
-	 * - Fire
-	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Input",
-		meta = (TitleProperty = "InputAction"))
+	// List of input actions used by the owner.  These input actions are mapped to a gameplay tag and are automatically bound to abilities with matching input tags.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputAction"))
 	TArray<FDCInputAction> AbilityInputActions;
 };

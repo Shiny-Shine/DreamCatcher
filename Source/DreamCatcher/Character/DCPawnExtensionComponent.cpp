@@ -6,6 +6,8 @@
 #include "GameFramework/Pawn.h"
 #include "Misc/ScopeExit.h"
 
+const FName UDCPawnExtensionComponent::NAME_ActorFeatureName("PawnExtension");
+
 UDCPawnExtensionComponent::UDCPawnExtensionComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {

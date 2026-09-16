@@ -1,31 +1,46 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
 #include "GameplayEffectTypes.h"
 #include "DCAnimInstance.generated.h"
 
 class UAbilitySystemComponent;
 
-// GAS GameplayTag를 AnimBP 변수에 자동 연결하는 DreamCatcher AnimInstance 기본 클래스.
+
+/**
+ * UDCAnimInstance
+ *
+ *	The base game animation instance class used by this project.
+ */
 UCLASS(Config = Game)
-class DREAMCATCHER_API UDCAnimInstance : public UAnimInstance
+class UDCAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
 
 public:
-	UDCAnimInstance(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	void InitializeWithAbilitySystem(UAbilitySystemComponent* AbilitySystemComponent);
+	UDCAnimInstance(const FObjectInitializer& ObjectInitializer);
+
+	virtual void InitializeWithAbilitySystem(UAbilitySystemComponent* ASC);
 
 protected:
-	virtual void NativeInitializeAnimation() override;
 
-	/**
-	 * Gameplay Tag와 AnimInstance 프로퍼티를 연결.
-	 *
-	 * 예:State.Aim.Shoulder, bIsShoulderAiming
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Gameplay Tags")
+#if WITH_EDITOR
+	virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
+#endif // WITH_EDITOR
+
+	virtual void NativeInitializeAnimation() override;
+	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+
+protected:
+
+	// Gameplay tags that can be mapped to blueprint variables. The variables will automatically update as the tags are added or removed.
+	// These should be used instead of manually querying for the gameplay tags.
+	UPROPERTY(EditDefaultsOnly, Category = "GameplayTags")
 	FGameplayTagBlueprintPropertyMap GameplayTagPropertyMap;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Character State Data")
+	float GroundDistance = -1.0f;
 };

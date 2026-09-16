@@ -1,9 +1,13 @@
-#include "Input/DCInputConfig.h"
+// Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "DreamCatcher.h"
-#include "InputAction.h"
+#include "DCInputConfig.h"
 
-UDCInputConfig::UDCInputConfig(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+#include "DCLogChannels.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(DCInputConfig)
+
+
+UDCInputConfig::UDCInputConfig(const FObjectInitializer& ObjectInitializer)
 {
 }
 
@@ -11,7 +15,7 @@ const UInputAction* UDCInputConfig::FindNativeInputActionForTag(const FGameplayT
 {
 	for (const FDCInputAction& Action : NativeInputActions)
 	{
-		if (Action.InputAction && Action.InputTag.MatchesTagExact(InputTag))
+		if (Action.InputAction && (Action.InputTag == InputTag))
 		{
 			return Action.InputAction;
 		}
@@ -19,8 +23,7 @@ const UInputAction* UDCInputConfig::FindNativeInputActionForTag(const FGameplayT
 
 	if (bLogNotFound)
 	{
-		UE_LOG(LogDreamCatcher, Error, TEXT("InputConfig [%s] cannot find a native ""InputAction for tag [%s]."),
-		       *GetNameSafe(this), *InputTag.ToString());
+		UE_LOG(LogDC, Error, TEXT("Can't find NativeInputAction for InputTag [%s] on InputConfig [%s]."), *InputTag.ToString(), *GetNameSafe(this));
 	}
 
 	return nullptr;
@@ -30,7 +33,7 @@ const UInputAction* UDCInputConfig::FindAbilityInputActionForTag(const FGameplay
 {
 	for (const FDCInputAction& Action : AbilityInputActions)
 	{
-		if (Action.InputAction && Action.InputTag.MatchesTagExact(InputTag))
+		if (Action.InputAction && (Action.InputTag == InputTag))
 		{
 			return Action.InputAction;
 		}
@@ -38,8 +41,7 @@ const UInputAction* UDCInputConfig::FindAbilityInputActionForTag(const FGameplay
 
 	if (bLogNotFound)
 	{
-		UE_LOG(LogDreamCatcher, Error, TEXT("InputConfig [%s] cannot find an ability ""InputAction for tag [%s]."),
-		       *GetNameSafe(this), *InputTag.ToString());
+		UE_LOG(LogDC, Error, TEXT("Can't find AbilityInputAction for InputTag [%s] on InputConfig [%s]."), *InputTag.ToString(), *GetNameSafe(this));
 	}
 
 	return nullptr;

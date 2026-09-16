@@ -1,152 +1,314 @@
-#include "AbilitySystem/DCAbilitySystemComponent.h"
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#include "DCAbilitySystemComponent.h"
 
 #include "AbilitySystem/Abilities/DCGameplayAbility.h"
-#include "AbilitySystem/DCGameplayTags.h"
+#include "AbilitySystem/DCAbilityTagRelationshipMapping.h"
+#include "Animation/DCAnimInstance.h"
+#include "Engine/World.h"
+#include "GameFramework/Pawn.h"
+#include "DCGlobalAbilitySystem.h"
+#include "DCLogChannels.h"
+#include "System/DCAssetManager.h"
+#include "System/DCGameData.h"
+#include "AbilitySystem/DCGameplayTags.h"	// Lagacy
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(DCAbilitySystemComponent)
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Gameplay_AbilityInputBlocked, "Gameplay.AbilityInputBlocked");
 
 UDCAbilitySystemComponent::UDCAbilitySystemComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	SetIsReplicatedByDefault(true);
+	InputPressedSpecHandles.Reset();
+	InputReleasedSpecHandles.Reset();
+	InputHeldSpecHandles.Reset();
+
+	FMemory::Memset(ActivationGroupCounts, 0, sizeof(ActivationGroupCounts));
 }
 
-void UDCAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+void UDCAbilitySystemComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (!InputTag.IsValid())
+	if (UDCGlobalAbilitySystem* GlobalAbilitySystem = UWorld::GetSubsystem<UDCGlobalAbilitySystem>(GetWorld()))
 	{
-		return;
+		GlobalAbilitySystem->UnregisterASC(this);
 	}
 
+	Super::EndPlay(EndPlayReason);
+}
+
+void UDCAbilitySystemComponent::InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor)
+{
+	FGameplayAbilityActorInfo* ActorInfo = AbilityActorInfo.Get();
+	check(ActorInfo);
+	check(InOwnerActor);
+
+	const bool bHasNewPawnAvatar = Cast<APawn>(InAvatarActor) && (InAvatarActor != ActorInfo->AvatarActor);
+
+	Super::InitAbilityActorInfo(InOwnerActor, InAvatarActor);
+
+	if (bHasNewPawnAvatar)
+	{
+		// Notify all abilities that a new pawn avatar has been set
+		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+		{
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+			ensureMsgf(AbilitySpec.Ability && AbilitySpec.Ability->GetInstancingPolicy() != EGameplayAbilityInstancingPolicy::NonInstanced, TEXT("InitAbilityActorInfo: All Abilities should be Instanced (NonInstanced is being deprecated due to usability issues)."));
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+	
+			TArray<UGameplayAbility*> Instances = AbilitySpec.GetAbilityInstances();
+			for (UGameplayAbility* AbilityInstance : Instances)
+			{
+				UDCGameplayAbility* DCAbilityInstance = Cast<UDCGameplayAbility>(AbilityInstance);
+				if (DCAbilityInstance)
+				{
+					// Ability instances may be missing for replays
+					DCAbilityInstance->OnPawnAvatarSet();
+				}
+			}
+		}
+
+		// Register with the global system once we actually have a pawn avatar. We wait until this time since some globally-applied effects may require an avatar.
+		if (UDCGlobalAbilitySystem* GlobalAbilitySystem = UWorld::GetSubsystem<UDCGlobalAbilitySystem>(GetWorld()))
+		{
+			GlobalAbilitySystem->RegisterASC(this);
+		}
+
+		if (UDCAnimInstance* DCAnimInst = Cast<UDCAnimInstance>(ActorInfo->GetAnimInstance()))
+		{
+			DCAnimInst->InitializeWithAbilitySystem(this);
+		}
+
+		TryActivateAbilitiesOnSpawn();
+	}
+}
+
+void UDCAbilitySystemComponent::TryActivateAbilitiesOnSpawn()
+{
+	ABILITYLIST_SCOPE_LOCK();
 	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 	{
-		if (!AbilitySpec.Ability)
+		if (const UDCGameplayAbility* DCAbilityCDO = Cast<UDCGameplayAbility>(AbilitySpec.Ability))
+		{
+			DCAbilityCDO->TryActivateAbilityOnSpawn(AbilityActorInfo.Get(), AbilitySpec);
+		}
+	}
+}
+
+void UDCAbilitySystemComponent::CancelAbilitiesByFunc(TShouldCancelAbilityFunc ShouldCancelFunc, bool bReplicateCancelAbility)
+{
+	ABILITYLIST_SCOPE_LOCK();
+	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+	{
+		if (!AbilitySpec.IsActive())
 		{
 			continue;
 		}
 
-		// AbilitySet에서 Ability Spec에 넣은 InputTag와 비교합니다.
-		if (AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
+		UDCGameplayAbility* DCAbilityCDO = Cast<UDCGameplayAbility>(AbilitySpec.Ability);
+		if (!DCAbilityCDO)
 		{
-			InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
+			UE_LOG(LogDCAbilitySystem, Error, TEXT("CancelAbilitiesByFunc: Non-DCGameplayAbility %s was Granted to ASC. Skipping."), *AbilitySpec.Ability.GetName());
+			continue;
+		}
 
-			InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		ensureMsgf(AbilitySpec.Ability->GetInstancingPolicy() != EGameplayAbilityInstancingPolicy::NonInstanced, TEXT("CancelAbilitiesByFunc: All Abilities should be Instanced (NonInstanced is being deprecated due to usability issues)."));
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+			
+		// Cancel all the spawned instances.
+		TArray<UGameplayAbility*> Instances = AbilitySpec.GetAbilityInstances();
+		for (UGameplayAbility* AbilityInstance : Instances)
+		{
+			UDCGameplayAbility* DCAbilityInstance = CastChecked<UDCGameplayAbility>(AbilityInstance);
+
+			if (ShouldCancelFunc(DCAbilityInstance, AbilitySpec.Handle))
+			{
+				if (DCAbilityInstance->CanBeCanceled())
+				{
+					DCAbilityInstance->CancelAbility(AbilitySpec.Handle, AbilityActorInfo.Get(), DCAbilityInstance->GetCurrentActivationInfo(), bReplicateCancelAbility);
+				}
+				else
+				{
+					UE_LOG(LogDCAbilitySystem, Error, TEXT("CancelAbilitiesByFunc: Can't cancel ability [%s] because CanBeCanceled is false."), *DCAbilityInstance->GetName());
+				}
+			}
+		}
+	}
+}
+
+void UDCAbilitySystemComponent::CancelInputActivatedAbilities(bool bReplicateCancelAbility)
+{
+	auto ShouldCancelFunc = [this](const UDCGameplayAbility* DCAbility, FGameplayAbilitySpecHandle Handle)
+	{
+		const EDCAbilityActivationPolicy ActivationPolicy = DCAbility->GetActivationPolicy();
+		return ((ActivationPolicy == EDCAbilityActivationPolicy::OnInputTriggered) || (ActivationPolicy == EDCAbilityActivationPolicy::WhileInputActive));
+	};
+
+	CancelAbilitiesByFunc(ShouldCancelFunc, bReplicateCancelAbility);
+}
+
+void UDCAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec& Spec)
+{
+	Super::AbilitySpecInputPressed(Spec);
+
+	// We don't support UGameplayAbility::bReplicateInputDirectly.
+	// Use replicated events instead so that the WaitInputPress ability task works.
+	if (Spec.IsActive())
+	{
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		const UGameplayAbility* Instance = Spec.GetPrimaryInstance();
+		FPredictionKey OriginalPredictionKey = Instance ? Instance->GetCurrentActivationInfo().GetActivationPredictionKey() : Spec.ActivationInfo.GetActivationPredictionKey();
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+		// Invoke the InputPressed event. This is not replicated here. If someone is listening, they may replicate the InputPressed event to the server.
+		InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, OriginalPredictionKey);
+	}
+}
+
+void UDCAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& Spec)
+{
+	Super::AbilitySpecInputReleased(Spec);
+
+	// We don't support UGameplayAbility::bReplicateInputDirectly.
+	// Use replicated events instead so that the WaitInputRelease ability task works.
+	if (Spec.IsActive())
+	{
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		const UGameplayAbility* Instance = Spec.GetPrimaryInstance();
+		FPredictionKey OriginalPredictionKey = Instance ? Instance->GetCurrentActivationInfo().GetActivationPredictionKey() : Spec.ActivationInfo.GetActivationPredictionKey();
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+		// Invoke the InputReleased event. This is not replicated here. If someone is listening, they may replicate the InputReleased event to the server.
+		InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, OriginalPredictionKey);
+	}
+}
+
+void UDCAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+{
+	if (InputTag.IsValid())
+	{
+		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+		{
+			if (AbilitySpec.Ability && (AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag)))
+			{
+				InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
+				InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
+			}
 		}
 	}
 }
 
 void UDCAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
 {
-	if (!InputTag.IsValid())
+	if (InputTag.IsValid())
 	{
-		return;
-	}
-
-	for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
-	{
-		if (!AbilitySpec.Ability)
+		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
-			continue;
-		}
-
-		if (AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag))
-		{
-			InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
-
-			InputHeldSpecHandles.Remove(AbilitySpec.Handle);
+			if (AbilitySpec.Ability && (AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag)))
+			{
+				InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
+				InputHeldSpecHandles.Remove(AbilitySpec.Handle);
+			}
 		}
 	}
 }
 
 void UDCAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGamePaused)
 {
-	// 현재 단계에서는 사용하지 않지만 이후 Ability 입력 처리 확장에 사용.
-	(void)DeltaTime;
-	(void)bGamePaused;
-
-	if (HasMatchingGameplayTag(DCGameplayTags::Gameplay_AbilityInputBlocked))
+	if (HasMatchingGameplayTag(TAG_Gameplay_AbilityInputBlocked))
 	{
-		// 입력이 차단되면 조준 대기 작업과 Scope 유지 상태도 종료.
-		CancelAimInputAndState();
 		ClearAbilityInput();
 		return;
 	}
 
-	TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
+	static TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
+	AbilitiesToActivate.Reset();
 
-	// WhileInputActive Ability 처리.
-	// 입력을 누르고 있으며 Ability가 비활성 상태라면 매 프레임 활성화를 다시 시도.
+	//@TODO: See if we can use FScopedServerAbilityRPCBatcher ScopedRPCBatcher in some of these loops
+
+	//
+	// Process all abilities that activate when the input is held.
+	//
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputHeldSpecHandles)
 	{
-		const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle);
-
-		if (!AbilitySpec || !AbilitySpec->Ability || AbilitySpec->IsActive())
+		if (const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
-			continue;
-		}
-
-		const UDCGameplayAbility* AbilityCDO = Cast<UDCGameplayAbility>(AbilitySpec->Ability);
-
-		if (AbilityCDO && AbilityCDO->GetActivationPolicy() == EDCAbilityActivationPolicy::WhileInputActive)
-		{
-			AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+			if (AbilitySpec->Ability && !AbilitySpec->IsActive())
+			{
+				const UDCGameplayAbility* DCAbilityCDO = Cast<UDCGameplayAbility>(AbilitySpec->Ability);
+				if (DCAbilityCDO && DCAbilityCDO->GetActivationPolicy() == EDCAbilityActivationPolicy::WhileInputActive)
+				{
+					AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+				}
+			}
 		}
 	}
 
-	// 이번 프레임에 새로 누른 입력을 처리.
+	//
+	// Process all abilities that had their input pressed this frame.
+	//
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
 	{
-		FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle);
-
-		if (!AbilitySpec || !AbilitySpec->Ability)
+		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
-			continue;
-		}
+			if (AbilitySpec->Ability)
+			{
+				AbilitySpec->InputPressed = true;
 
-		AbilitySpec->InputPressed = true;
+				if (AbilitySpec->IsActive())
+				{
+					// Ability is active so pass along the input event.
+					AbilitySpecInputPressed(*AbilitySpec);
+				}
+				else
+				{
+					const UDCGameplayAbility* DCAbilityCDO = Cast<UDCGameplayAbility>(AbilitySpec->Ability);
 
-		if (AbilitySpec->IsActive())
-		{
-			// 이미 실행 중이라면 AbilityTask 등에 Press 이벤트를 전달.
-			AbilitySpecInputPressed(*AbilitySpec);
-			continue;
-		}
-
-		const UDCGameplayAbility* AbilityCDO = Cast<UDCGameplayAbility>(AbilitySpec->Ability);
-
-		if (AbilityCDO && AbilityCDO->GetActivationPolicy() == EDCAbilityActivationPolicy::OnInputTriggered)
-		{
-			AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					if (DCAbilityCDO && DCAbilityCDO->GetActivationPolicy() == EDCAbilityActivationPolicy::OnInputTriggered)
+					{
+						AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					}
+				}
+			}
 		}
 	}
 
-	// Held와 Pressed 양쪽에서 같은 Ability가 발견될 수 있으므로 AddUnique로 모은 뒤 한 번씩만 활성화를 시도.
-	for (const FGameplayAbilitySpecHandle& SpecHandle : AbilitiesToActivate)
+	//
+	// Try to activate all the abilities that are from presses and holds.
+	// We do it all at once so that held inputs don't activate the ability
+	// and then also send a input event to the ability because of the press.
+	//
+	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
 	{
-		TryActivateAbility(SpecHandle);
+		TryActivateAbility(AbilitySpecHandle);
 	}
 
-	// 이번 프레임에 해제된 입력을 처리.
+	//
+	// Process all abilities that had their input released this frame.
+	//
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputReleasedSpecHandles)
 	{
-		FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle);
-
-		if (!AbilitySpec || !AbilitySpec->Ability)
+		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
-			continue;
-		}
+			if (AbilitySpec->Ability)
+			{
+				AbilitySpec->InputPressed = false;
 
-		AbilitySpec->InputPressed = false;
-
-		if (AbilitySpec->IsActive())
-		{
-			AbilitySpecInputReleased(*AbilitySpec);
+				if (AbilitySpec->IsActive())
+				{
+					// Ability is active so pass along the input event.
+					AbilitySpecInputReleased(*AbilitySpec);
+				}
+			}
 		}
 	}
 
-	// Pressed와 Released는 한 프레임짜리 상태.
+	//
+	// Clear the cached ability handles.
+	//
 	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
-
-	// Held는 버튼을 뗄 때까지 유지.
 }
 
 void UDCAbilitySystemComponent::ClearAbilityInput()
@@ -156,51 +318,216 @@ void UDCAbilitySystemComponent::ClearAbilityInput()
 	InputHeldSpecHandles.Reset();
 }
 
-void UDCAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec& Spec)
+void UDCAbilitySystemComponent::NotifyAbilityActivated(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability)
 {
-	Super::AbilitySpecInputPressed(Spec);
+	Super::NotifyAbilityActivated(Handle, Ability);
 
-	if (!Spec.IsActive())
+	if (UDCGameplayAbility* DCAbility = Cast<UDCGameplayAbility>(Ability))
 	{
+		AddAbilityToActivationGroup(DCAbility->GetActivationGroup(), DCAbility);
+	}
+}
+
+void UDCAbilitySystemComponent::NotifyAbilityFailed(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason)
+{
+	Super::NotifyAbilityFailed(Handle, Ability, FailureReason);
+
+	if (APawn* Avatar = Cast<APawn>(GetAvatarActor()))
+	{
+		if (!Avatar->IsLocallyControlled() && Ability->IsSupportedForNetworking())
+		{
+			ClientNotifyAbilityFailed(Ability, FailureReason);
+			return;
+		}
+	}
+
+	HandleAbilityFailed(Ability, FailureReason);
+}
+
+void UDCAbilitySystemComponent::NotifyAbilityEnded(FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability, bool bWasCancelled)
+{
+	Super::NotifyAbilityEnded(Handle, Ability, bWasCancelled);
+
+	if (UDCGameplayAbility* DCAbility = Cast<UDCGameplayAbility>(Ability))
+	{
+		RemoveAbilityFromActivationGroup(DCAbility->GetActivationGroup(), DCAbility);
+	}
+}
+
+void UDCAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags)
+{
+	FGameplayTagContainer ModifiedBlockTags = BlockTags;
+	FGameplayTagContainer ModifiedCancelTags = CancelTags;
+
+	if (TagRelationshipMapping)
+	{
+		// Use the mapping to expand the ability tags into block and cancel tag
+		TagRelationshipMapping->GetAbilityTagsToBlockAndCancel(AbilityTags, &ModifiedBlockTags, &ModifiedCancelTags);
+	}
+
+	Super::ApplyAbilityBlockAndCancelTags(AbilityTags, RequestingAbility, bEnableBlockTags, ModifiedBlockTags, bExecuteCancelTags, ModifiedCancelTags);
+
+	//@TODO: Apply any special logic like blocking input or movement
+}
+
+void UDCAbilitySystemComponent::HandleChangeAbilityCanBeCanceled(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bCanBeCanceled)
+{
+	Super::HandleChangeAbilityCanBeCanceled(AbilityTags, RequestingAbility, bCanBeCanceled);
+
+	//@TODO: Apply any special logic like blocking input or movement
+}
+
+void UDCAbilitySystemComponent::GetAdditionalActivationTagRequirements(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer& OutActivationRequired, FGameplayTagContainer& OutActivationBlocked) const
+{
+	if (TagRelationshipMapping)
+	{
+		TagRelationshipMapping->GetRequiredAndBlockedActivationTags(AbilityTags, &OutActivationRequired, &OutActivationBlocked);
+	}
+}
+
+void UDCAbilitySystemComponent::SetTagRelationshipMapping(UDCAbilityTagRelationshipMapping* NewMapping)
+{
+	TagRelationshipMapping = NewMapping;
+}
+
+void UDCAbilitySystemComponent::ClientNotifyAbilityFailed_Implementation(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason)
+{
+	HandleAbilityFailed(Ability, FailureReason);
+}
+
+void UDCAbilitySystemComponent::HandleAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason)
+{
+	//UE_LOG(LogDCAbilitySystem, Warning, TEXT("Ability %s failed to activate (tags: %s)"), *GetPathNameSafe(Ability), *FailureReason.ToString());
+
+	if (const UDCGameplayAbility* DCAbility = Cast<const UDCGameplayAbility>(Ability))
+	{
+		DCAbility->OnAbilityFailedToActivate(FailureReason);
+	}	
+}
+
+bool UDCAbilitySystemComponent::IsActivationGroupBlocked(EDCAbilityActivationGroup Group) const
+{
+	bool bBlocked = false;
+
+	switch (Group)
+	{
+	case EDCAbilityActivationGroup::Independent:
+		// Independent abilities are never blocked.
+		bBlocked = false;
+		break;
+
+	case EDCAbilityActivationGroup::Exclusive_Replaceable:
+	case EDCAbilityActivationGroup::Exclusive_Blocking:
+		// Exclusive abilities can activate if nothing is blocking.
+		bBlocked = (ActivationGroupCounts[(uint8)EDCAbilityActivationGroup::Exclusive_Blocking] > 0);
+		break;
+
+	default:
+		checkf(false, TEXT("IsActivationGroupBlocked: Invalid ActivationGroup [%d]\n"), (uint8)Group);
+		break;
+	}
+
+	return bBlocked;
+}
+
+void UDCAbilitySystemComponent::AddAbilityToActivationGroup(EDCAbilityActivationGroup Group, UDCGameplayAbility* DCAbility)
+{
+	check(DCAbility);
+	check(ActivationGroupCounts[(uint8)Group] < INT32_MAX);
+
+	ActivationGroupCounts[(uint8)Group]++;
+
+	const bool bReplicateCancelAbility = false;
+
+	switch (Group)
+	{
+	case EDCAbilityActivationGroup::Independent:
+		// Independent abilities do not cancel any other abilities.
+		break;
+
+	case EDCAbilityActivationGroup::Exclusive_Replaceable:
+	case EDCAbilityActivationGroup::Exclusive_Blocking:
+		CancelActivationGroupAbilities(EDCAbilityActivationGroup::Exclusive_Replaceable, DCAbility, bReplicateCancelAbility);
+		break;
+
+	default:
+		checkf(false, TEXT("AddAbilityToActivationGroup: Invalid ActivationGroup [%d]\n"), (uint8)Group);
+		break;
+	}
+
+	const int32 ExclusiveCount = ActivationGroupCounts[(uint8)EDCAbilityActivationGroup::Exclusive_Replaceable] + ActivationGroupCounts[(uint8)EDCAbilityActivationGroup::Exclusive_Blocking];
+	if (!ensure(ExclusiveCount <= 1))
+	{
+		UE_LOG(LogDCAbilitySystem, Error, TEXT("AddAbilityToActivationGroup: Multiple exclusive abilities are running."));
+	}
+}
+
+void UDCAbilitySystemComponent::RemoveAbilityFromActivationGroup(EDCAbilityActivationGroup Group, UDCGameplayAbility* DCAbility)
+{
+	check(DCAbility);
+	check(ActivationGroupCounts[(uint8)Group] > 0);
+
+	ActivationGroupCounts[(uint8)Group]--;
+}
+
+void UDCAbilitySystemComponent::CancelActivationGroupAbilities(EDCAbilityActivationGroup Group, UDCGameplayAbility* IgnoreDCAbility, bool bReplicateCancelAbility)
+{
+	auto ShouldCancelFunc = [this, Group, IgnoreDCAbility](const UDCGameplayAbility* DCAbility, FGameplayAbilitySpecHandle Handle)
+	{
+		return ((DCAbility->GetActivationGroup() == Group) && (DCAbility != IgnoreDCAbility));
+	};
+
+	CancelAbilitiesByFunc(ShouldCancelFunc, bReplicateCancelAbility);
+}
+
+void UDCAbilitySystemComponent::AddDynamicTagGameplayEffect(const FGameplayTag& Tag)
+{
+	const TSubclassOf<UGameplayEffect> DynamicTagGE = UDCAssetManager::GetSubclass(UDCGameData::Get().DynamicTagGameplayEffect);
+	if (!DynamicTagGE)
+	{
+		UE_LOG(LogDCAbilitySystem, Warning, TEXT("AddDynamicTagGameplayEffect: Unable to find DynamicTagGameplayEffect [%s]."), *UDCGameData::Get().DynamicTagGameplayEffect.GetAssetName());
 		return;
 	}
 
-	/*
-	 * WaitInputPress 같은 AbilityTask가 입력 이벤트를 받을 수 있도록
-	 * GAS Generic Replicated Event를 발생시킴.
-	 */
-	PRAGMA_DISABLE_DEPRECATION_WARNINGS
-	const UGameplayAbility* AbilityInstance = Spec.GetPrimaryInstance();
+	const FGameplayEffectSpecHandle SpecHandle = MakeOutgoingSpec(DynamicTagGE, 1.0f, MakeEffectContext());
+	FGameplayEffectSpec* Spec = SpecHandle.Data.Get();
 
-	const FPredictionKey PredictionKey = AbilityInstance
-		                                     ? AbilityInstance->GetCurrentActivationInfo().GetActivationPredictionKey()
-		                                     : Spec.ActivationInfo.GetActivationPredictionKey();
-	PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-	InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, PredictionKey);
-}
-
-void UDCAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& Spec)
-{
-	Super::AbilitySpecInputReleased(Spec);
-
-	if (!Spec.IsActive())
+	if (!Spec)
 	{
+		UE_LOG(LogDCAbilitySystem, Warning, TEXT("AddDynamicTagGameplayEffect: Unable to make outgoing spec for [%s]."), *GetNameSafe(DynamicTagGE));
 		return;
 	}
 
-	// WaitInputRelease가 사용하는 Release 이벤트를 발생시킴. 이후 GA_DC_Aim의 짧은 클릭/Hold 구분에 필요.
-	PRAGMA_DISABLE_DEPRECATION_WARNINGS
-	const UGameplayAbility* AbilityInstance = Spec.GetPrimaryInstance();
+	Spec->DynamicGrantedTags.AddTag(Tag);
 
-	const FPredictionKey PredictionKey = AbilityInstance
-		                                     ? AbilityInstance->GetCurrentActivationInfo().GetActivationPredictionKey()
-		                                     : Spec.ActivationInfo.GetActivationPredictionKey();
-	PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-	InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, PredictionKey);
+	ApplyGameplayEffectSpecToSelf(*Spec);
 }
 
+void UDCAbilitySystemComponent::RemoveDynamicTagGameplayEffect(const FGameplayTag& Tag)
+{
+	const TSubclassOf<UGameplayEffect> DynamicTagGE = UDCAssetManager::GetSubclass(UDCGameData::Get().DynamicTagGameplayEffect);
+	if (!DynamicTagGE)
+	{
+		UE_LOG(LogDCAbilitySystem, Warning, TEXT("RemoveDynamicTagGameplayEffect: Unable to find gameplay effect [%s]."), *UDCGameData::Get().DynamicTagGameplayEffect.GetAssetName());
+		return;
+	}
+
+	FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(Tag));
+	Query.EffectDefinition = DynamicTagGE;
+
+	RemoveActiveEffects(Query);
+}
+
+void UDCAbilitySystemComponent::GetAbilityTargetData(const FGameplayAbilitySpecHandle AbilityHandle, FGameplayAbilityActivationInfo ActivationInfo, FGameplayAbilityTargetDataHandle& OutTargetDataHandle)
+{
+	TSharedPtr<FAbilityReplicatedDataCache> ReplicatedData = AbilityTargetDataMap.Find(FGameplayAbilitySpecHandleAndPredictionKey(AbilityHandle, ActivationInfo.GetActivationPredictionKey()));
+	if (ReplicatedData.IsValid())
+	{
+		OutTargetDataHandle = ReplicatedData->TargetData;
+	}
+}
+
+// Lagacy
 void UDCAbilitySystemComponent::ClearAimState()
 {
 	FGameplayTagContainer AimStateTags;

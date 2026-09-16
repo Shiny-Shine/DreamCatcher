@@ -26,8 +26,11 @@
 #include "InputActionValue.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/DCPlayerState.h"
+#include "Character/DCCharacterMovementComponent.h"
 
-ADreamCatcherCharacter::ADreamCatcherCharacter()
+ADreamCatcherCharacter::ADreamCatcherCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDCCharacterMovementComponent>(
+		ACharacter::CharacterMovementComponentName))
 {
 	// Constructor는 기본 부품 조립 단계.
 	// 런타임 월드 참조나 다른 액터 찾기는 일반적으로 여기서 안함.
@@ -246,11 +249,6 @@ void ADreamCatcherCharacter::InitializeGASAimStateListeners()
 
 	BoundAimAbilitySystemComponent = AbilitySystemComponent;
 
-	if (UDCAnimInstance* DCAnimInstance = Cast<UDCAnimInstance>(GetMesh()->GetAnimInstance()))
-	{
-		DCAnimInstance->InitializeWithAbilitySystem(AbilitySystemComponent);
-	}
-
 	ShoulderAimTagDelegateHandle =
 		AbilitySystemComponent->
 		RegisterGameplayTagEvent(DCGameplayTags::State_Aim_Shoulder, EGameplayTagEventType::NewOrRemoved)
@@ -436,21 +434,14 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		// 같은 InputComponent에 다시 Setup이 호출될 경우를 대비해 기존 Ability Binding을 먼저 제거.
 		DCInputComponent->RemoveBinds(AbilityInputBindHandles);
 
-		// Move와 Look은 일반 Character 함수에 직접 연결.
-		DCInputComponent->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Move, ETriggerEvent::Triggered, this,
-		                                   &ADreamCatcherCharacter::Move);
+		DCInputComponent->BindNativeAction(InputConfig,DCGameplayTags::InputTag_Move,ETriggerEvent::Triggered,this,&ADreamCatcherCharacter::Move,true);
 
-		DCInputComponent->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Look, ETriggerEvent::Triggered, this,
-		                                   &ADreamCatcherCharacter::Look);
+		DCInputComponent->BindNativeAction(InputConfig,DCGameplayTags::InputTag_Look,ETriggerEvent::Triggered,this,&ADreamCatcherCharacter::Look,true);
 
 		// Jump, Aim, Dodge, Ultimate, Fire는 InputTag를 ASC에 전달.
-		DCInputComponent->BindAbilityActions(InputConfig, this, &ADreamCatcherCharacter::Input_AbilityInputTagPressed,
-		                                     &ADreamCatcherCharacter::Input_AbilityInputTagReleased,
-		                                     &ADreamCatcherCharacter::Input_AbilityInputTagCanceled,
-		                                     AbilityInputBindHandles);
+		DCInputComponent->BindLegacyAbilityActions(InputConfig,this,&ADreamCatcherCharacter::Input_AbilityInputTagPressed,&ADreamCatcherCharacter::Input_AbilityInputTagReleased,&ADreamCatcherCharacter::Input_AbilityInputTagCanceled,AbilityInputBindHandles);
 
-		UE_LOG(LogDreamCatcher, Log, TEXT("Character [%s] bound GAS input ""using InputConfig [%s]."),
-		       *GetNameSafe(this), *GetNameSafe(InputConfig));
+		UE_LOG(LogDreamCatcher, Log, TEXT("Character [%s] bound GAS input ""using InputConfig [%s]."), *GetNameSafe(this), *GetNameSafe(InputConfig));
 
 		// GAS 입력을 연결했으므로 아래 Legacy 입력까지 중복 연결하지 않고 종료.
 		return;
@@ -1103,4 +1094,19 @@ void ADreamCatcherCharacter::UnPossessed()
 	}
 
 	Super::UnPossessed();
+}
+
+void ADreamCatcherCharacter::ToggleCrouch()
+{
+	const UDCCharacterMovementComponent* DCMoveComp =
+		CastChecked<UDCCharacterMovementComponent>(GetCharacterMovement());
+
+	if (IsCrouched() || DCMoveComp->bWantsToCrouch)
+	{
+		UnCrouch();
+	}
+	else if (DCMoveComp->IsMovingOnGround())
+	{
+		Crouch();
+	}
 }

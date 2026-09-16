@@ -59,7 +59,7 @@ class DREAMCATCHER_API ADreamCatcherCharacter : public ACharacter, public IAbili
 
 public:
 	// Unreal의 기본 데미지 파이프라인과 연결.
-	ADreamCatcherCharacter();
+	ADreamCatcherCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	// IAbilitySystemInterface 구현.
 	// 실제 ASC는 PlayerState가 소유하고 Character는 Avatar로만 연결.
@@ -101,6 +101,9 @@ public:
 	{
 		return CurrentGASAimMode;
 	}
+	
+	UFUNCTION(BlueprintCallable, Category = "DC|Character")
+	void ToggleCrouch();
 
 protected:
 	virtual void BeginPlay() override;
@@ -335,10 +338,10 @@ private:
 	FDelegateHandle ScopeAimTagDelegateHandle;
 
 	EDCAimMode CurrentGASAimMode = EDCAimMode::Hip;
-	
+
 	// 이 Character가 현재 새 CameraMode 시스템을 사용하는지 반환.
 	bool IsUsingCameraModeSystem() const;
-	
+
 	// 정상적인 입력 해제와 구분되는 취소 이벤트.
 	void Input_AbilityInputTagCanceled(FGameplayTag InputTag);
 };
