@@ -1,3 +1,5 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #include "DreamCatcherCharacter.h"
 
 #include "AbilitySystem/DCAbilitySystemComponent.h"
@@ -8,6 +10,7 @@
 #include "Camera/DCCameraMode.h"
 #include "Character/DCPawnData.h"
 #include "Character/DCPawnExtensionComponent.h"
+#include "Character/DCHeroComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/DCCombatComponent.h"
 #include "Components/DCHealthComponent.h"
@@ -80,6 +83,11 @@ ADreamCatcherCharacter::ADreamCatcherCharacter(const FObjectInitializer& ObjectI
 	// 체력, 전투를 컴포넌트로 분리해
 	// 나중에 적 캐릭터나 보스에도 재사용하기 쉽게 만ㄷ므.
 	PawnExtensionComponent = CreateDefaultSubobject<UDCPawnExtensionComponent>(TEXT("PawnExtensionComponent"));
+	// Ported from LyraCharacter: react to the extension's ASC lifetime rather than initialize it here.
+	PawnExtensionComponent->OnAbilitySystemInitialized_RegisterAndCall(
+		FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
+	PawnExtensionComponent->OnAbilitySystemUninitialized_Register(
+		FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemUninitialized));
 	HealthComponent = CreateDefaultSubobject<UDCHealthComponent>(TEXT("HealthComponent"));
 	CombatComponent = CreateDefaultSubobject<UDCCombatComponent>(TEXT("CombatComponent"));
 
@@ -134,52 +142,32 @@ void ADreamCatcherCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	// 서버에서는 PossessedBy 시점에 PlayerState와 Controller가 모두 준비되어 있으므로 여기서 ASC를 초기화.
-	InitializeAbilitySystem();
+	PawnExtensionComponent->HandleControllerChanged();
+}
+
+void ADreamCatcherCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+	PawnExtensionComponent->HandleControllerChanged();
 }
 
 void ADreamCatcherCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 
-	// 클라이언트에서는 PlayerState가 네트워크로 복제된 뒤 이 함수가 호출되므로 여기서 ASC Avatar를 연결.
-	InitializeAbilitySystem();
+	PawnExtensionComponent->HandlePlayerStateReplicated();
 }
 
-void ADreamCatcherCharacter::InitializeAbilitySystem()
+void ADreamCatcherCharacter::OnAbilitySystemInitialized()
 {
-	if (!PawnExtensionComponent)
-	{
-		UE_LOG(LogDreamCatcher, Error, TEXT("Character [%s] has no ""PawnExtensionComponent."),
-		       *GetNameSafe(this));
-
-		return;
-	}
-
-	ADCPlayerState* DCPlayerState = GetPlayerState<ADCPlayerState>();
-
-	if (!DCPlayerState)
-	{
-		UE_LOG(LogDreamCatcher, Warning,
-		       TEXT("Character [%s] cannot initialize ASC ""because DCPlayerState is not available."),
-		       *GetNameSafe(this));
-
-		return;
-	}
-
-	UDCAbilitySystemComponent* AbilitySystemComponent = DCPlayerState->GetDCAbilitySystemComponent();
-
-	if (!AbilitySystemComponent)
-	{
-		UE_LOG(LogDreamCatcher, Error, TEXT("DCPlayerState [%s] has no ""DCAbilitySystemComponent."),
-		       *GetNameSafe(DCPlayerState));
-
-		return;
-	}
-
-	PawnExtensionComponent->InitializeAbilitySystem(AbilitySystemComponent, DCPlayerState);
-
+	// The existing HealthComponent subscribes independently; do not initialize it twice here.
 	InitializeGASAimStateListeners();
+	InitializeCameraModeSystem();
+}
+
+void ADreamCatcherCharacter::OnAbilitySystemUninitialized()
+{
+	UninitializeGASAimStateListeners();
 }
 
 void ADreamCatcherCharacter::InitializeCameraModeSystem()
@@ -209,8 +197,16 @@ void ADreamCatcherCharacter::InitializeCameraModeSystem()
 		return;
 	}
 
-	// DCCameraComponent가 매 프레임 사용할 CameraMode를 Character에 질의하도록 연결.
-	ModeCamera->DetermineCameraModeDelegate.BindUObject(this, &ThisClass::DetermineCameraMode);
+	const UDCHeroComponent* HeroComponent = UDCHeroComponent::FindHeroComponent(this);
+	if (!HeroComponent || HeroComponent->UsesLegacyCameraMode())
+	{
+		ModeCamera->DetermineCameraModeDelegate.BindUObject(this, &ThisClass::DetermineCameraMode);
+	}
+	else if (ModeCamera->DetermineCameraModeDelegate.IsBoundToObject(this))
+	{
+		// Hero supplies the original camera delegate when the R4 migration is enabled.
+		ModeCamera->DetermineCameraModeDelegate.Unbind();
+	}
 
 	// 새 카메라를 먼저 활성화.
 	ModeCamera->Activate(true);
@@ -379,6 +375,14 @@ void ADreamCatcherCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (PawnExtensionComponent->GetPawnData<UDCPawnData>())
+	{
+		ensureMsgf(UDCHeroComponent::FindHeroComponent(this),
+		           TEXT(
+			           "[R2-2] GAS pawn [%s] needs exactly one DCHeroComponent on its Blueprint. ASC initialization is owned by Hero."
+		           ), *GetNameSafe(this));
+	}
+
 	InitializeCameraModeSystem();
 
 	// BeginPlay 시점에는 컴포넌트와 런타임 객체들이 모두 살아 있으므로
@@ -412,6 +416,15 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+	if (const UDCHeroComponent* HeroComponent = UDCHeroComponent::FindHeroComponent(this))
+	{
+		if (!HeroComponent->UsesLegacyPlayerInput())
+		{
+			PawnExtensionComponent->SetupPlayerInputComponent();
+			return;
+		}
+	}
+
 	const UDCPawnData* PawnData = PawnExtensionComponent ? PawnExtensionComponent->GetPawnData() : nullptr;
 
 	const UDCInputConfig* InputConfig = PawnData ? PawnData->InputConfig : nullptr;
@@ -434,14 +447,24 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		// 같은 InputComponent에 다시 Setup이 호출될 경우를 대비해 기존 Ability Binding을 먼저 제거.
 		DCInputComponent->RemoveBinds(AbilityInputBindHandles);
 
-		DCInputComponent->BindNativeAction(InputConfig,DCGameplayTags::InputTag_Move,ETriggerEvent::Triggered,this,&ADreamCatcherCharacter::Move,true);
+		DCInputComponent->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Move, ETriggerEvent::Triggered, this,
+		                                   &ADreamCatcherCharacter::Move, true);
 
-		DCInputComponent->BindNativeAction(InputConfig,DCGameplayTags::InputTag_Look,ETriggerEvent::Triggered,this,&ADreamCatcherCharacter::Look,true);
+		DCInputComponent->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Look, ETriggerEvent::Triggered, this,
+		                                   &ADreamCatcherCharacter::Look, true);
 
 		// Jump, Aim, Dodge, Ultimate, Fire는 InputTag를 ASC에 전달.
-		DCInputComponent->BindLegacyAbilityActions(InputConfig,this,&ADreamCatcherCharacter::Input_AbilityInputTagPressed,&ADreamCatcherCharacter::Input_AbilityInputTagReleased,&ADreamCatcherCharacter::Input_AbilityInputTagCanceled,AbilityInputBindHandles);
+		DCInputComponent->BindLegacyAbilityActions(InputConfig, this,
+		                                           &ADreamCatcherCharacter::Input_AbilityInputTagPressed,
+		                                           &ADreamCatcherCharacter::Input_AbilityInputTagReleased,
+		                                           &ADreamCatcherCharacter::Input_AbilityInputTagCanceled,
+		                                           AbilityInputBindHandles);
 
-		UE_LOG(LogDreamCatcher, Log, TEXT("Character [%s] bound GAS input ""using InputConfig [%s]."), *GetNameSafe(this), *GetNameSafe(InputConfig));
+		UE_LOG(LogDreamCatcher, Log, TEXT("Character [%s] bound GAS input ""using InputConfig [%s]."),
+		       *GetNameSafe(this), *GetNameSafe(InputConfig));
+
+		// The input component and bindings now exist; allow the original InitState chain to proceed.
+		PawnExtensionComponent->SetupPlayerInputComponent();
 
 		// GAS 입력을 연결했으므로 아래 Legacy 입력까지 중복 연결하지 않고 종료.
 		return;
@@ -532,6 +555,8 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		UE_LOG(LogDreamCatcher, Warning, TEXT("AimAction is not assigned on %s"), *GetName());
 	}
+
+	PawnExtensionComponent->SetupPlayerInputComponent();
 }
 
 void ADreamCatcherCharacter::Input_AbilityInputTagPressed(FGameplayTag InputTag)
@@ -602,9 +627,7 @@ void ADreamCatcherCharacter::Look(const FInputActionValue& Value)
 
 	// CameraMode 시스템이 활성화된 GAS 테스트 Character는 CameraMode Stack에서 계산된 감도를 사용.
 	// 기존 Character는 Legacy 감도를 유지.
-	const float LookSensitivity = ModeCamera && ModeCamera->IsActive()
-		                              ? ModeCamera->GetCurrentLookSensitivityMultiplier()
-		                              : CurrentLookSensitivityMultiplier;
+	const float LookSensitivity = GetCurrentLookSensitivityMultiplier();
 
 	AddControllerYawInput(Input.X * LookSensitivity);
 
@@ -1085,15 +1108,10 @@ void ADreamCatcherCharacter::UnPossessed()
 		AbilityInputBindHandles.Reset();
 	}
 
-	UninitializeGASAimStateListeners();
-
-	// PlayerState ASC에서 현재 Character Avatar와 PawnData AbilitySet을 제거.
-	if (PawnExtensionComponent)
-	{
-		PawnExtensionComponent->UninitializeAbilitySystem();
-	}
-
 	Super::UnPossessed();
+
+	// Match Lyra's controller-change path. Actual avatar teardown belongs to PawnExtension's lifetime.
+	PawnExtensionComponent->HandleControllerChanged();
 }
 
 void ADreamCatcherCharacter::ToggleCrouch()
@@ -1109,4 +1127,11 @@ void ADreamCatcherCharacter::ToggleCrouch()
 	{
 		Crouch();
 	}
+}
+
+float ADreamCatcherCharacter::GetCurrentLookSensitivityMultiplier() const
+{
+	return ModeCamera && ModeCamera->IsActive()
+		       ? ModeCamera->GetCurrentLookSensitivityMultiplier()
+		       : CurrentLookSensitivityMultiplier;
 }

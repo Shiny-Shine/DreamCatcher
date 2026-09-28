@@ -1,3 +1,5 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -104,12 +106,16 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "DC|Character")
 	void ToggleCrouch();
+	
+	// R4 카메라 전환 전까지 현재 카메라의 감도를 제공.
+	float GetCurrentLookSensitivityMultiplier() const;
 
 protected:
 	virtual void BeginPlay() override;
 
 	// 서버에서 Controller가 이 Character를 Possess한 직후 호출.
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_Controller() override;
 
 	// 클라이언트에서 PlayerState가 복제된 뒤 호출.
 	virtual void OnRep_PlayerState() override;
@@ -247,8 +253,9 @@ protected:
 	float MaxAccumulatedRecoilYaw = 1.0f; // 적용되지 않은 좌우 반동의 최대치
 
 private:
-	// 현재 Character의 PlayerState에서 ASC를 가져와 PawnExtensionComponent에 연결.
-	void InitializeAbilitySystem();
+	// ASC ownership/initialization is handled by PawnExtension and Hero. Observe their lifetime here.
+	void OnAbilitySystemInitialized();
+	void OnAbilitySystemUninitialized();
 
 	// Ability 입력이 시작됐을 때 해당 InputTag를 ASC에 전달.
 	void Input_AbilityInputTagPressed(FGameplayTag InputTag);

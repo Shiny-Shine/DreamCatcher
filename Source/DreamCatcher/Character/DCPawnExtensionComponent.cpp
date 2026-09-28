@@ -1,128 +1,161 @@
-#include "Character/DCPawnExtensionComponent.h"
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#include "DCPawnExtensionComponent.h"
 
 #include "AbilitySystem/DCAbilitySystemComponent.h"
-#include "Character/DCPawnData.h"
-#include "DreamCatcher.h"
+#include "Components/GameFrameworkComponentDelegates.h"
+#include "Components/GameFrameworkComponentManager.h"
+#include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
+#include "AbilitySystem/DCGameplayTags.h"
+#include "DCLogChannels.h"
+#include "DCPawnData.h"
+#include "Net/UnrealNetwork.h"
 #include "Misc/ScopeExit.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(DCPawnExtensionComponent)
+
+class FLifetimeProperty;
+class UActorComponent;
 
 const FName UDCPawnExtensionComponent::NAME_ActorFeatureName("PawnExtension");
 
 UDCPawnExtensionComponent::UDCPawnExtensionComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.bCanEverTick = false;
 
+	SetIsReplicatedByDefault(true);
+
+	PawnData = nullptr;
 	AbilitySystemComponent = nullptr;
 }
 
-UDCPawnExtensionComponent* UDCPawnExtensionComponent::FindPawnExtensionComponent(const AActor* Actor)
+void UDCPawnExtensionComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	return Actor ? Actor->FindComponentByClass<UDCPawnExtensionComponent>() : nullptr;
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UDCPawnExtensionComponent, PawnData);
 }
 
 void UDCPawnExtensionComponent::OnRegister()
 {
 	Super::OnRegister();
 
-	const APawn* Pawn = Cast<APawn>(GetOwner());
+	const APawn* Pawn = GetPawn<APawn>();
+	if (!ensureAlwaysMsgf((Pawn != nullptr), TEXT("DCPawnExtensionComponent on [%s] can only be added to Pawn actors."), *GetNameSafe(GetOwner())))
+	{
+		return;
+	}
 
-	ensureAlwaysMsgf(Pawn, TEXT("DCPawnExtensionComponent can only be added to a Pawn. ""Owner: [%s]"),
-	                 *GetNameSafe(GetOwner()));
+	TArray<UActorComponent*> PawnExtensionComponents;
+	Pawn->GetComponents(UDCPawnExtensionComponent::StaticClass(), PawnExtensionComponents);
+	ensureAlwaysMsgf((PawnExtensionComponents.Num() == 1), TEXT("Only one DCPawnExtensionComponent should exist on [%s]."), *GetNameSafe(GetOwner()));
+
+	// Register with the init state system early, this will only work if this is a game world
+	RegisterInitStateFeature();
+}
+
+void UDCPawnExtensionComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Listen for changes to all features
+	BindOnActorInitStateChanged(NAME_None, FGameplayTag(), false);
+
+	// Notifies state manager that we have spawned, then try rest of default initialization
+	ensure(TryToChangeInitState(DCGameplayTags::InitState_Spawned));
+	CheckDefaultInitialization();
 }
 
 void UDCPawnExtensionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UninitializeAbilitySystem();
+	UnregisterInitStateFeature();
 
 	Super::EndPlay(EndPlayReason);
 }
 
-void UDCPawnExtensionComponent::InitializeAbilitySystem(UDCAbilitySystemComponent* InAbilitySystemComponent,
-                                                        AActor* InOwnerActor)
+void UDCPawnExtensionComponent::SetPawnData(const UDCPawnData* InPawnData)
 {
-	check(InAbilitySystemComponent);
+	check(InPawnData);
+
+	APawn* Pawn = GetPawnChecked<APawn>();
+
+	if (Pawn->GetLocalRole() != ROLE_Authority)
+	{
+		return;
+	}
+
+	if (PawnData)
+	{
+		UE_LOG(LogDC, Error, TEXT("Trying to set PawnData [%s] on pawn [%s] that already has valid PawnData [%s]."), *GetNameSafe(InPawnData), *GetNameSafe(Pawn), *GetNameSafe(PawnData));
+		return;
+	}
+
+	PawnData = InPawnData;
+
+	Pawn->ForceNetUpdate();
+
+	CheckDefaultInitialization();
+}
+
+void UDCPawnExtensionComponent::OnRep_PawnData()
+{
+	CheckDefaultInitialization();
+}
+
+void UDCPawnExtensionComponent::InitializeAbilitySystem(UDCAbilitySystemComponent* InASC, AActor* InOwnerActor)
+{
+	check(InASC);
 	check(InOwnerActor);
 
-	// 연결 해제 콜백 안에서 다시 초기화하여 ASC 참조가 바뀌는 것을 막음.
+	// A legacy unequip callback must not reconnect the component while teardown is still running.
 	if (bUninitializingAbilitySystem)
 	{
-		UE_LOG(LogDreamCatcher, Warning, TEXT("PawnExtension [%s]: initialization requested during uninitialization."),
-		       *GetNameSafe(this));
-
+		UE_LOG(LogDC, Warning, TEXT("PawnExtension [%s]: initialization requested during uninitialization."), *GetNameSafe(this));
 		return;
 	}
 
-	APawn* Pawn = CastChecked<APawn>(GetOwner());
-
-	// 같은 ASC와 Pawn이 이미 연결되어 있다면 AbilitySet을 중복 부여하지 않음.
-	if (AbilitySystemComponent == InAbilitySystemComponent && InAbilitySystemComponent->GetAvatarActor() == Pawn)
+	if (AbilitySystemComponent == InASC)
 	{
+		// The ability system component hasn't changed.
 		return;
 	}
 
-	// 기존 ASC가 있었다면 먼저 정리.
 	if (AbilitySystemComponent)
 	{
+		// Clean up the old ability system component.
 		UninitializeAbilitySystem();
 	}
 
-	// 같은 ASC에 이전 Pawn이 Avatar로 남아 있다면 이전 PawnExtension을 먼저 해제.
-	AActor* ExistingAvatar = InAbilitySystemComponent->GetAvatarActor();
+	APawn* Pawn = GetPawnChecked<APawn>();
+	AActor* ExistingAvatar = InASC->GetAvatarActor();
 
-	if (ExistingAvatar && ExistingAvatar != Pawn)
+	UE_LOG(LogDC, Verbose, TEXT("Setting up ASC [%s] on pawn [%s] owner [%s], existing [%s] "), *GetNameSafe(InASC), *GetNameSafe(Pawn), *GetNameSafe(InOwnerActor), *GetNameSafe(ExistingAvatar));
+
+	if ((ExistingAvatar != nullptr) && (ExistingAvatar != Pawn))
 	{
-		if (UDCPawnExtensionComponent* OtherExtension = FindPawnExtensionComponent(ExistingAvatar))
+		UE_LOG(LogDC, Log, TEXT("Existing avatar (authority=%d)"), ExistingAvatar->HasAuthority() ? 1 : 0);
+
+		// There is already a pawn acting as the ASC's avatar, so we need to kick it out
+		// This can happen on clients if they're lagged: their new pawn is spawned + possessed before the dead one is removed
+		ensure(!ExistingAvatar->HasAuthority());
+
+		if (UDCPawnExtensionComponent* OtherExtensionComponent = FindPawnExtensionComponent(ExistingAvatar))
 		{
-			OtherExtension->UninitializeAbilitySystem();
-		}
-		else
-		{
-			InAbilitySystemComponent->SetAvatarActor(nullptr);
+			OtherExtensionComponent->UninitializeAbilitySystem();
 		}
 	}
 
-	AbilitySystemComponent = InAbilitySystemComponent;
-
-	// ASC Owner  = PlayerState ASC Avatar = 현재 Character
+	AbilitySystemComponent = InASC;
 	AbilitySystemComponent->InitAbilityActorInfo(InOwnerActor, Pawn);
 
-	// Ability 부여는 Authority에서만 수행.
-	if (Pawn->HasAuthority())
+	if (ensure(PawnData))
 	{
-		if (!PawnData)
-		{
-			UE_LOG(LogDreamCatcher, Warning,
-			       TEXT("PawnExtension [%s] has no PawnData. ""ASC was initialized, but no Pawn AbilitySet was granted."
-			       ), *GetNameSafe(this));
-		}
-		else
-		{
-			PawnDataGrantedHandles.Reserve(PawnData->AbilitySets.Num());
-
-			for (const UDCAbilitySet* AbilitySet : PawnData->AbilitySets)
-			{
-				if (!AbilitySet)
-				{
-					continue;
-				}
-
-				FDCAbilitySet_GrantedHandles& GrantedHandles = PawnDataGrantedHandles.Emplace_GetRef();
-
-				AbilitySet->GiveToAbilitySystem(AbilitySystemComponent, &GrantedHandles);
-			}
-		}
+		InASC->SetTagRelationshipMapping(PawnData->TagRelationshipMapping);
 	}
-
-	UE_LOG(LogDreamCatcher, Log,
-	       TEXT("PawnExtension [%s] initialized ASC [%s]. ""Owner [%s], Avatar [%s], PawnData [%s]"),
-	       *GetNameSafe(this),
-	       *GetNameSafe(AbilitySystemComponent),
-	       *GetNameSafe(InOwnerActor),
-	       *GetNameSafe(Pawn),
-	       *GetNameSafe(PawnData)
-	);
 
 	OnAbilitySystemInitialized.Broadcast();
 }
@@ -135,56 +168,149 @@ void UDCPawnExtensionComponent::UninitializeAbilitySystem()
 	}
 
 	bUninitializingAbilitySystem = true;
-
-	// 중간에 함수가 종료되더라도 재진입 방지 상태는 반드시 복구.
 	ON_SCOPE_EXIT
 	{
 		bUninitializingAbilitySystem = false;
 	};
 
-	// 중요: ASC의 Avatar와 Pawn AbilitySet이 살아 있는 동안 장비부터 정리.
+	// R5 compatibility: equipment must release its own grants before the avatar is disconnected.
 	OnAbilitySystemUninitializing.Broadcast();
 
-	APawn* Pawn = Cast<APawn>(GetOwner());
-
-	// PawnData의 Ability를 회수하기 전에 조준 입력과 상태를 정리.
-	if (Pawn && AbilitySystemComponent->GetAvatarActor() == Pawn)
+	// Uninitialize the ASC if we're still the avatar actor (otherwise another pawn already did it when they became the avatar actor)
+	if (AbilitySystemComponent->GetAvatarActor() == GetOwner())
 	{
+		// R4 compatibility: Scope is a persistent GE in the current custom aim implementation.
 		AbilitySystemComponent->CancelAimInputAndState();
-	}
 
-	// 이 PawnData가 부여했던 GAS 항목만 회수.
-	for (FDCAbilitySet_GrantedHandles& GrantedHandles : PawnDataGrantedHandles)
-	{
-		GrantedHandles.TakeFromAbilitySystem(AbilitySystemComponent);
-	}
+		FGameplayTagContainer AbilityTypesToIgnore;
+		AbilityTypesToIgnore.AddTag(DCGameplayTags::Ability_Behavior_SurvivesDeath);
 
-	PawnDataGrantedHandles.Reset();
-
-	// 다른 Pawn이 이미 사용 중인 ASC의 Avatar를 지우지 않도록 확인.
-	if (Pawn && AbilitySystemComponent->GetAvatarActor() == Pawn)
-	{
-		AbilitySystemComponent->CancelAbilities();
+		AbilitySystemComponent->CancelAbilities(nullptr, &AbilityTypesToIgnore);
 		AbilitySystemComponent->ClearAbilityInput();
+		AbilitySystemComponent->RemoveAllGameplayCues();
 
-		if (AbilitySystemComponent->GetOwnerActor())
+		if (AbilitySystemComponent->GetOwnerActor() != nullptr)
 		{
-			// PlayerState Owner는 유지하고 현재 Pawn Avatar만 제거.
 			AbilitySystemComponent->SetAvatarActor(nullptr);
 		}
 		else
 		{
+			// If the ASC doesn't have a valid owner, we need to clear *all* actor info, not just the avatar pairing
 			AbilitySystemComponent->ClearActorInfo();
+		}
+
+		OnAbilitySystemUninitialized.Broadcast();
+	}
+
+	AbilitySystemComponent = nullptr;
+}
+
+void UDCPawnExtensionComponent::HandleControllerChanged()
+{
+	if (AbilitySystemComponent && (AbilitySystemComponent->GetAvatarActor() == GetPawnChecked<APawn>()))
+	{
+		ensure(AbilitySystemComponent->AbilityActorInfo->OwnerActor == AbilitySystemComponent->GetOwnerActor());
+		if (AbilitySystemComponent->GetOwnerActor() == nullptr)
+		{
+			UninitializeAbilitySystem();
+		}
+		else
+		{
+			AbilitySystemComponent->RefreshAbilityActorInfo();
 		}
 	}
 
-	// 기존 HealthComponent 등의 연결 해제 처리는 그대로 유지.
-	OnAbilitySystemUninitialized.Broadcast();
+	CheckDefaultInitialization();
+}
 
-	UE_LOG(LogDreamCatcher, Log, TEXT("PawnExtension [%s] uninitialized ASC [%s] from Pawn [%s]."),
-	       *GetNameSafe(this), *GetNameSafe(AbilitySystemComponent), *GetNameSafe(Pawn));
+void UDCPawnExtensionComponent::HandlePlayerStateReplicated()
+{
+	CheckDefaultInitialization();
+}
 
-	AbilitySystemComponent = nullptr;
+void UDCPawnExtensionComponent::SetupPlayerInputComponent()
+{
+	CheckDefaultInitialization();
+}
+
+void UDCPawnExtensionComponent::CheckDefaultInitialization()
+{
+	// Before checking our progress, try progressing any other features we might depend on
+	CheckDefaultInitializationForImplementers();
+
+	static const TArray<FGameplayTag> StateChain = { DCGameplayTags::InitState_Spawned, DCGameplayTags::InitState_DataAvailable, DCGameplayTags::InitState_DataInitialized, DCGameplayTags::InitState_GameplayReady };
+
+	// This will try to progress from spawned (which is only set in BeginPlay) through the data initialization stages until it gets to gameplay ready
+	ContinueInitStateChain(StateChain);
+}
+
+bool UDCPawnExtensionComponent::CanChangeInitState(UGameFrameworkComponentManager* Manager, FGameplayTag CurrentState, FGameplayTag DesiredState) const
+{
+	check(Manager);
+
+	APawn* Pawn = GetPawn<APawn>();
+	if (!CurrentState.IsValid() && DesiredState == DCGameplayTags::InitState_Spawned)
+	{
+		// As long as we are on a valid pawn, we count as spawned
+		if (Pawn)
+		{
+			return true;
+		}
+	}
+	if (CurrentState == DCGameplayTags::InitState_Spawned && DesiredState == DCGameplayTags::InitState_DataAvailable)
+	{
+		// Pawn data is required.
+		if (!PawnData)
+		{
+			return false;
+		}
+
+		const bool bHasAuthority = Pawn->HasAuthority();
+		const bool bIsLocallyControlled = Pawn->IsLocallyControlled();
+
+		if (bHasAuthority || bIsLocallyControlled)
+		{
+			// Check for being possessed by a controller.
+			if (!GetController<AController>())
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+	else if (CurrentState == DCGameplayTags::InitState_DataAvailable && DesiredState == DCGameplayTags::InitState_DataInitialized)
+	{
+		// Transition to initialize if all features have their data available
+		return Manager->HaveAllFeaturesReachedInitState(Pawn, DCGameplayTags::InitState_DataAvailable);
+	}
+	else if (CurrentState == DCGameplayTags::InitState_DataInitialized && DesiredState == DCGameplayTags::InitState_GameplayReady)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void UDCPawnExtensionComponent::HandleChangeInitState(UGameFrameworkComponentManager* Manager, FGameplayTag CurrentState, FGameplayTag DesiredState)
+{
+	UE_LOG(LogDC, Log, TEXT("[R2-2] PawnExtension [%s] InitState=%s"), *GetNameSafe(GetOwner()), *DesiredState.ToString());
+	if (DesiredState == DCGameplayTags::InitState_DataInitialized)
+	{
+		// This is currently all handled by other components listening to this state change
+	}
+}
+
+void UDCPawnExtensionComponent::OnActorInitStateChanged(const FActorInitStateChangedParams& Params)
+{
+	// If another feature is now in DataAvailable, see if we should transition to DataInitialized
+	if (Params.FeatureName != NAME_ActorFeatureName)
+	{
+		if (Params.FeatureState == DCGameplayTags::InitState_DataAvailable)
+		{
+			CheckDefaultInitialization();
+		}
+	}
 }
 
 void UDCPawnExtensionComponent::OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate Delegate)
@@ -194,7 +320,6 @@ void UDCPawnExtensionComponent::OnAbilitySystemInitialized_RegisterAndCall(FSimp
 		OnAbilitySystemInitialized.Add(Delegate);
 	}
 
-	// 연결 해제 중인 ASC를 준비 완료 상태로 전달 X.
 	if (AbilitySystemComponent && !bUninitializingAbilitySystem)
 	{
 		Delegate.ExecuteIfBound();
@@ -211,7 +336,6 @@ void UDCPawnExtensionComponent::OnAbilitySystemUninitialized_Register(FSimpleMul
 
 void UDCPawnExtensionComponent::OnAbilitySystemUninitializing_Register(FSimpleMulticastDelegate::FDelegate Delegate)
 {
-	// 동일한 객체가 같은 수명 이벤트에 중복 등록되는 것을 방지.
 	if (!OnAbilitySystemUninitializing.IsBoundToObject(Delegate.GetUObject()))
 	{
 		OnAbilitySystemUninitializing.Add(Delegate);
@@ -220,12 +344,10 @@ void UDCPawnExtensionComponent::OnAbilitySystemUninitializing_Register(FSimpleMu
 
 void UDCPawnExtensionComponent::UnregisterAbilitySystemDelegates(UObject* Listener)
 {
-	if (!Listener)
+	if (Listener)
 	{
-		return;
+		OnAbilitySystemInitialized.RemoveAll(Listener);
+		OnAbilitySystemUninitialized.RemoveAll(Listener);
+		OnAbilitySystemUninitializing.RemoveAll(Listener);
 	}
-
-	OnAbilitySystemInitialized.RemoveAll(Listener);
-	OnAbilitySystemUninitializing.RemoveAll(Listener);
-	OnAbilitySystemUninitialized.RemoveAll(Listener);
 }

@@ -1,117 +1,122 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
-#include "AbilitySystem/DCAbilitySet.h"
-#include "Components/ActorComponent.h"
+#include "Components/GameFrameworkInitStateInterface.h"
+#include "Components/PawnComponent.h"
+
 #include "DCPawnExtensionComponent.generated.h"
 
+#define UE_API DREAMCATCHER_API
+
+namespace EEndPlayReason { enum Type : int; }
+
+class UGameFrameworkComponentManager;
+class FLifetimeProperty;
 class UDCAbilitySystemComponent;
 class UDCPawnData;
+class UObject;
+struct FActorInitStateChangedParams;
+struct FFrame;
+struct FGameplayTag;
 
 /**
- * PawnData와 PlayerState 소유 ASC를 현재 Pawn에 연결하는 컴포넌트.
- *
- * PlayerState:
- *   ASC의 Owner
- *
- * Character:
- *   ASC의 Avatar
+ * Component that adds functionality to all Pawn classes so it can be used for characters/vehicles/etc.
+ * This coordinates the initialization of other components.
  */
-UCLASS(ClassGroup = (DreamCatcher), meta = (BlueprintSpawnableComponent))
-class DREAMCATCHER_API UDCPawnExtensionComponent : public UActorComponent
+UCLASS(MinimalAPI, ClassGroup = (DreamCatcher), meta = (BlueprintSpawnableComponent))
+class UDCPawnExtensionComponent : public UPawnComponent, public IGameFrameworkInitStateInterface
 {
 	GENERATED_BODY()
 
 public:
-	UDCPawnExtensionComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	// 지정한 Actor에서 PawnExtensionComponent를 찾음.
+	UE_API UDCPawnExtensionComponent(const FObjectInitializer& ObjectInitializer);
+
+	/** The name of this overall feature, this one depends on the other named component features */
+	static UE_API const FName NAME_ActorFeatureName;
+
+	//~ Begin IGameFrameworkInitStateInterface interface
+	virtual FName GetFeatureName() const override { return NAME_ActorFeatureName; }
+	UE_API virtual bool CanChangeInitState(UGameFrameworkComponentManager* Manager, FGameplayTag CurrentState, FGameplayTag DesiredState) const override;
+	UE_API virtual void HandleChangeInitState(UGameFrameworkComponentManager* Manager, FGameplayTag CurrentState, FGameplayTag DesiredState) override;
+	UE_API virtual void OnActorInitStateChanged(const FActorInitStateChangedParams& Params) override;
+	UE_API virtual void CheckDefaultInitialization() override;
+	UE_API virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	//~ End IGameFrameworkInitStateInterface interface
+
+	/** Returns the pawn extension component if one exists on the specified actor. */
+	UFUNCTION(BlueprintPure, Category = "DC|Pawn")
+	static UDCPawnExtensionComponent* FindPawnExtensionComponent(const AActor* Actor) { return (Actor ? Actor->FindComponentByClass<UDCPawnExtensionComponent>() : nullptr); }
+
+	/** Gets the pawn data, which is used to specify pawn properties in data */
+	template <class T>
+	const T* GetPawnData() const { return Cast<T>(PawnData); }
+
+	// Migration compatibility: preserve existing Blueprint/C++ callers until their references are migrated.
 	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Pawn")
-	static UDCPawnExtensionComponent* FindPawnExtensionComponent(const AActor* Actor);
+	const UDCPawnData* GetPawnData() const { return PawnData; }
 
-	// 이 Pawn이 사용할 설정 데이터.
-	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Pawn")
-	const UDCPawnData* GetPawnData() const
-	{
-		return PawnData;
-	}
+	/** Sets the current pawn data */
+	UE_API void SetPawnData(const UDCPawnData* InPawnData);
 
-	/**
-	 * 현재 Pawn과 연결된 ASC.
-	 *
-	 * ASC의 실제 소유자는 PlayerState일 수 있음.
-	 */
-	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Ability System")
-	UDCAbilitySystemComponent* GetDCAbilitySystemComponent() const
-	{
-		return AbilitySystemComponent;
-	}
+	/** Gets the current ability system component, which may be owned by a different actor */
+	UFUNCTION(BlueprintPure, Category = "DC|Pawn")
+	UDCAbilitySystemComponent* GetDCAbilitySystemComponent() const { return AbilitySystemComponent; }
 
-	// PlayerState가 소유한 ASC에 현재 Pawn을 Avatar로 연결.
-	void InitializeAbilitySystem(UDCAbilitySystemComponent* InAbilitySystemComponent, AActor* InOwnerActor);
+	/** Should be called by the owning pawn to become the avatar of the ability system. */
+	UE_API void InitializeAbilitySystem(UDCAbilitySystemComponent* InASC, AActor* InOwnerActor);
 
-	// 현재 Pawn과 ASC의 연결을 해제.
-	void UninitializeAbilitySystem();
+	/** Should be called by the owning pawn to remove itself as the avatar of the ability system. */
+	UE_API void UninitializeAbilitySystem();
 
-	/**
-	 * ASC 초기화 완료 이벤트에 등록.
-	 *
-	 * 이미 초기화된 상태라면 등록 직후 한 번 호출.
-	 */
-	void OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate Delegate);
+	/** Should be called by the owning pawn when the pawn's controller changes. */
+	UE_API void HandleControllerChanged();
 
-	// ASC 연결이 해제될 때 호출되는 이벤트에 등록.
-	void OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate Delegate);
+	/** Should be called by the owning pawn when the player state has been replicated. */
+	UE_API void HandlePlayerStateReplicated();
 
-	// ASC의 Avatar와 Pawn AbilitySet을 제거하기 전에 호출되는 이벤트.
-	// 장비처럼 ASC 연결이 살아 있을 때 정리해야 하는 시스템이 구독.
-	void OnAbilitySystemUninitializing_Register(FSimpleMulticastDelegate::FDelegate Delegate);
+	/** Should be called by the owning pawn when the input component is setup. */
+	UE_API void SetupPlayerInputComponent();
 
-	// 구독자가 종료될 때 자신이 등록한 ASC 관련 이벤트를 해제.
-	void UnregisterAbilitySystemDelegates(UObject* Listener);
+	/** Register with the OnAbilitySystemInitialized delegate and broadcast if our pawn has been registered with the ability system component */
+	UE_API void OnAbilitySystemInitialized_RegisterAndCall(FSimpleMulticastDelegate::FDelegate Delegate);
 
-	// 연결 해제 처리 중에는 새 장비 장착 등의 요청을 막음.
-	bool IsAbilitySystemUninitializing() const
-	{
-		return bUninitializingAbilitySystem;
-	}
-	
-	// 원본 Hero가 참조하는 기능 이름.
-	// 실제 InitState 등록·진행 구현은 R2-2에서 연결.
-	static const FName NAME_ActorFeatureName;
+	/** Register with the OnAbilitySystemUninitialized delegate fired when our pawn is removed as the ability system's avatar actor */
+	UE_API void OnAbilitySystemUninitialized_Register(FSimpleMulticastDelegate::FDelegate Delegate);
+
+	// Migration compatibility for the current EquipmentManager. Remove when R5 replaces its lifetime path.
+	UE_API void OnAbilitySystemUninitializing_Register(FSimpleMulticastDelegate::FDelegate Delegate);
+	UE_API void UnregisterAbilitySystemDelegates(UObject* Listener);
+	bool IsAbilitySystemUninitializing() const { return bUninitializingAbilitySystem; }
 
 protected:
-	virtual void OnRegister() override;
 
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	UE_API virtual void OnRegister() override;
+	UE_API virtual void BeginPlay() override;
+	UE_API virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	/**
-	 * 이 Pawn을 구성할 데이터 에셋.
-	 *
-	 * 테스트 Character Blueprint에서
-	 * DA_DC_PlayerPawn을 할당.
-	 */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Pawn")
+	UFUNCTION()
+	UE_API void OnRep_PawnData();
+
+	/** Delegate fired when our pawn becomes the ability system's avatar actor */
+	FSimpleMulticastDelegate OnAbilitySystemInitialized;
+
+	/** Delegate fired when our pawn is removed as the ability system's avatar actor */
+	FSimpleMulticastDelegate OnAbilitySystemUninitialized;
+
+	/** Pawn data used to create the pawn. Specified from a spawn function or on a placed instance. */
+	// Keep Class Defaults readable during migration; GameMode verifies that any saved default matches its data.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_PawnData, Category = "DC|Pawn")
 	TObjectPtr<const UDCPawnData> PawnData;
 
-private:
-	// PlayerState가 소유하는 ASC를 캐시.
+	/** Pointer to the ability system component that is cached for convenience. */
 	UPROPERTY(Transient)
 	TObjectPtr<UDCAbilitySystemComponent> AbilitySystemComponent;
 
-	/**
-	 * PawnData로부터 부여된 Ability, Effect, Attribute의 Handle.
-	 *
-	 * UnPossess 또는 Pawn 파괴 시 이 Pawn이 부여한 항목만
-	 * ASC에서 제거하기 위해 보관.
-	 */
-	UPROPERTY()
-	TArray<FDCAbilitySet_GrantedHandles> PawnDataGrantedHandles;
-
-	FSimpleMulticastDelegate OnAbilitySystemInitialized;
-	FSimpleMulticastDelegate OnAbilitySystemUninitialized;
+private:
 	FSimpleMulticastDelegate OnAbilitySystemUninitializing;
-
-	// Ability 취소나 Blueprint 콜백에서 연결 해제가 중복 호출되는 것을 방지.
 	bool bUninitializingAbilitySystem = false;
 };
+
+#undef UE_API

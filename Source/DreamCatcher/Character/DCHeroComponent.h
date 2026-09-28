@@ -55,6 +55,10 @@ public:
 
 	/** True if this is controlled by a real player and has progressed far enough in initialization where additional input bindings can be added */
 	UE_API bool IsReadyToBindInputs() const;
+
+	// R2-3/R4 migration boundary: the existing Character currently owns these paths.
+	bool UsesLegacyPlayerInput() const { return bUseLegacyPlayerInput; }
+	bool UsesLegacyCameraMode() const { return bUseLegacyCameraMode; }
 	
 	/** The name of the extension event sent via UGameFrameworkComponentManager when ability inputs are ready to bind */
 	static UE_API const FName NAME_BindInputsNow;
@@ -86,11 +90,24 @@ protected:
 	UE_API void Input_LookStick(const FInputActionValue& InputActionValue);
 	UE_API void Input_Crouch(const FInputActionValue& InputActionValue);
 	UE_API void Input_AutoRun(const FInputActionValue& InputActionValue);
+	
+	// DreamCatcher의 짧은 클릭 / Hold 조준 규칙을 위한 입력 연결.
+    UE_API void Input_AimPressed(const FInputActionValue& InputActionValue);
+    UE_API void Input_AimReleased(const FInputActionValue& InputActionValue);
+    UE_API void Input_AimCanceled(const FInputActionValue& InputActionValue);
 
 	UE_API TSubclassOf<UDCCameraMode> DetermineCameraMode() const;
 
 protected:
 	
+	// Keep Started/Completed/Canceled aim input until the R2-3 binding migration is verified.
+	UPROPERTY(EditDefaultsOnly, Category = "DC|Migration")
+	bool bUseLegacyPlayerInput = true;
+
+	// Keep the existing Hip/Shoulder/Scope camera selection until R4.
+	UPROPERTY(EditDefaultsOnly, Category = "DC|Migration")
+	bool bUseLegacyCameraMode = true;
+
 	UPROPERTY(EditAnywhere)
 	TArray<FInputMappingContextAndPriority> DefaultInputMappings;
 	

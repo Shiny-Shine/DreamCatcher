@@ -1,3 +1,5 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #include "Player/DCPlayerState.h"
 
 #include "AbilitySystem/DCAbilitySet.h"
@@ -5,9 +7,13 @@
 #include "AbilitySystem/Attributes/DCHealthSet.h"
 #include "AbilitySystem/Attributes/DCCombatSet.h"
 #include "AbilitySystem/Attributes/DCResourceSet.h"
+#include "Character/DCPawnData.h"
+#include "Components/GameFrameworkComponentManager.h"
 #include "DCLogChannels.h"
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
+
+const FName ADCPlayerState::NAME_DCAbilityReady("LyraAbilitiesReady");
 
 ADCPlayerState::ADCPlayerState(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -86,9 +92,59 @@ void ADCPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	FDoRepLifetimeParams SharedParams;
 	SharedParams.bIsPushBased = true;
 
+	DOREPLIFETIME_WITH_PARAMS_FAST(ThisClass, PawnData, SharedParams);
+
 	DOREPLIFETIME_WITH_PARAMS_FAST(ThisClass, MyTeamID, SharedParams);
 
 	DOREPLIFETIME(ThisClass, StatTags);
+}
+
+void ADCPlayerState::SetPawnData(const UDCPawnData* InPawnData)
+{
+	check(InPawnData);
+
+	if (GetLocalRole() != ROLE_Authority)
+	{
+		return;
+	}
+
+	if (PawnData)
+	{
+		UE_LOG(
+			LogDC,
+			Error,
+			TEXT(
+				"Trying to set PawnData [%s] on player state [%s] "
+				"that already has valid PawnData [%s]."),
+			*GetNameSafe(InPawnData),
+			*GetNameSafe(this),
+			*GetNameSafe(PawnData));
+
+		return;
+	}
+
+	MARK_PROPERTY_DIRTY_FROM_NAME(ThisClass, PawnData, this);
+	PawnData = InPawnData;
+
+	for (const UDCAbilitySet* AbilitySet : PawnData->AbilitySets)
+	{
+		if (AbilitySet)
+		{
+			AbilitySet->GiveToAbilitySystem(
+				AbilitySystemComponent,
+				nullptr);
+		}
+	}
+
+	UGameFrameworkComponentManager::SendGameFrameworkComponentExtensionEvent(
+		this,
+		NAME_DCAbilityReady);
+
+	ForceNetUpdate();
+}
+
+void ADCPlayerState::OnRep_PawnData()
+{
 }
 
 void ADCPlayerState::SetGenericTeamId(const FGenericTeamId& NewTeamID)

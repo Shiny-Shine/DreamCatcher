@@ -1,3 +1,5 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
 #include "AbilitySystemInterface.h"
@@ -12,6 +14,7 @@ class UDCAbilitySystemComponent;
 class UDCHealthSet;
 class UDCCombatSet;
 class UDCResourceSet;
+class UDCPawnData;
 class FLifetimeProperty;
 
 // DreamCatcher 플레이어의 GAS 상태를 소유하는 PlayerState.
@@ -34,6 +37,17 @@ public:
 	{
 		return AbilitySystemComponent;
 	}
+
+	// Ported from ALyraPlayerState.
+	template <class T>
+	const T* GetPawnData() const
+	{
+		return Cast<T>(PawnData);
+	}
+
+	void SetPawnData(const UDCPawnData* InPawnData);
+
+	static const FName NAME_DCAbilityReady;
 
 	// 플레이어의 체력 AttributeSet을 반환.
 	const UDCHealthSet* GetHealthSet() const
@@ -84,6 +98,13 @@ public:
 
 protected:
 	virtual void PostInitializeComponents() override;
+
+	// Ported from ALyraPlayerState.
+	UFUNCTION()
+	void OnRep_PawnData();
+
+	UPROPERTY(ReplicatedUsing = OnRep_PawnData)
+	TObjectPtr<const UDCPawnData> PawnData;
 
 	// PlayerState가 유지되는 동안 함께 유지할 AbilitySet.
 	// 현재는 Foundation 테스트에 사용, 무기 AbilitySet은 여기에 넣지 않고 Equipment가 부여.

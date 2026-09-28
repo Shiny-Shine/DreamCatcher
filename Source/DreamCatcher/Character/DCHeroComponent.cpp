@@ -68,6 +68,13 @@ void UDCHeroComponent::OnRegister()
 	}
 	else
 	{
+		TArray<UActorComponent*> HeroComponents;
+		GetPawn<APawn>()->GetComponents(UDCHeroComponent::StaticClass(), HeroComponents);
+		if (!ensureAlwaysMsgf(HeroComponents.Num() == 1, TEXT("Only one DCHeroComponent should exist on [%s]."), *GetNameSafe(GetOwner())))
+		{
+			return;
+		}
+
 		// Register with the init state system early, this will only work if this is a game world
 		RegisterInitStateFeature();
 	}
@@ -144,6 +151,8 @@ bool UDCHeroComponent::CanChangeInitState(UGameFrameworkComponentManager* Manage
 
 void UDCHeroComponent::HandleChangeInitState(UGameFrameworkComponentManager* Manager, FGameplayTag CurrentState, FGameplayTag DesiredState)
 {
+	UE_LOG(LogDC, Log, TEXT("[R2-2] Hero [%s] InitState=%s"), *GetNameSafe(GetOwner()), *DesiredState.ToString());
+
 	if (CurrentState == DCGameplayTags::InitState_DataAvailable && DesiredState == DCGameplayTags::InitState_DataInitialized)
 	{
 		APawn* Pawn = GetPawn<APawn>();
@@ -164,7 +173,8 @@ void UDCHeroComponent::HandleChangeInitState(UGameFrameworkComponentManager* Man
 			PawnExtComp->InitializeAbilitySystem(DCPS->GetDCAbilitySystemComponent(), DCPS);
 		}
 
-		if (ADreamCatcherPlayerController* DCPC = GetController<ADreamCatcherPlayerController>())
+		// Keep the original implementation available; do not bind it beside the Character path.
+		if (!bUseLegacyPlayerInput && GetController<ADreamCatcherPlayerController>())
 		{
 			if (Pawn->InputComponent != nullptr)
 			{
@@ -173,7 +183,7 @@ void UDCHeroComponent::HandleChangeInitState(UGameFrameworkComponentManager* Man
 		}
 
 		// Hook up the delegate for all pawns, in case we spectate later
-		if (PawnData)
+		if (PawnData && !bUseLegacyCameraMode)
 		{
 			if (UDCCameraComponent* CameraComponent = UDCCameraComponent::FindCameraComponent(Pawn))
 			{
@@ -281,12 +291,24 @@ void UDCHeroComponent::InitializePlayerInput(UInputComponent* PlayerInputCompone
 					// be triggered directly by these input actions Triggered events. 
 					TArray<uint32> BindHandles;
 					DCIC->BindAbilityActions(InputConfig, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased, /*out*/ BindHandles);
+					
+					// 원본 Triggered / Completed 바인딩은 유지. 현재 프로젝트에서 처리하던 입력 취소도 해제로 전달.
+					for (const FDCInputAction& Action : InputConfig->AbilityInputActions)
+					{
+						if (Action.InputAction && Action.InputTag.IsValid())
+						{
+							BindHandles.Add(DCIC->BindAction(Action.InputAction,ETriggerEvent::Canceled,this,&ThisClass::Input_AbilityInputTagReleased,Action.InputTag).GetHandle());
+						}
+					}
 
 					DCIC->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Move, ETriggerEvent::Triggered, this, &ThisClass::Input_Move, /*bLogIfNotFound=*/ false);
 					DCIC->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Look_Mouse, ETriggerEvent::Triggered, this, &ThisClass::Input_LookMouse, /*bLogIfNotFound=*/ false);
 					DCIC->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Look_Stick, ETriggerEvent::Triggered, this, &ThisClass::Input_LookStick, /*bLogIfNotFound=*/ false);
 					DCIC->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Crouch, ETriggerEvent::Triggered, this, &ThisClass::Input_Crouch, /*bLogIfNotFound=*/ false);
 					DCIC->BindNativeAction(InputConfig, DCGameplayTags::InputTag_AutoRun, ETriggerEvent::Triggered, this, &ThisClass::Input_AutoRun, /*bLogIfNotFound=*/ false);
+					DCIC->BindNativeAction(InputConfig,DCGameplayTags::InputTag_Aim,ETriggerEvent::Started,this,&ThisClass::Input_AimPressed,/*bLogIfNotFound=*/ true);
+					DCIC->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Aim,ETriggerEvent::Completed,this,&ThisClass::Input_AimReleased,/*bLogIfNotFound=*/ true);
+					DCIC->BindNativeAction(	InputConfig,DCGameplayTags::InputTag_Aim,ETriggerEvent::Canceled,this,&ThisClass::Input_AimCanceled,/*bLogIfNotFound=*/ true);
 				}
 			}
 		}
@@ -350,7 +372,7 @@ void UDCHeroComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 			{
 				DCASC->AbilityInputTagPressed(InputTag);
 			}
-		}	
+		}
 	}
 }
 
@@ -404,22 +426,25 @@ void UDCHeroComponent::Input_Move(const FInputActionValue& InputActionValue)
 void UDCHeroComponent::Input_LookMouse(const FInputActionValue& InputActionValue)
 {
 	APawn* Pawn = GetPawn<APawn>();
-
 	if (!Pawn)
 	{
 		return;
 	}
-	
+
 	const FVector2D Value = InputActionValue.Get<FVector2D>();
+
+	const ADreamCatcherCharacter* Character = Cast<ADreamCatcherCharacter>(Pawn);
+
+	const float LookSensitivity = Character ? Character->GetCurrentLookSensitivityMultiplier() : 1.0f;
 
 	if (Value.X != 0.0f)
 	{
-		Pawn->AddControllerYawInput(Value.X);
+		Pawn->AddControllerYawInput(Value.X * LookSensitivity);
 	}
 
 	if (Value.Y != 0.0f)
 	{
-		Pawn->AddControllerPitchInput(Value.Y);
+		Pawn->AddControllerPitchInput(Value.Y * LookSensitivity);
 	}
 }
 
@@ -510,3 +535,34 @@ void UDCHeroComponent::ClearAbilityCameraMode(const FGameplayAbilitySpecHandle& 
 	}
 }
 
+void UDCHeroComponent::Input_AimPressed(const FInputActionValue& InputActionValue)
+{
+	Input_AbilityInputTagPressed(DCGameplayTags::InputTag_Aim);
+}
+
+void UDCHeroComponent::Input_AimReleased(const FInputActionValue& InputActionValue)
+{
+	Input_AbilityInputTagReleased(DCGameplayTags::InputTag_Aim);
+}
+
+void UDCHeroComponent::Input_AimCanceled(const FInputActionValue& InputActionValue)
+{
+	const APawn* Pawn = GetPawn<APawn>();
+	if (!Pawn)
+	{
+		return;
+	}
+
+	const UDCPawnExtensionComponent* PawnExtension =UDCPawnExtensionComponent::FindPawnExtensionComponent(Pawn);
+
+	if (!PawnExtension)
+	{
+		return;
+	}
+
+	if (UDCAbilitySystemComponent* ASC =PawnExtension->GetDCAbilitySystemComponent())
+	{
+		// 취소는 정상적인 버튼 해제와 다름, 짧은 클릭으로 처리하여 Scope가 켜지지 않도록 함.
+		ASC->CancelAimInputAndState();
+	}
+}
