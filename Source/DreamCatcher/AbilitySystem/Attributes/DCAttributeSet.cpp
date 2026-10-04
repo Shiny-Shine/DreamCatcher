@@ -1,18 +1,24 @@
-#include "AbilitySystem/Attributes/DCAttributeSet.h"
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#include "DCAttributeSet.h"
 
 #include "AbilitySystem/DCAbilitySystemComponent.h"
-#include "Engine/World.h"
 
-// AttributeSet들이 공통 기능을 재사용
+#include UE_INLINE_GENERATED_CPP_BY_NAME(DCAttributeSet)
+
+class UWorld;
+
+
 UDCAttributeSet::UDCAttributeSet()
 {
 }
 
 UWorld* UDCAttributeSet::GetWorld() const
 {
-	const UObject* OuterObject = GetOuter();
+	const UObject* Outer = GetOuter();
+	check(Outer);
 
-	return OuterObject ? OuterObject->GetWorld() : nullptr;
+	return Outer->GetWorld();
 }
 
 UDCAbilitySystemComponent* UDCAttributeSet::GetDCAbilitySystemComponent() const

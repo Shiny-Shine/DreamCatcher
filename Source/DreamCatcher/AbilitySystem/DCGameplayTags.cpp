@@ -116,6 +116,10 @@ namespace DCGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Weapon_Fire, "InputTag.Weapon.Fire", "Primary weapon fire input.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Weapon_Reload, "InputTag.Weapon.Reload", "Weapon reload input.");
 
+	// R4-3 project extension; the original ADS graph still consumes press/release through the ASC.
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Weapon_ADS_Shoulder, "InputTag.Weapon.ADS.Shoulder", "DreamCatcher logical shoulder aim input.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Weapon_ADS_Scope, "InputTag.Weapon.ADS.Scope", "DreamCatcher logical scope aim input.");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Action_Aim, "Ability.Action.Aim", "Aim ability.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Action_Dodge, "Ability.Action.Dodge", "Dodge ability.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Action_Ultimate, "Ability.Action.Ultimate", "Ultimate ability.");

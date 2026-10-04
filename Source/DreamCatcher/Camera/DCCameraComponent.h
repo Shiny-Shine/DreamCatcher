@@ -1,70 +1,79 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
 #include "Camera/CameraComponent.h"
-#include "GameplayTagContainer.h"
+#include "GameFramework/Actor.h"
+
 #include "DCCameraComponent.generated.h"
 
+class UCanvas;
 class UDCCameraMode;
 class UDCCameraModeStack;
+class UObject;
+struct FFrame;
+struct FGameplayTag;
+struct FMinimalViewInfo;
+template <class TClass> class TSubclassOf;
 
 DECLARE_DELEGATE_RetVal(TSubclassOf<UDCCameraMode>, FDCCameraModeDelegate);
 
+
 /**
- * DreamCatcher의 CameraMode Stack을 실행하는 CameraComponent.
+ * UDCCameraComponent
  *
- * 아직 Character에 연결 X.
+ *	The base camera component class used by this project.
  */
-UCLASS(ClassGroup = (DreamCatcher), meta = (BlueprintSpawnableComponent))
-class DREAMCATCHER_API UDCCameraComponent : public UCameraComponent
+UCLASS()
+class UDCCameraComponent : public UCameraComponent
 {
 	GENERATED_BODY()
 
 public:
-	UDCCameraComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Camera")
-	static UDCCameraComponent* FindCameraComponent(const AActor* Actor);
+	UDCCameraComponent(const FObjectInitializer& ObjectInitializer);
 
+	// Retained for the existing Character/Hero input path.
 	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Camera")
 	float GetCurrentLookSensitivityMultiplier() const
 	{
 		return CurrentLookSensitivityMultiplier;
 	}
 
-	// 이 카메라가 추적할 Actor. 기본값은 Owner.
-	virtual AActor* GetTargetActor() const
-	{
-		return GetOwner();
-	}
+	// Returns the camera component if one exists on the specified actor.
+	UFUNCTION(BlueprintPure, Category = "Lyra|Camera")
+	static UDCCameraComponent* FindCameraComponent(const AActor* Actor) { return (Actor ? Actor->FindComponentByClass<UDCCameraComponent>() : nullptr); }
 
-	/**
-	 * 매 프레임 현재 사용할 CameraMode 클래스를 요청.
-	 *
-	 * 4-3에서 Character 또는 Pawn 구성 요소가 연결.
-	 */
+	// Returns the target actor that the camera is looking at.
+	virtual AActor* GetTargetActor() const { return GetOwner(); }
+
+	// Delegate used to query for the best camera mode.
 	FDCCameraModeDelegate DetermineCameraModeDelegate;
 
-	// 한 프레임 동안 적용할 추가 FOV.
-	void AddFieldOfViewOffset(float FOVOffset)
-	{
-		FieldOfViewOffset += FOVOffset;
-	}
+	// Add an offset to the field of view.  The offset is only for one frame, it gets cleared once it is applied.
+	void AddFieldOfViewOffset(float FovOffset) { FieldOfViewOffset += FovOffset; }
 
-	void GetBlendInfo(float& OutTopModeWeight, FGameplayTag& OutTopModeTag) const;
+	virtual void DrawDebug(UCanvas* Canvas) const;
+
+	// Gets the tag associated with the top layer and the blend weight of it
+	void GetBlendInfo(float& OutWeightOfTopLayer, FGameplayTag& OutTagOfTopLayer) const;
 
 protected:
-	virtual void OnRegister() override;
 
+	virtual void OnRegister() override;
 	virtual void GetCameraView(float DeltaTime, FMinimalViewInfo& DesiredView) override;
 
-	void UpdateCameraModes();
+	virtual void UpdateCameraModes();
 
-private:
+protected:
+
+	// Stack used to blend the camera modes.
 	UPROPERTY()
 	TObjectPtr<UDCCameraModeStack> CameraModeStack;
 
-	float FieldOfViewOffset = 0.0f;
-	
+	// Offset applied to the field of view.  The offset is only for one frame, it gets cleared once it is applied.
+	float FieldOfViewOffset;
+
 	float CurrentLookSensitivityMultiplier = 1.0f;
+
 };

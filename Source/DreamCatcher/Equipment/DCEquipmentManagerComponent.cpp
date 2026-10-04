@@ -12,7 +12,7 @@
 #include "AbilitySystem/Attributes/DCHealthSet.h"
 #include "Character/DCPawnData.h"
 #include "Character/DCPawnExtensionComponent.h"
-#include "Components/DCHealthComponent.h"
+#include "Character/DCLyraHealthComponent.h"
 #include "Weapon/DCWeaponInstance.h"
 
 UDCEquipmentManagerComponent::UDCEquipmentManagerComponent()
@@ -36,7 +36,7 @@ void UDCEquipmentManagerComponent::BeginPlay()
 
 	UDCPawnExtensionComponent* PawnExtension = UDCPawnExtensionComponent::FindPawnExtensionComponent(Pawn);
 
-	UDCHealthComponent* HealthComponent = Pawn->FindComponentByClass<UDCHealthComponent>();
+	UDCLyraHealthComponent* HealthComponent = UDCLyraHealthComponent::FindHealthComponent(Pawn);
 
 	if (!PawnExtension || !HealthComponent)
 	{
@@ -53,7 +53,7 @@ void UDCEquipmentManagerComponent::BeginPlay()
 	PawnExtension->OnAbilitySystemUninitializing_Register(
 		FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::HandleAbilitySystemUninitializing));
 
-	HealthComponent->OnDeath.AddUniqueDynamic(this, &ThisClass::HandleOwnerDeath);
+	HealthComponent->OnDeathStarted.AddUniqueDynamic(this, &ThisClass::HandleOwnerDeath);
 
 	// ASC가 이미 준비되었다면 즉시 실행하고, 아니라면 준비 완료까지 대기.
 	PawnExtension->OnAbilitySystemInitialized_RegisterAndCall(
@@ -84,10 +84,10 @@ void UDCEquipmentManagerComponent::HandleAbilitySystemInitialized()
 	}
 
 	const UDCHealthSet* HealthSet = ASC->GetSet<UDCHealthSet>();
-	const UDCHealthComponent* HealthComponent = BoundHealthComponent.Get();
+	const UDCLyraHealthComponent* HealthComponent = BoundHealthComponent.Get();
 
 	// HealthComponent의 초기화 이벤트 순서에 의존하지 않도록 실제 Attribute도 확인.
-	if (!HealthSet || HealthSet->GetHealth() <= 0.0f || ASC->HasMatchingGameplayTag(DCGameplayTags::State_Dead) ||
+	if (!HealthSet || HealthSet->GetHealth() <= 0.0f || ASC->HasMatchingGameplayTag(DCGameplayTags::Status_Death) ||
 		(HealthComponent && HealthComponent->IsDeadOrDying()))
 	{
 		return;
@@ -144,10 +144,9 @@ void UDCEquipmentManagerComponent::HandleOwnerDeath(AActor* DeadActor)
 		return;
 	}
 
-	// 사망 시에는 Pawn이 아직 남아 있어도 무기와 무기 Ability를 회수.
+	// The death ability already cancels actions. Keep equipment actors for the original death Cue;
+	// HandleAbilitySystemUninitializing / EndPlay perform the actual grant and actor cleanup.
 	bEquipmentEnabled = false;
-
-	UnequipAll();
 }
 
 UDCWeaponInstance* UDCEquipmentManagerComponent::GetCurrentWeaponInstance() const
@@ -195,7 +194,7 @@ EquipItem(TSubclassOf<UDCEquipmentDefinition> EquipmentDefinition, UObject* Inst
 		return nullptr;
 	}
 
-	if (ASC->HasMatchingGameplayTag(DCGameplayTags::State_Dead))
+	if (ASC->HasMatchingGameplayTag(DCGameplayTags::Status_Death))
 	{
 		return nullptr;
 	}
@@ -208,7 +207,7 @@ EquipItem(TSubclassOf<UDCEquipmentDefinition> EquipmentDefinition, UObject* Inst
 		return nullptr;
 	}
 
-	if (const UDCHealthComponent* HealthComponent = BoundHealthComponent.Get())
+	if (const UDCLyraHealthComponent* HealthComponent = BoundHealthComponent.Get())
 	{
 		if (HealthComponent->IsDeadOrDying())
 		{
@@ -463,9 +462,9 @@ void UDCEquipmentManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 		PawnExtension->UnregisterAbilitySystemDelegates(this);
 	}
 
-	if (UDCHealthComponent* HealthComponent = BoundHealthComponent.Get())
+	if (UDCLyraHealthComponent* HealthComponent = BoundHealthComponent.Get())
 	{
-		HealthComponent->OnDeath.RemoveDynamic(this, &ThisClass::HandleOwnerDeath);
+		HealthComponent->OnDeathStarted.RemoveDynamic(this, &ThisClass::HandleOwnerDeath);
 	}
 
 	// PawnExtension이 먼저 정리했어도 빈 목록에 대한 호출은 안전.

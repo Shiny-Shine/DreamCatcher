@@ -165,6 +165,6 @@ bool UDCReticleWidgetBase::ShouldShowReticle() const
 		return false;
 	}
 
-	return !ASC->HasMatchingGameplayTag(DCGameplayTags::State_Dead)
+	return !ASC->HasMatchingGameplayTag(DCGameplayTags::Status_Death)
 		&& !ASC->HasMatchingGameplayTag(DCGameplayTags::State_Aim_Scope);
 }

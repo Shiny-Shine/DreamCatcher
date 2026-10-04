@@ -60,7 +60,7 @@ UDCGameplayAbility_RangedWeapon::UDCGameplayAbility_RangedWeapon(const FObjectIn
 	FireAbilityTags.AddTag(DCGameplayTags::Ability_Action_WeaponFire);
 	SetAssetTags(FireAbilityTags);
 
-	ActivationBlockedTags.AddTag(DCGameplayTags::State_Dead);
+	ActivationBlockedTags.AddTag(DCGameplayTags::Status_Death);
 	ActivationBlockedTags.AddTag(DCGameplayTags::State_Dodging);
 	ActivationBlockedTags.AddTag(DCGameplayTags::State_Reloading);
 	ActivationBlockedTags.AddTag(DCGameplayTags::Gameplay_AbilityInputBlocked);

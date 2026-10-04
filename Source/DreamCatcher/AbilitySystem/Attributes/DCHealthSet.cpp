@@ -1,15 +1,29 @@
-#include "AbilitySystem/Attributes/DCHealthSet.h"
+// Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "AbilitySystem/DCAbilitySystemComponent.h"
+#include "DCHealthSet.h"
+#include "AbilitySystem/Attributes/DCAttributeSet.h"
 #include "AbilitySystem/DCGameplayTags.h"
-#include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystem/DCAbilitySystemComponent.h"
+#include "Engine/World.h"
+#include "GameplayEffectExtension.h"
+#include "Messages/DCVerbMessage.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 
-UDCHealthSet::UDCHealthSet() :
-	bOutOfHealth(false), HealthBeforeAttributeChange(0.0f), MaxHealthBeforeAttributeChange(0.0f),
-	Health(100.0f), MaxHealth(100.0f), Damage(0.0f), Healing(0.0f)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(DCHealthSet)
 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Gameplay_Damage, "Gameplay.Damage");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Gameplay_DamageSelfDestruct, "Gameplay.Damage.SelfDestruct");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Gameplay_FellOutOfWorld, "Gameplay.Damage.FellOutOfWorld");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Lyra_Damage_Message, "Lyra.Damage.Message");
+
+UDCHealthSet::UDCHealthSet()
+	: Health(100.0f)
+	, MaxHealth(100.0f)
 {
+	bOutOfHealth = false;
+	MaxHealthBeforeAttributeChange = 0.0f;
+	HealthBeforeAttributeChange = 0.0f;
 }
 
 void UDCHealthSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -17,7 +31,6 @@ void UDCHealthSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UDCHealthSet, Health, COND_None, REPNOTIFY_Always);
-
 	DOREPLIFETIME_CONDITION_NOTIFY(UDCHealthSet, MaxHealth, COND_None, REPNOTIFY_Always);
 }
 
@@ -25,52 +38,147 @@ void UDCHealthSet::OnRep_Health(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UDCHealthSet, Health, OldValue);
 
-	const float PreviousHealth = OldValue.GetCurrentValue();
-	const float CurrentHealth = GetHealth();
-	const float ChangeMagnitude = CurrentHealth - PreviousHealth;
+	// Call the change callback, but without an instigator
+	// This could be changed to an explicit RPC in the future
+	// These events on the client should not be changing attributes
 
-	OnHealthChanged.Broadcast(nullptr, nullptr, nullptr, ChangeMagnitude, PreviousHealth, CurrentHealth);
+	const float CurrentHealth = GetHealth();
+	const float EstimatedMagnitude = CurrentHealth - OldValue.GetCurrentValue();
+
+	OnHealthChanged.Broadcast(nullptr, nullptr, nullptr, EstimatedMagnitude, OldValue.GetCurrentValue(), CurrentHealth);
 
 	if (!bOutOfHealth && CurrentHealth <= 0.0f)
 	{
-		OnOutOfHealth.Broadcast(nullptr, nullptr, nullptr, ChangeMagnitude, PreviousHealth, CurrentHealth);
+		OnOutOfHealth.Broadcast(nullptr, nullptr, nullptr, EstimatedMagnitude, OldValue.GetCurrentValue(), CurrentHealth);
 	}
 
-	bOutOfHealth = CurrentHealth <= 0.0f;
+	bOutOfHealth = (CurrentHealth <= 0.0f);
 }
 
 void UDCHealthSet::OnRep_MaxHealth(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UDCHealthSet, MaxHealth, OldValue);
 
-	const float PreviousMaxHealth = OldValue.GetCurrentValue();
-	const float CurrentMaxHealth = GetMaxHealth();
-	const float ChangeMagnitude = CurrentMaxHealth - PreviousMaxHealth;
-
-	OnMaxHealthChanged.Broadcast(nullptr, nullptr, nullptr, ChangeMagnitude, PreviousMaxHealth, CurrentMaxHealth);
+	// Call the change callback, but without an instigator
+	// This could be changed to an explicit RPC in the future
+	OnMaxHealthChanged.Broadcast(nullptr, nullptr, nullptr, GetMaxHealth() - OldValue.GetCurrentValue(), OldValue.GetCurrentValue(), GetMaxHealth());
 }
 
-bool UDCHealthSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data)
+bool UDCHealthSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData &Data)
 {
 	if (!Super::PreGameplayEffectExecute(Data))
 	{
 		return false;
 	}
 
-	// 들어오는 Damage Meta Attribute를 변경하려는데 대상에게 DamageImmunity가 있으면 Effect 실행을 차단.
-	if (Data.EvaluatedData.Attribute == GetDamageAttribute() && Data.EvaluatedData.Magnitude > 0.0f && Data.Target.
-		HasMatchingGameplayTag(DCGameplayTags::Gameplay_DamageImmunity))
+	// Handle modifying incoming normal damage
+	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
 	{
-		Data.EvaluatedData.Magnitude = 0.0f;
+		if (Data.EvaluatedData.Magnitude > 0.0f)
+		{
+			const bool bIsDamageFromSelfDestruct = Data.EffectSpec.GetDynamicAssetTags().HasTagExact(TAG_Gameplay_DamageSelfDestruct);
 
-		return false;
+			if (Data.Target.HasMatchingGameplayTag(DCGameplayTags::Gameplay_DamageImmunity) && !bIsDamageFromSelfDestruct)
+			{
+				// Do not take away any health.
+				Data.EvaluatedData.Magnitude = 0.0f;
+				return false;
+			}
+
+#if !UE_BUILD_SHIPPING
+			// Check GodMode cheat, unlimited health is checked below
+			if (Data.Target.HasMatchingGameplayTag(DCGameplayTags::Cheat_GodMode) && !bIsDamageFromSelfDestruct)
+			{
+				// Do not take away any health.
+				Data.EvaluatedData.Magnitude = 0.0f;
+				return false;
+			}
+#endif // #if !UE_BUILD_SHIPPING
+		}
 	}
 
-	// Effect 적용 전 값을 저장.
+	// Save the current health
 	HealthBeforeAttributeChange = GetHealth();
 	MaxHealthBeforeAttributeChange = GetMaxHealth();
 
 	return true;
+}
+
+void UDCHealthSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
+{
+	Super::PostGameplayEffectExecute(Data);
+
+	const bool bIsDamageFromSelfDestruct = Data.EffectSpec.GetDynamicAssetTags().HasTagExact(TAG_Gameplay_DamageSelfDestruct);
+	float MinimumHealth = 0.0f;
+
+#if !UE_BUILD_SHIPPING
+	// Godmode and unlimited health stop death unless it's a self destruct
+	if (!bIsDamageFromSelfDestruct &&
+		(Data.Target.HasMatchingGameplayTag(DCGameplayTags::Cheat_GodMode) || Data.Target.HasMatchingGameplayTag(DCGameplayTags::Cheat_UnlimitedHealth) ))
+	{
+		MinimumHealth = 1.0f;
+	}
+#endif // #if !UE_BUILD_SHIPPING
+
+	const FGameplayEffectContextHandle& EffectContext = Data.EffectSpec.GetEffectContext();
+	AActor* Instigator = EffectContext.GetOriginalInstigator();
+	AActor* Causer = EffectContext.GetEffectCauser();
+
+	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
+	{
+		// Send a standardized verb message that other systems can observe
+		if (Data.EvaluatedData.Magnitude > 0.0f)
+		{
+			FDCVerbMessage Message;
+			Message.Verb = TAG_Lyra_Damage_Message;
+			Message.Instigator = Data.EffectSpec.GetEffectContext().GetEffectCauser();
+			Message.InstigatorTags = *Data.EffectSpec.CapturedSourceTags.GetAggregatedTags();
+			Message.Target = GetOwningActor();
+			Message.TargetTags = *Data.EffectSpec.CapturedTargetTags.GetAggregatedTags();
+			//@TODO: Fill out context tags, and any non-ability-system source/instigator tags
+			//@TODO: Determine if it's an opposing team kill, self-own, team kill, etc...
+			Message.Magnitude = Data.EvaluatedData.Magnitude;
+
+			UGameplayMessageSubsystem& MessageSystem = UGameplayMessageSubsystem::Get(GetWorld());
+			MessageSystem.BroadcastMessage(Message.Verb, Message);
+		}
+
+		// Convert into -Health and then clamp
+		SetHealth(FMath::Clamp(GetHealth() - GetDamage(), MinimumHealth, GetMaxHealth()));
+		SetDamage(0.0f);
+	}
+	else if (Data.EvaluatedData.Attribute == GetHealingAttribute())
+	{
+		// Convert into +Health and then clamo
+		SetHealth(FMath::Clamp(GetHealth() + GetHealing(), MinimumHealth, GetMaxHealth()));
+		SetHealing(0.0f);
+	}
+	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	{
+		// Clamp and fall into out of health handling below
+		SetHealth(FMath::Clamp(GetHealth(), MinimumHealth, GetMaxHealth()));
+	}
+	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
+	{
+		// TODO clamp current health?
+
+		// Notify on any requested max health changes
+		OnMaxHealthChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude, MaxHealthBeforeAttributeChange, GetMaxHealth());
+	}
+
+	// If health has actually changed activate callbacks
+	if (GetHealth() != HealthBeforeAttributeChange)
+	{
+		OnHealthChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude, HealthBeforeAttributeChange, GetHealth());
+	}
+
+	if ((GetHealth() <= 0.0f) && !bOutOfHealth)
+	{
+		OnOutOfHealth.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude, HealthBeforeAttributeChange, GetHealth());
+	}
+
+	// Check health again in case an event above changed it.
+	bOutOfHealth = (GetHealth() <= 0.0f);
 }
 
 void UDCHealthSet::PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const
@@ -91,91 +199,34 @@ void UDCHealthSet::PostAttributeChange(const FGameplayAttribute& Attribute, floa
 {
 	Super::PostAttributeChange(Attribute, OldValue, NewValue);
 
-	// 최대 체력이 감소해서 현재 체력보다 작아졌다면 현재 체력도 새 최대 체력에 맞춤.
-	if (Attribute == GetMaxHealthAttribute() && GetHealth() > NewValue)
+	if (Attribute == GetMaxHealthAttribute())
 	{
-		if (UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent())
+		// Make sure current health is not greater than the new max health.
+		if (GetHealth() > NewValue)
 		{
-			AbilitySystemComponent->ApplyModToAttribute(GetHealthAttribute(), EGameplayModOp::Override, NewValue);
+			UDCAbilitySystemComponent* LyraASC = GetDCAbilitySystemComponent();
+			check(LyraASC);
+
+			LyraASC->ApplyModToAttribute(GetHealthAttribute(), EGameplayModOp::Override, NewValue);
 		}
 	}
 
-	// 회복이나 초기화로 다시 체력이 생긴 경우 죽음 감지 상태를 해제.
-	if (bOutOfHealth && GetHealth() > 0.0f)
+	if (bOutOfHealth && (GetHealth() > 0.0f))
 	{
 		bOutOfHealth = false;
 	}
-}
-
-void UDCHealthSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
-{
-	Super::PostGameplayEffectExecute(Data);
-
-	const FGameplayEffectContextHandle& EffectContext = Data.EffectSpec.GetEffectContext();
-
-	AActor* EffectInstigator = EffectContext.GetOriginalInstigator();
-
-	AActor* EffectCauser = EffectContext.GetEffectCauser();
-
-	// Damage는 실제 상태가 아니라 이번 Effect가 전달한 임시 데미지 합계.
-	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
-	{
-		const float IncomingDamage = FMath::Max(GetDamage(), 0.0f);
-
-		// Meta Attribute는 처리 후 반드시 0으로 돌림.
-		SetDamage(0.0f);
-
-		if (IncomingDamage > 0.0f)
-		{
-			SetHealth(FMath::Clamp(GetHealth() - IncomingDamage, 0.0f, GetMaxHealth()));
-		}
-	}
-	else if (Data.EvaluatedData.Attribute == GetHealingAttribute())
-	{
-		const float IncomingHealing = FMath::Max(GetHealing(), 0.0f);
-
-		SetHealing(0.0f);
-
-		if (IncomingHealing > 0.0f && GetHealth() > 0.0f)
-		{
-			SetHealth(FMath::Clamp(GetHealth() + IncomingHealing, 0.0f, GetMaxHealth()));
-		}
-	}
-	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())
-	{
-		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
-	}
-	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
-	{
-		OnMaxHealthChanged.Broadcast(EffectInstigator, EffectCauser, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-		                             MaxHealthBeforeAttributeChange, GetMaxHealth());
-	}
-
-	// 실제 Health가 변경된 경우 HealthComponent에 알림.
-	if (GetHealth() != HealthBeforeAttributeChange)
-	{
-		OnHealthChanged.Broadcast(EffectInstigator, EffectCauser, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-		                          HealthBeforeAttributeChange, GetHealth());
-	}
-
-	// Health가 처음 0에 도달했을 때만 죽음 이벤트를 발생.
-	if (GetHealth() <= 0.0f && !bOutOfHealth)
-	{
-		OnOutOfHealth.Broadcast(EffectInstigator, EffectCauser, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-		                        HealthBeforeAttributeChange, GetHealth());
-	}
-
-	bOutOfHealth = GetHealth() <= 0.0f;
 }
 
 void UDCHealthSet::ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const
 {
 	if (Attribute == GetHealthAttribute())
 	{
+		// Do not allow health to go negative or above max health.
 		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxHealth());
 	}
 	else if (Attribute == GetMaxHealthAttribute())
 	{
+		// Do not allow max health to drop below 1.
 		NewValue = FMath::Max(NewValue, 1.0f);
 	}
 }

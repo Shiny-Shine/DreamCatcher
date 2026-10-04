@@ -31,12 +31,16 @@ public class DreamCatcher : ModuleRules
 			"ModularGameplayActors",
 			"CommonUser",
 			"CommonGame",
-			"CommonUI"
+			"CommonUI",
+			"GameSubtitles",
+			"DeveloperSettings"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"GameplayMessageRuntime",
-			"Niagara"
+			"Niagara",
+			"SlateCore",
+			"CommonInput"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {

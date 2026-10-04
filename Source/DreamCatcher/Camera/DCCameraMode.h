@@ -1,207 +1,210 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
+#include "Engine/World.h"
 #include "GameplayTagContainer.h"
+
 #include "DCCameraMode.generated.h"
 
+#define UE_API DREAMCATCHER_API
+
 class AActor;
+class UCanvas;
 class UDCCameraComponent;
 
-// CameraMode 전환에 사용할 Blend 함수.
+/**
+ * EDCCameraModeBlendFunction
+ *
+ *	Blend function used for transitioning between camera modes.
+ */
 UENUM(BlueprintType)
 enum class EDCCameraModeBlendFunction : uint8
 {
+	// Does a simple linear interpolation.
 	Linear,
+
+	// Immediately accelerates, but smoothly decelerates into the target.  Ease amount controlled by the exponent.
 	EaseIn,
+
+	// Smoothly accelerates, but does not decelerate into the target.  Ease amount controlled by the exponent.
 	EaseOut,
-	EaseInOut
+
+	// Smoothly accelerates and decelerates.  Ease amount controlled by the exponent.
+	EaseInOut,
+
+	COUNT	UMETA(Hidden)
 };
 
-// CameraMode 하나가 계산한 최종 카메라 정보.
-struct FDCCameraModeView
-{
-	FDCCameraModeView();
-
-	/**
-	 * 현재 View에 Other View를 지정한 가중치만큼 혼합.
-	 *
-	 * OtherWeight:
-	 *   0.0 → 현재 View 유지
-	 *   1.0 → Other View로 완전히 교체
-	 */
-	void Blend(const FDCCameraModeView& Other, float OtherWeight);
-
-	FVector Location;
-
-	FRotator Rotation;
-
-	FRotator ControlRotation;
-
-	float FieldOfView;
-
-	float LookSensitivityMultiplier;
-};
 
 /**
- * 모든 DreamCatcher CameraMode의 기본 클래스.
+ * FDCCameraModeView
  *
- * CameraMode는 Actor가 아니라 CameraComponent가 소유하는 UObject.
- * 같은 CameraMode 클래스는 Stack 안에서 인스턴스 하나를 재사용.
+ *	View data produced by the camera mode that is used to blend camera modes.
  */
-UCLASS(Abstract, NotBlueprintable)
-class DREAMCATCHER_API UDCCameraMode : public UObject
+struct FDCCameraModeView
+{
+public:
+
+	FDCCameraModeView();
+
+	void Blend(const FDCCameraModeView& Other, float OtherWeight);
+
+public:
+
+	FVector Location;
+	FRotator Rotation;
+	FRotator ControlRotation;
+	float FieldOfView;
+
+	// DreamCatcher extension: blend the existing per-mode input sensitivity.
+	float LookSensitivityMultiplier = 1.0f;
+};
+
+
+/**
+ * UDCCameraMode
+ *
+ *	Base class for all camera modes.
+ */
+UCLASS(MinimalAPI, Abstract, NotBlueprintable)
+class UDCCameraMode : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	UDCCameraMode();
 
-	virtual UWorld* GetWorld() const override;
+	UE_API UDCCameraMode();
 
-	UDCCameraComponent* GetDCCameraComponent() const;
+	UE_API UDCCameraComponent* GetDCCameraComponent() const;
 
-	AActor* GetTargetActor() const;
+	UE_API virtual UWorld* GetWorld() const override;
 
-	const FDCCameraModeView& GetCameraModeView() const
-	{
-		return View;
-	}
+	UE_API AActor* GetTargetActor() const;
 
-	float GetBlendTime() const
-	{
-		return BlendTime;
-	}
+	const FDCCameraModeView& GetCameraModeView() const { return View; }
 
-	float GetBlendWeight() const
-	{
-		return BlendWeight;
-	}
+	// Called when this camera mode is activated on the camera mode stack.
+	virtual void OnActivation() {};
+
+	// Called when this camera mode is deactivated on the camera mode stack.
+	virtual void OnDeactivation() {};
+
+	UE_API void UpdateCameraMode(float DeltaTime);
+
+	float GetBlendTime() const { return BlendTime; }
+	float GetBlendWeight() const { return BlendWeight; }
+	UE_API void SetBlendWeight(float Weight);
 
 	FGameplayTag GetCameraTypeTag() const
 	{
 		return CameraTypeTag;
 	}
 
-	void SetBlendWeight(float Weight);
-
-	void UpdateCameraMode(float DeltaTime);
-
-	// CameraMode가 Stack에 처음 추가될 때 호출.
-	virtual void OnActivation()
-	{
-	}
-
-	// CameraMode가 Stack에서 제거될 때 호출.
-	virtual void OnDeactivation()
-	{
-	}
+	UE_API virtual void DrawDebug(UCanvas* Canvas) const;
 
 protected:
-	// 카메라가 바라보는 기준 위치.
-	virtual FVector GetPivotLocation() const;
 
-	// 카메라의 기준 회전.
-	virtual FRotator GetPivotRotation() const;
+	UE_API virtual FVector GetPivotLocation() const;
+	UE_API virtual FRotator GetPivotRotation() const;
 
-	// 매 프레임 CameraMode의 View를 계산.
-	virtual void UpdateView(float DeltaTime);
+	UE_API virtual void UpdateView(float DeltaTime);
+	UE_API virtual void UpdateBlending(float DeltaTime);
 
-	// BlendAlpha와 BlendWeight를 갱신.
-	void UpdateBlending(float DeltaTime);
+protected:
+	// A tag that can be queried by gameplay code that cares when a kind of camera mode is active
+	// without having to ask about a specific mode (e.g., when aiming downsights to get more accuracy)
+	UPROPERTY(EditDefaultsOnly, Category = "Blending")
+	FGameplayTag CameraTypeTag;
 
-	// 이 CameraMode에서 사용할 Look 입력 감도 배율.
+	// Preserve the property used by existing Hip/Shoulder/Scope camera assets.
 	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Camera|Input", meta = (ClampMin = "0.01"))
 	float LookSensitivityMultiplier = 1.0f;
 
-	/**
-	 * 현재 CameraMode의 종류를 나타내는 태그.
-	 *
-	 * 이후 예:
-	 * Camera.Type.Hip
-	 * Camera.Type.Shoulder
-	 * Camera.Type.Scope
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Camera|Blending")
-	FGameplayTag CameraTypeTag;
-
-	// 가로 FOV.
-	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Camera|View",
-		meta = (ClampMin = "5.0", ClampMax = "170.0", UIMin = "5.0", UIMax = "170.0"))
-	float FieldOfView = 90.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Camera|View", meta = (ClampMin = "-89.9", ClampMax = "89.9"))
-	float ViewPitchMin = -89.9f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Camera|View", meta = (ClampMin = "-89.9", ClampMax = "89.9"))
-	float ViewPitchMax = 89.9f;
-
-	// 이 CameraMode가 완전히 적용되는 데 걸리는 시간.
-	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Camera|Blending", meta = (ClampMin = "0.0", Units = "s"))
-	float BlendTime = 0.25f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Camera|Blending")
-	EDCCameraModeBlendFunction BlendFunction =
-		EDCCameraModeBlendFunction::EaseOut;
-
-	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Camera|Blending", meta = (ClampMin = "1.0"))
-	float BlendExponent = 4.0f;
-
+	// View output produced by the camera mode.
 	FDCCameraModeView View;
 
-	float BlendAlpha = 1.0f;
+	// The horizontal field of view (in degrees).
+	UPROPERTY(EditDefaultsOnly, Category = "View", Meta = (UIMin = "5.0", UIMax = "170", ClampMin = "5.0", ClampMax = "170.0"))
+	float FieldOfView;
 
-	float BlendWeight = 1.0f;
+	// Minimum view pitch (in degrees).
+	UPROPERTY(EditDefaultsOnly, Category = "View", Meta = (UIMin = "-89.9", UIMax = "89.9", ClampMin = "-89.9", ClampMax = "89.9"))
+	float ViewPitchMin;
+
+	// Maximum view pitch (in degrees).
+	UPROPERTY(EditDefaultsOnly, Category = "View", Meta = (UIMin = "-89.9", UIMax = "89.9", ClampMin = "-89.9", ClampMax = "89.9"))
+	float ViewPitchMax;
+
+	// How long it takes to blend in this mode.
+	UPROPERTY(EditDefaultsOnly, Category = "Blending")
+	float BlendTime;
+
+	// Function used for blending.
+	UPROPERTY(EditDefaultsOnly, Category = "Blending")
+	EDCCameraModeBlendFunction BlendFunction;
+
+	// Exponent used by blend functions to control the shape of the curve.
+	UPROPERTY(EditDefaultsOnly, Category = "Blending")
+	float BlendExponent;
+
+	// Linear blend alpha used to determine the blend weight.
+	float BlendAlpha;
+
+	// Blend weight calculated using the blend alpha and function.
+	float BlendWeight;
+
+protected:
+	/** If true, skips all interpolation and puts camera in ideal location.  Automatically set to false next frame. */
+	UPROPERTY(transient)
+	uint32 bResetInterpolation:1;
 };
 
+
 /**
- * 여러 CameraMode를 보관하고 최종 View를 계산하는 Stack.
+ * UDCCameraModeStack
  *
- * 배열의 0번:
- *   가장 위에 있는 최신 CameraMode
- *
- * 배열의 마지막:
- *   Blend의 기반이 되는 가장 오래된 CameraMode
+ *	Stack used for blending camera modes.
  */
 UCLASS()
-class DREAMCATCHER_API UDCCameraModeStack : public UObject
+class UDCCameraModeStack : public UObject
 {
 	GENERATED_BODY()
 
 public:
+
 	UDCCameraModeStack();
 
 	void ActivateStack();
-
 	void DeactivateStack();
 
-	bool IsStackActive() const
-	{
-		return bIsActive;
-	}
+	bool IsStackActivate() const { return bIsActive; }
 
-	// 지정한 CameraMode를 Stack 최상단으로 이동 또는 추가.
 	void PushCameraMode(TSubclassOf<UDCCameraMode> CameraModeClass);
 
-	// Stack을 갱신하고 최종 카메라 View를 반환.
 	bool EvaluateStack(float DeltaTime, FDCCameraModeView& OutCameraModeView);
 
-	// 현재 최상단 CameraMode의 Blend 정보.
-	void GetBlendInfo(float& OutTopModeWeight, FGameplayTag& OutTopModeTag) const;
+	void DrawDebug(UCanvas* Canvas) const;
 
-private:
+	// Gets the tag associated with the top layer and the blend weight of it
+	void GetBlendInfo(float& OutWeightOfTopLayer, FGameplayTag& OutTagOfTopLayer) const;
+
+protected:
+
 	UDCCameraMode* GetCameraModeInstance(TSubclassOf<UDCCameraMode> CameraModeClass);
 
 	void UpdateStack(float DeltaTime);
-
 	void BlendStack(FDCCameraModeView& OutCameraModeView) const;
 
-	bool bIsActive = true;
+protected:
 
-	// 클래스별로 생성된 CameraMode 인스턴스.
+	bool bIsActive;
+
 	UPROPERTY()
 	TArray<TObjectPtr<UDCCameraMode>> CameraModeInstances;
 
-	// 실제 Blend 순서를 나타내는 Stack.
 	UPROPERTY()
 	TArray<TObjectPtr<UDCCameraMode>> CameraModeStack;
 };
+
+#undef UE_API

@@ -1,14 +1,20 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystem/DCAbilitySourceInterface.h"
 #include "Curves/CurveFloat.h"
+#include "GameplayTagContainer.h"
 #include "Weapon/DCWeaponInstance.h"
 #include "DCRangedWeaponInstance.generated.h"
+
+class UPhysicalMaterial;
 
 // 원거리 무기의 설정과 탄 퍼짐 런타임 상태.
 // 실제 발사 Ability와 Reticle은 GetCurrentSpreadAngle()이 반환하는 동일한 값을 사용.
 UCLASS(BlueprintType, Blueprintable)
-class DREAMCATCHER_API UDCRangedWeaponInstance : public UDCWeaponInstance
+class DREAMCATCHER_API UDCRangedWeaponInstance
+	: public UDCWeaponInstance
+	, public IDCAbilitySourceInterface
 {
 	GENERATED_BODY()
 
@@ -84,6 +90,13 @@ public:
 	// 거리 단위는 Unreal의 cm. Curve가 비어 있으면 거리 감쇠 없이 1배를 반환.
 	UFUNCTION(BlueprintPure, Category = "DreamCatcher|Weapon|Damage")
 	float GetDistanceDamageMultiplier(float DistanceCm) const;
+
+	// Lyra ability-source contract used by the original damage execution.
+	virtual float GetDistanceAttenuation(float Distance, const FGameplayTagContainer* SourceTags = nullptr,
+	                                    const FGameplayTagContainer* TargetTags = nullptr) const override;
+	virtual float GetPhysicalMaterialAttenuation(const UPhysicalMaterial* PhysicalMaterial,
+	                                            const FGameplayTagContainer* SourceTags = nullptr,
+	                                            const FGameplayTagContainer* TargetTags = nullptr) const override;
 
 protected:
 	// 초 단위 발사 간격입니다. 실제 연사는 6단계 Ability가 처리.
@@ -167,6 +180,10 @@ protected:
 	// X: 거리(cm) / Y: 데미지 배율.
 	UPROPERTY(EditDefaultsOnly, Category = "DreamCatcher|Weapon|Damage")
 	FRuntimeFloatCurve DistanceDamageFalloff;
+
+	// Ported from Lyra: matching physical-material tags multiply their damage modifiers together.
+	UPROPERTY(EditAnywhere, Category = "Weapon Config")
+	TMap<FGameplayTag, float> MaterialDamageMultiplier;
 
 private:
 	// 현재 이동·공중·조준 상태로 목표 배율을 계산.

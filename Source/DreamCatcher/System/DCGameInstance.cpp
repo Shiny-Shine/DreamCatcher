@@ -3,9 +3,11 @@
 #include "System/DCGameInstance.h"
 
 #include "AbilitySystem/DCGameplayTags.h"
+#include "CommonUserSubsystem.h"
 #include "Components/GameFrameworkComponentManager.h"
 #include "DCLogChannels.h"
 #include "GameUIManagerSubsystem.h"
+#include "Player/DCLocalPlayer.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCGameInstance)
 
@@ -61,4 +63,21 @@ void UDCGameInstance::Init()
 	UE_LOG(LogDC, Log, TEXT("[R2-2] InitStateOrder=%s, UIManager=%s"),
 	       bOrderValid ? TEXT("OK") : TEXT("FAILED"),
 	       bDedicatedServer? TEXT("NotRequired"): (UIManager ? TEXT("OK") : TEXT("MISSING")));
+}
+
+void UDCGameInstance::HandlerUserInitialized(const UCommonUserInfo* UserInfo, bool bSuccess, FText Error, ECommonUserPrivilege RequestedPrivilege, ECommonUserOnlineContext OnlineContext)
+{
+	Super::HandlerUserInitialized(UserInfo, bSuccess, Error, RequestedPrivilege, OnlineContext);
+
+	// If login succeeded, tell the local player to load their settings
+	if (bSuccess && ensure(UserInfo))
+	{
+		UDCLocalPlayer* LocalPlayer = Cast<UDCLocalPlayer>(GetLocalPlayerByIndex(UserInfo->LocalPlayerIndex));
+
+		// There will not be a local player attached to the dedicated server user
+		if (LocalPlayer)
+		{
+			LocalPlayer->LoadSharedSettingsFromDisk();
+		}
+	}
 }

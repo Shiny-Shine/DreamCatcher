@@ -6,6 +6,9 @@
 #include "Components/PawnComponent.h"
 #include "GameFeatures/GameFeatureAction_AddInputContextMapping.h"
 #include "GameplayAbilitySpecHandle.h"
+#include "GameplayTagContainer.h"
+#include "InputCoreTypes.h"
+#include "TimerManager.h"
 #include "DCHeroComponent.generated.h"
 
 #define UE_API DREAMCATCHER_API
@@ -18,7 +21,11 @@ class UGameFrameworkComponentManager;
 class UInputComponent;
 class UDCCameraMode;
 class UDCInputConfig;
+class UDCAbilitySystemComponent;
+class UGameplayAbility;
+class UInputAction;
 class UObject;
+struct FAbilityEndedData;
 struct FActorInitStateChangedParams;
 struct FFrame;
 struct FGameplayTag;
@@ -46,6 +53,10 @@ public:
 
 	/** Clears the camera override if it is set */
 	UE_API void ClearAbilityCameraMode(const FGameplayAbilitySpecHandle& OwningSpecHandle);
+	
+	// R4 전환 전까지 Character의 카메라 선택 경로에서
+	// Ability가 지정한 카메라를 우선 적용하기 위한 조회 함수.
+	TSubclassOf<UDCCameraMode> GetAbilityCameraMode() const { return AbilityCameraMode; }
 
 	/** Adds mode-specific input config */
 	UE_API void AddAdditionalInputConfig(const UDCInputConfig* InputConfig);
@@ -108,6 +119,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "DC|Migration")
 	bool bUseLegacyCameraMode = true;
 
+	// Opt-in project gesture adapter. The original ADS ability graph and ASC processing stay unchanged.
+	UPROPERTY(EditDefaultsOnly, Category = "DC|Aim")
+	bool bUseOriginalADSInputRouting = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DC|Aim", meta = (ClampMin = "0.05", Units = "s"))
+	float ShoulderHoldThreshold = 0.18f;
+
 	UPROPERTY(EditAnywhere)
 	TArray<FInputMappingContextAndPriority> DefaultInputMappings;
 	
@@ -120,6 +138,43 @@ protected:
 
 	/** True when player input bindings have been applied, will never be true for non - players */
 	bool bReadyToBindInputs;
+
+private:
+	bool UsesOriginalADSInputRouting() const { return bUseOriginalADSInputRouting && !bUseLegacyPlayerInput; }
+	void BindOriginalADSInput();
+	void UnbindOriginalADSInput();
+	void ResetOriginalADSGesture();
+	void HandleOriginalADSHold();
+	bool CanRouteOriginalADSInput() const;
+	bool RequestOriginalADS(const FGameplayTag& InputTag);
+	void CheckOriginalADSActivation();
+	void ReleaseOriginalADS();
+	void HandleOriginalADSEnded(const FAbilityEndedData& EndedData);
+	void HandleOriginalADSFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureTags);
+	void DeferADSInputCleanup(FGameplayAbilitySpecHandle Handle);
+	void FlushADSInputCleanup();
+	void GetAimInputKeys(TArray<FKey>& OutKeys) const;
+	bool IsAimKeyDown() const;
+	bool IsFreshAimKeyPress() const;
+
+	TWeakObjectPtr<UDCAbilitySystemComponent> AimInputASC;
+	TWeakObjectPtr<const UInputAction> RoutedAimAction;
+	TArray<FKey> DefaultAimKeys;
+	FDelegateHandle AimCanceledDelegateHandle;
+	FDelegateHandle AimEndedDelegateHandle;
+	FDelegateHandle AimFailedDelegateHandle;
+	FTimerHandle AimHoldTimerHandle;
+	FTimerHandle ADSInputCleanupTimerHandle;
+	FTimerHandle ADSActivationCheckTimerHandle;
+	TArray<FGameplayAbilitySpecHandle> ADSInputCleanupHandles;
+	FGameplayAbilitySpecHandle RoutedADSHandle;
+	FGameplayTag RoutedADSTag;
+	double AimPressTime = 0.0;
+	uint64 AimSuppressionFrame = 0;
+	uint64 ADSRequestFrame = 0;
+	bool bPhysicalAimPressed = false;
+	bool bAwaitingAimHold = false;
+	bool bIgnoreAimUntilRelease = false;
 };
 
 #undef UE_API

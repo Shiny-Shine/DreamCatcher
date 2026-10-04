@@ -1,69 +1,65 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
 #include "AttributeSet.h"
+
 #include "DCAttributeSet.generated.h"
+
+#define UE_API DREAMCATCHER_API
 
 class AActor;
 class UDCAbilitySystemComponent;
+class UObject;
 class UWorld;
 struct FGameplayEffectSpec;
 
+
 /**
- * Attribute 접근 함수를 한 번에 생성.
+ * This macro defines a set of helper functions for accessing and initializing attributes.
  *
- * 예:
- * DC_ATTRIBUTE_ACCESSORS(UDCHealthSet, Health)
- *
- * 생성되는 함수:
- * - GetHealthAttribute()
- * - GetHealth()
- * - SetHealth()
- * - InitHealth()
+ * The following example of the macro:
+ *		DC_ATTRIBUTE_ACCESSORS(UDCHealthSet, Health)
+ * will create the following functions:
+ *		static FGameplayAttribute GetHealthAttribute();
+ *		float GetHealth() const;
+ *		void SetHealth(float NewVal);
+ *		void InitHealth(float NewVal);
  */
 #define DC_ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
-GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
-GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
-GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
-GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
+	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
+	GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
+	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
+	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
 /**
- * Attribute 변경에 대한 내부 C++ 이벤트.
- *
- * Blueprint에는 이 Delegate를 직접 노출하지 않음.
- * 이후 UDCHealthComponent가 이 이벤트를 받아 기존 HUD용
- * BlueprintAssignable 이벤트로 변환.
- */
-DECLARE_MULTICAST_DELEGATE_SixParams(
-	FDCAttributeEvent,
-	AActor* /* EffectInstigator */,
-	AActor* /* EffectCauser */,
-	const FGameplayEffectSpec* /* EffectSpec */,
-	float /* EffectMagnitude */,
-	float /* OldValue */,
-	float /* NewValue */
-);
+ * Delegate used to broadcast attribute events, some of these parameters may be null on clients:
+ * @param EffectInstigator	The original instigating actor for this event
+ * @param EffectCauser		The physical actor that caused the change
+ * @param EffectSpec		The full effect spec for this change
+ * @param EffectMagnitude	The raw magnitude, this is before clamping
+ * @param OldValue			The value of the attribute before it was changed
+ * @param NewValue			The value after it was changed
+*/
+DECLARE_MULTICAST_DELEGATE_SixParams(FDCAttributeEvent, AActor* /*EffectInstigator*/, AActor* /*EffectCauser*/, const FGameplayEffectSpec* /*EffectSpec*/, float /*EffectMagnitude*/, float /*OldValue*/, float /*NewValue*/);
 
 /**
- * DreamCatcher AttributeSet의 공통 기반 클래스.
+ * UDCAttributeSet
  *
- * 직접 데이터 에셋이나 PlayerState에 넣는 클래스가 아닌, HealthSet, CombatSet, ResourceSet이 상속받는 기반 클래스.
+ *	Base attribute set class for the project.
  */
-UCLASS(Abstract)
-class DREAMCATCHER_API UDCAttributeSet : public UAttributeSet
+UCLASS(MinimalAPI)
+class UDCAttributeSet : public UAttributeSet
 {
 	GENERATED_BODY()
 
 public:
-	UDCAttributeSet();
 
-	/**
-	 * AttributeSet의 Outer를 기준으로 현재 World를 반환.
-	 *
-	 * PlayerState가 AttributeSet을 소유해도 정상적으로 게임 World에 접근할 수 있음.
-	 */
-	virtual UWorld* GetWorld() const override;
+	UE_API UDCAttributeSet();
 
-	// 이 AttributeSet을 등록한 ASC를 DreamCatcher 전용 타입으로 반환.
-	UDCAbilitySystemComponent* GetDCAbilitySystemComponent() const;
+	UE_API UWorld* GetWorld() const override;
+
+	UE_API UDCAbilitySystemComponent* GetDCAbilitySystemComponent() const;
 };
+
+#undef UE_API

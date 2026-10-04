@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Camera/DCCameraAssistInterface.h"
 #include "GameFramework/PlayerController.h"
+#include "PrimitiveComponentId.h"
 #include "DreamCatcherPlayerController.generated.h"
 
 class UDCPlayerHUDWidget;
@@ -11,11 +13,18 @@ class UInputMappingContext;
 class UDCAbilitySystemComponent;
 
 UCLASS()
-class DREAMCATCHER_API ADreamCatcherPlayerController : public APlayerController
+class DREAMCATCHER_API ADreamCatcherPlayerController
+	: public APlayerController
+	, public IDCCameraAssistInterface
 {
 	GENERATED_BODY()
 	
 public:
+	ADreamCatcherPlayerController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+	virtual void OnCameraPenetratingTarget() override;
+	virtual void UpdateHiddenComponents(const FVector& ViewLocation, TSet<FPrimitiveComponentId>& OutHiddenComponents) override;
+
 	UDCAbilitySystemComponent* GetDCAbilitySystemComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = "DC|Character")
@@ -52,4 +61,7 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnEndAutoRun"))
 	void K2_OnEndAutoRun();
+
+private:
+	bool bHideViewTargetPawnNextFrame = false;
 };

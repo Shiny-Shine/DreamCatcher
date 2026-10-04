@@ -60,6 +60,18 @@
 			"Type": "RequiredResource"
 		},
 		{
+			"Path": "$(ProjectDir)/Plugins/GameSubtitles/Binaries/Win64/UnrealEditor-GameSubtitles.dll",
+			"Type": "DynamicLibrary"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/GameSubtitles/Binaries/Win64/UnrealEditor-GameSubtitles.pdb",
+			"Type": "SymbolFile"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/GameSubtitles/Binaries/Win64/UnrealEditor.modules",
+			"Type": "RequiredResource"
+		},
+		{
 			"Path": "$(ProjectDir)/Plugins/GameplayMessageRouter/Binaries/Win64/UnrealEditor-GameplayMessageNodes.dll",
 			"Type": "DynamicLibrary"
 		},
@@ -89,6 +101,18 @@
 		},
 		{
 			"Path": "$(ProjectDir)/Plugins/ModularGameplayActors/Binaries/Win64/UnrealEditor.modules",
+			"Type": "RequiredResource"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/UIExtension/Binaries/Win64/UnrealEditor-UIExtension.dll",
+			"Type": "DynamicLibrary"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/UIExtension/Binaries/Win64/UnrealEditor-UIExtension.pdb",
+			"Type": "SymbolFile"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/UIExtension/Binaries/Win64/UnrealEditor.modules",
 			"Type": "RequiredResource"
 		},
 		{
@@ -4536,6 +4560,18 @@
 			"Type": "RequiredResource"
 		},
 		{
+			"Path": "$(EngineDir)/Plugins/Runtime/AudioModulation/Binaries/Win64/UnrealEditor-AudioModulation.dll",
+			"Type": "DynamicLibrary"
+		},
+		{
+			"Path": "$(EngineDir)/Plugins/Runtime/AudioModulation/Binaries/Win64/UnrealEditor-AudioModulationEditor.dll",
+			"Type": "DynamicLibrary"
+		},
+		{
+			"Path": "$(EngineDir)/Plugins/Runtime/AudioModulation/Binaries/Win64/UnrealEditor.modules",
+			"Type": "RequiredResource"
+		},
+		{
 			"Path": "$(EngineDir)/Plugins/Runtime/AudioSynesthesia/Binaries/Win64/UnrealEditor-AudioSynesthesia.dll",
 			"Type": "DynamicLibrary"
 		},
@@ -5214,11 +5250,19 @@
 			"Type": "UFS"
 		},
 		{
+			"Path": "$(ProjectDir)/Plugins/GameSubtitles/GameSubtitles.uplugin",
+			"Type": "UFS"
+		},
+		{
 			"Path": "$(ProjectDir)/Plugins/GameplayMessageRouter/GameplayMessageRouter.uplugin",
 			"Type": "UFS"
 		},
 		{
 			"Path": "$(ProjectDir)/Plugins/ModularGameplayActors/ModularGameplayActors.uplugin",
+			"Type": "UFS"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/UIExtension/UIExtension.uplugin",
 			"Type": "UFS"
 		},
 		{
@@ -29962,6 +30006,10 @@
 			"Type": "UFS"
 		},
 		{
+			"Path": "$(EngineDir)/Plugins/Runtime/AudioModulation/AudioModulation.uplugin",
+			"Type": "UFS"
+		},
+		{
 			"Path": "$(EngineDir)/Plugins/Runtime/AudioSynesthesia/AudioSynesthesia.uplugin",
 			"Type": "UFS"
 		},
@@ -30183,6 +30231,7 @@
 		"AudioCapture",
 		"AudioInsights",
 		"AudioInsightsRuntime",
+		"AudioModulation",
 		"AudioModulationInsights",
 		"AudioSynesthesia",
 		"AudioWidgets",
@@ -30265,6 +30314,7 @@
 		"GLTFExporter",
 		"GPUReshape",
 		"GameFeatures",
+		"GameSubtitles",
 		"GameplayAbilities",
 		"GameplayCameras",
 		"GameplayInsights",
@@ -30406,6 +30456,7 @@
 		"ToolPresets",
 		"TraceUtilities",
 		"TweeningUtils",
+		"UIExtension",
 		"UMGWidgetPreview",
 		"UObjectPlugin",
 		"UVEditor",

@@ -9,7 +9,7 @@ class UDCAbilitySystemComponent;
 class UDCEquipmentDefinition;
 class UDCEquipmentInstance;
 class UDCPawnExtensionComponent;
-class UDCHealthComponent;
+class UDCLyraHealthComponent;
 class UDCWeaponInstance;
 
 // 장착된 장비 하나의 관리 기록.
@@ -110,13 +110,13 @@ private:
 	// ASC 연결이 끊어지기 전에 장비를 정리.
 	void HandleAbilitySystemUninitializing();
 
-	// 기존 HealthComponent의 사망 시작 이벤트를 받음.
+	// Block new equipment at death start; keep actors until ASC/component teardown for the death Cue.
 	UFUNCTION()
 	void HandleOwnerDeath(AActor* DeadActor);
 
 	// 구독한 컴포넌트를 기억해 EndPlay에서 이벤트를 해제.
 	TWeakObjectPtr<UDCPawnExtensionComponent> BoundPawnExtension;
-	TWeakObjectPtr<UDCHealthComponent> BoundHealthComponent;
+	TWeakObjectPtr<UDCLyraHealthComponent> BoundHealthComponent;
 
 	// ASC 준비 전, 연결 해제 중, 사망 후에는 새 장비를 장착 X.
 	bool bEquipmentEnabled = false;

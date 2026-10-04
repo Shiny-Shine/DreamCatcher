@@ -4,6 +4,8 @@
 
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "AbilitySystem/DCGameplayTags.h"
+#include "AbilitySystem/Attributes/DCHealthSet.h"
+#include "AbilitySystemGlobals.h"
 #include "Animation/DCAnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Camera/DCCameraComponent.h"
@@ -11,9 +13,9 @@
 #include "Character/DCPawnData.h"
 #include "Character/DCPawnExtensionComponent.h"
 #include "Character/DCHeroComponent.h"
+#include "Character/DCLyraHealthComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/DCCombatComponent.h"
-#include "Components/DCHealthComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -21,8 +23,11 @@
 #include "EnhancedInputComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameplayEffect.h"
+#include "GameplayEffectTypes.h"
 #include "Input/DCInputComponent.h"
 #include "Input/DCInputConfig.h"
 #include "InputAction.h"
@@ -30,6 +35,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Player/DCPlayerState.h"
 #include "Character/DCCharacterMovementComponent.h"
+#include "TimerManager.h"
 
 ADreamCatcherCharacter::ADreamCatcherCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDCCharacterMovementComponent>(
@@ -88,7 +94,9 @@ ADreamCatcherCharacter::ADreamCatcherCharacter(const FObjectInitializer& ObjectI
 		FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
 	PawnExtensionComponent->OnAbilitySystemUninitialized_Register(
 		FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemUninitialized));
-	HealthComponent = CreateDefaultSubobject<UDCHealthComponent>(TEXT("HealthComponent"));
+	HealthComponent = CreateDefaultSubobject<UDCLyraHealthComponent>(TEXT("HealthComponent"));
+	HealthComponent->OnDeathStarted.AddDynamic(this, &ThisClass::OnDeathStarted);
+	HealthComponent->OnDeathFinished.AddDynamic(this, &ThisClass::OnDeathFinished);
 	CombatComponent = CreateDefaultSubobject<UDCCombatComponent>(TEXT("CombatComponent"));
 
 	// 임시 무기 모델을 표시할 컴포넌트.
@@ -160,13 +168,19 @@ void ADreamCatcherCharacter::OnRep_PlayerState()
 
 void ADreamCatcherCharacter::OnAbilitySystemInitialized()
 {
-	// The existing HealthComponent subscribes independently; do not initialize it twice here.
+	UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent();
+	check(ASC);
+
+	HealthComponent->InitializeWithAbilitySystem(ASC);
+
 	InitializeGASAimStateListeners();
 	InitializeCameraModeSystem();
 }
 
 void ADreamCatcherCharacter::OnAbilitySystemUninitialized()
 {
+	HealthComponent->UninitializeFromAbilitySystem();
+
 	UninitializeGASAimStateListeners();
 }
 
@@ -338,6 +352,17 @@ void ADreamCatcherCharacter::RefreshGASAimMode(bool bForceBroadcast)
 
 TSubclassOf<UDCCameraMode> ADreamCatcherCharacter::DetermineCameraMode() const
 {
+	// Ability가 카메라를 지정했다면 해당 카메라를 먼저 사용.
+	if (const UDCHeroComponent* HeroComponent = UDCHeroComponent::FindHeroComponent(this))
+	{
+		const TSubclassOf<UDCCameraMode> AbilityCameraMode = HeroComponent->GetAbilityCameraMode();
+
+		if (AbilityCameraMode)
+		{
+			return AbilityCameraMode;
+		}
+	}
+
 	const UDCPawnData* PawnData = PawnExtensionComponent ? PawnExtensionComponent->GetPawnData() : nullptr;
 
 	if (!PawnData)
@@ -349,12 +374,6 @@ TSubclassOf<UDCCameraMode> ADreamCatcherCharacter::DetermineCameraMode() const
 
 	if (AbilitySystemComponent)
 	{
-		/*
-		 * Scope를 Shoulder보다 먼저 검사.
-		 *
-		 * 정상 상태에서는 두 태그가 동시에 존재하지 않지만,
-		 * 데이터 설정 오류나 Effect 제거 실패가 발생했을 때도 결과가 항상 결정적이도록 Scope가 우선.
-		 */
 		if (PawnData->ScopeCameraMode && AbilitySystemComponent->
 			HasMatchingGameplayTag(DCGameplayTags::State_Aim_Scope))
 		{
@@ -404,11 +423,6 @@ void ADreamCatcherCharacter::BeginPlay()
 
 			HandleAimModeChanged(CombatComponent->GetAimMode());
 		}
-	}
-
-	if (HealthComponent)
-	{
-		HealthComponent->OnDeath.AddDynamic(this, &ADreamCatcherCharacter::HandleDeath);
 	}
 }
 
@@ -855,24 +869,66 @@ void ADreamCatcherCharacter::HandleUltimateRequested()
 	BP_OnUltimateRequested();
 }
 
-void ADreamCatcherCharacter::HandleDeath(AActor* /*DeadActor*/)
+void ADreamCatcherCharacter::OnDeathStarted(AActor*)
 {
-	// 죽는 순간 자동 연사를 끊어줌.
+	// DreamCatcher compatibility: stop the remaining legacy fire timer and persistent aim effect.
 	StopPrimaryFire();
 	CancelAimInputAndState();
+	PendingRecoil = FVector2D::ZeroVector;
 
-	// 더 이상 움직이지 못하게 막음.
-	GetCharacterMovement()->DisableMovement();
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DisableMovementAndCollision();
+	UE_LOG(LogDreamCatcher, Log, TEXT("[R3-1] Death started: [%s]."), *GetNameSafe(this));
+}
 
-	// 입력도 끊어서 죽은 뒤 조작이 남지 않게 함.
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+void ADreamCatcherCharacter::OnDeathFinished(AActor*)
+{
+	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::DestroyDueToDeath);
+	UE_LOG(LogDreamCatcher, Log, TEXT("[R3-1] Death finished: [%s]. Avatar cleanup queued."), *GetNameSafe(this));
+}
+
+// The following cleanup functions retain LyraCharacter's ordering and behavior.
+void ADreamCatcherCharacter::DisableMovementAndCollision()
+{
+	if (GetController())
 	{
-		DisableInput(PC);
+		GetController()->SetIgnoreMoveInput(true);
 	}
 
-	// 실제 사망 애니메이션, dissolve, 컷신, 카메라 연출은 BP에서 처리.
-	BP_OnDeath();
+	UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+	check(CapsuleComp);
+	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+
+	UDCCharacterMovementComponent* DCMoveComp = CastChecked<UDCCharacterMovementComponent>(GetCharacterMovement());
+	DCMoveComp->StopMovementImmediately();
+	DCMoveComp->DisableMovement();
+}
+
+void ADreamCatcherCharacter::DestroyDueToDeath()
+{
+	K2_OnDeathFinished();
+
+	UninitAndDestroy();
+}
+
+void ADreamCatcherCharacter::UninitAndDestroy()
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		DetachFromControllerPendingDestroy();
+		SetLifeSpan(0.1f);
+	}
+
+	// A replacement pawn may already own the PlayerState ASC. Never clear that pawn's actor info.
+	if (UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent())
+	{
+		if (ASC->GetAvatarActor() == this)
+		{
+			PawnExtensionComponent->UninitializeAbilitySystem();
+		}
+	}
+
+	SetActorHiddenInGame(true);
 }
 
 float ADreamCatcherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
@@ -880,16 +936,61 @@ float ADreamCatcherCharacter::TakeDamage(float DamageAmount, FDamageEvent const&
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (!HealthComponent)
+	if (!HasAuthority() || !FMath::IsFinite(DamageAmount) || DamageAmount <= 0.0f ||
+		!HealthComponent || HealthComponent->IsDeadOrDying())
 	{
 		return 0.0f;
 	}
 
-	const float AppliedDamage = HealthComponent->ApplyDamage(DamageAmount, DamageCauser);
+	UDCAbilitySystemComponent* TargetASC = GetDCAbilitySystemComponent();
+	if (!IsValid(TargetASC) || TargetASC->GetAvatarActor() != this ||
+		!TargetASC->IsOwnerActorAuthoritative() || !TargetASC->GetSet<UDCHealthSet>())
+	{
+		return 0.0f;
+	}
+
+	if (!LegacyDamageGameplayEffectClass)
+	{
+		UE_LOG(LogDreamCatcher, Error,
+			TEXT("[R3-1] Character [%s]: assign GE_DC_Damage to LegacyDamageGameplayEffectClass for legacy enemy damage."),
+			*GetNameSafe(this));
+		return 0.0f;
+	}
+
+	// Preserve the old health component's SetByCaller bridge outside the original Lyra health component.
+	// The temporary target-as-source fallback is only for enemies without an ASC; R3-2 replaces this boundary.
+	UAbilitySystemComponent* SourceASC = DamageCauser
+		? UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(DamageCauser, true)
+		: nullptr;
+	if (!IsValid(SourceASC))
+	{
+		SourceASC = TargetASC;
+	}
+
+	FGameplayEffectContextHandle EffectContext = SourceASC->MakeEffectContext();
+	if (DamageCauser)
+	{
+		EffectContext.AddInstigator(DamageCauser, DamageCauser);
+		EffectContext.AddSourceObject(DamageCauser);
+	}
+
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(
+		LegacyDamageGameplayEffectClass, 1.0f, EffectContext);
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOG(LogDreamCatcher, Error, TEXT("[R3-1] Character [%s]: failed to create the legacy damage spec."),
+			*GetNameSafe(this));
+		return 0.0f;
+	}
+
+	SpecHandle.Data->SetSetByCallerMagnitude(DCGameplayTags::SetByCaller_Damage, DamageAmount);
+	const float PreviousHealth = HealthComponent->GetHealth();
+	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	const float AppliedDamage = FMath::Max(PreviousHealth - HealthComponent->GetHealth(), 0.0f);
 
 	if (AppliedDamage > 0.0f && !HealthComponent->IsDeadOrDying())
 	{
-		BP_OnDamaged(HealthComponent->GetCurrentHealth(), HealthComponent->GetMaxHealth(), DamageCauser);
+		BP_OnDamaged(HealthComponent->GetHealth(), HealthComponent->GetMaxHealth(), DamageCauser);
 	}
 
 	return AppliedDamage;

@@ -7,6 +7,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Pawn.h"
+#include "Physics/PhysicalMaterialWithTags.h"
 
 UDCRangedWeaponInstance::UDCRangedWeaponInstance(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -189,7 +190,7 @@ bool UDCRangedWeaponInstance::CanUseFirstShotAccuracy(float BaseSpreadAngle) con
 		return false;
 	}
 
-	if (ASC->HasMatchingGameplayTag(DCGameplayTags::State_Dead) || ASC->HasMatchingGameplayTag(
+	if (ASC->HasMatchingGameplayTag(DCGameplayTags::Status_Death) || ASC->HasMatchingGameplayTag(
 		DCGameplayTags::State_Dodging))
 	{
 		return false;
@@ -273,4 +274,32 @@ float UDCRangedWeaponInstance::GetDistanceDamageMultiplier(float DistanceCm) con
 	}
 
 	return FMath::Max(Curve->Eval(FMath::Max(DistanceCm, 0.0f)), 0.0f);
+}
+
+// Copyright Epic Games, Inc. All Rights Reserved.
+// The following two functions are ported from LyraRangedWeaponInstance; only project type names differ.
+float UDCRangedWeaponInstance::GetDistanceAttenuation(float Distance, const FGameplayTagContainer* SourceTags,
+                                                    const FGameplayTagContainer* TargetTags) const
+{
+	const FRichCurve* Curve = DistanceDamageFalloff.GetRichCurveConst();
+	return Curve->HasAnyData() ? Curve->Eval(Distance) : 1.0f;
+}
+
+float UDCRangedWeaponInstance::GetPhysicalMaterialAttenuation(const UPhysicalMaterial* PhysicalMaterial,
+                                                            const FGameplayTagContainer* SourceTags,
+                                                            const FGameplayTagContainer* TargetTags) const
+{
+	float CombinedMultiplier = 1.0f;
+	if (const UDCPhysicalMaterialWithTags* PhysMatWithTags = Cast<const UDCPhysicalMaterialWithTags>(PhysicalMaterial))
+	{
+		for (const FGameplayTag MaterialTag : PhysMatWithTags->Tags)
+		{
+			if (const float* pTagMultiplier = MaterialDamageMultiplier.Find(MaterialTag))
+			{
+				CombinedMultiplier *= *pTagMultiplier;
+			}
+		}
+	}
+
+	return CombinedMultiplier;
 }

@@ -14,8 +14,9 @@ class UCameraComponent;
 class UDCCameraComponent;
 class UDCCameraMode;
 class UDCAbilitySystemComponent;
-class UDCHealthComponent;
+class UDCLyraHealthComponent;
 class UDCPawnExtensionComponent;
+class UGameplayEffect;
 class USceneComponent;
 class UStaticMeshComponent;
 class UInputAction;
@@ -75,7 +76,7 @@ public:
 	                         AActor* DamageCauser) override;
 
 	UFUNCTION(BlueprintPure, Category="Components")
-	UDCHealthComponent* GetHealthComponent() const { return HealthComponent; }
+	UDCLyraHealthComponent* GetHealthComponent() const { return HealthComponent; }
 
 	UFUNCTION(BlueprintPure, Category="Components")
 	UDCCombatComponent* GetCombatComponent() const { return CombatComponent; }
@@ -125,6 +126,20 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void UnPossessed() override;
 
+	// Ported from LyraCharacter: death starts now, but avatar cleanup waits for the death ability to finish.
+	UFUNCTION()
+	virtual void OnDeathStarted(AActor* OwningActor);
+
+	UFUNCTION()
+	virtual void OnDeathFinished(AActor* OwningActor);
+
+	void DisableMovementAndCollision();
+	void DestroyDueToDeath();
+	void UninitAndDestroy();
+
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "OnDeathFinished"))
+	void K2_OnDeathFinished();
+
 	// CameraBoom:
 	// 캐릭터 뒤에서 카메라를 따라오게 하는 스프링 암.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
@@ -145,7 +160,12 @@ protected:
 
 	// 체력 규칙을 담당하는 컴포넌트.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-	TObjectPtr<UDCHealthComponent> HealthComponent;
+	TObjectPtr<UDCLyraHealthComponent> HealthComponent;
+
+	// R3 compatibility boundary: legacy enemies still call AActor::TakeDamage.
+	// Assign the existing GE_DC_Damage until the source/team pipeline is migrated in R3-2.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Health|Compatibility")
+	TSubclassOf<UGameplayEffect> LegacyDamageGameplayEffectClass;
 
 	// 발사/회피/궁극기 규칙을 담당하는 컴포넌트.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
@@ -205,6 +225,7 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Combat")
 	void BP_OnUltimateRequested();
 
+	// Retained for legacy Blueprint compatibility only. The active death path uses GA_Hero_Death and its Cue.
 	UFUNCTION(BlueprintImplementableEvent, Category="Character")
 	void BP_OnDeath();
 
@@ -310,9 +331,6 @@ private:
 
 	UFUNCTION()
 	void HandleUltimateRequested();
-
-	UFUNCTION()
-	void HandleDeath(AActor* DeadActor);
 
 	void UpdateCameraRecoil(float DeltaSeconds);
 

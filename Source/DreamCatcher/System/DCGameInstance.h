@@ -14,6 +14,9 @@ class DREAMCATCHER_API UDCGameInstance : public UCommonGameInstance
 public:
 	UDCGameInstance(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	virtual void HandlerUserInitialized(const UCommonUserInfo* UserInfo, bool bSuccess, FText Error,
+		ECommonUserPrivilege RequestedPrivilege, ECommonUserOnlineContext OnlineContext) override;
+
 protected:
 	virtual void Init() override;
 };

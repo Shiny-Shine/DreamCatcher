@@ -12,6 +12,7 @@
 #include "System/DCAssetManager.h"
 #include "System/DCGameData.h"
 #include "AbilitySystem/DCGameplayTags.h"	// Lagacy
+#include "Templates/UnrealTemplate.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCAbilitySystemComponent)
 
@@ -540,12 +541,25 @@ void UDCAbilitySystemComponent::ClearAimState()
 
 void UDCAbilitySystemComponent::CancelAimInputAndState()
 {
+	if (bCancelingAimInputAndState)
+	{
+		return;
+	}
+	TGuardValue<bool> CancelGuard(bCancelingAimInputAndState, true);
+
+	// No ability exists during the initial hold delay, but that pending gesture must also stop.
+	OnAimInputCanceled.Broadcast();
+
 	TArray<FGameplayAbilitySpecHandle> AimHandles;
 
 	// Ability를 취소하면 실행 상태가 바뀔 수 있으므로 먼저 대상 Handle만 별도 배열에 모음.
 	for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
 	{
-		if (Spec.Ability && Spec.GetDynamicSpecSourceTags().HasTagExact(DCGameplayTags::InputTag_Aim))
+		const FGameplayTagContainer& InputTags = Spec.GetDynamicSpecSourceTags();
+		if (Spec.Ability &&
+			(InputTags.HasTagExact(DCGameplayTags::InputTag_Aim) ||
+			 InputTags.HasTagExact(DCGameplayTags::InputTag_Weapon_ADS_Shoulder) ||
+			 InputTags.HasTagExact(DCGameplayTags::InputTag_Weapon_ADS_Scope)))
 		{
 			AimHandles.Add(Spec.Handle);
 		}
@@ -554,20 +568,13 @@ void UDCAbilitySystemComponent::CancelAimInputAndState()
 	for (const FGameplayAbilitySpecHandle& Handle : AimHandles)
 	{
 		// 취소 직후 남은 입력으로 Aim이 다시 시작되지 않게 함.
-		InputPressedSpecHandles.Remove(Handle);
-		InputReleasedSpecHandles.Remove(Handle);
-		InputHeldSpecHandles.Remove(Handle);
-
-		if (FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(Handle))
-		{
-			Spec->InputPressed = false;
-		}
+		ClearAbilityInputForHandle(Handle);
 
 		// WaitDelay와 WaitInputRelease도 Ability 종료와 함께 정리됨.
 		CancelAbilityHandle(Handle);
 	}
 
-	// Scope는 Ability 종료 후에도 Effect가 유지되므로 별도 제거.
+	// Compatibility only: the old Scope GE outlives its ability. New ADS owned tags end with the ability.
 	ClearAimState();
 }
 

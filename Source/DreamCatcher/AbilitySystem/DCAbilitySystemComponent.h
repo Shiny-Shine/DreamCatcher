@@ -81,6 +81,9 @@ public:
 
 	void ClearAbilityInputForHandle(const FGameplayAbilitySpecHandle& Handle);
 
+	// R4-3: reset the local gesture even when its hold timer has not activated an ability yet.
+	FSimpleMulticastDelegate OnAimInputCanceled;
+
 protected:
 
 	UE_API virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
@@ -114,6 +117,9 @@ protected:
 
 	// Number of abilities running in each activation group.
 	int32 ActivationGroupCounts[(uint8)EDCAbilityActivationGroup::MAX];
+
+private:
+	bool bCancelingAimInputAndState = false;
 };
 
 #undef UE_API

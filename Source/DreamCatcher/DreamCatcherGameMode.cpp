@@ -4,7 +4,7 @@
 #include "DreamCatcherCharacter.h"
 #include "Character/DCPawnData.h"
 #include "Character/DCPawnExtensionComponent.h"
-#include "Components/DCHealthComponent.h"
+#include "Character/DCLyraHealthComponent.h"
 #include "DCLogChannels.h"
 #include "Engine/World.h"
 #include "GameFramework/Controller.h"
@@ -152,38 +152,100 @@ void ADreamCatcherGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	GetWorldTimerManager().ClearTimer(BindPlayerTimerHandle);
 	GetWorldTimerManager().ClearTimer(RestartLevelTimerHandle);
+	UnbindPlayerDeath();
 
 	Super::EndPlay(EndPlayReason);
 }
 
 void ADreamCatcherGameMode::BindPlayerDeath()
 {
-	if (bPlayerDeathBound)
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+	if (!IsValid(PlayerController))
+	{
+		GetWorldTimerManager().SetTimer(BindPlayerTimerHandle, this, &ThisClass::BindPlayerDeath, 0.1f, false);
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(BindPlayerTimerHandle);
+
+	if (BoundPlayerController.Get() != PlayerController)
+	{
+		UnbindPlayerDeath();
+		BoundPlayerController = PlayerController;
+		PlayerController->OnPossessedPawnChanged.AddUniqueDynamic(this, &ThisClass::HandlePlayerPawnChanged);
+	}
+
+	// Subscribe first, then read the current pawn: possession may already have happened before BeginPlay.
+	HandlePlayerPawnChanged(nullptr, PlayerController->GetPawn());
+}
+
+void ADreamCatcherGameMode::UnbindPlayerDeath()
+{
+	if (APlayerController* PlayerController = BoundPlayerController.Get())
+	{
+		PlayerController->OnPossessedPawnChanged.RemoveDynamic(this, &ThisClass::HandlePlayerPawnChanged);
+	}
+	BoundPlayerController.Reset();
+
+	if (UDCLyraHealthComponent* HealthComponent = BoundHealthComponent.Get())
+	{
+		HealthComponent->OnDeathFinished.RemoveDynamic(this, &ThisClass::HandlePlayerDeath);
+	}
+	BoundHealthComponent.Reset();
+}
+
+void ADreamCatcherGameMode::HandlePlayerPawnChanged(APawn* OldPawn, APawn* NewPawn)
+{
+	if (UDCLyraHealthComponent* HealthComponent = BoundHealthComponent.Get())
+	{
+		HealthComponent->OnDeathFinished.RemoveDynamic(this, &ThisClass::HandlePlayerDeath);
+	}
+	BoundHealthComponent.Reset();
+
+	ADreamCatcherCharacter* PlayerCharacter = Cast<ADreamCatcherCharacter>(NewPawn);
+	if (!IsValid(PlayerCharacter))
+	{
+		// Death cleanup unpossesses the pawn. Do not cancel the already queued level restart here.
+		return;
+	}
+
+	UDCLyraHealthComponent* HealthComponent = PlayerCharacter->GetHealthComponent();
+	if (!IsValid(HealthComponent))
 	{
 		return;
 	}
 
-	ADreamCatcherCharacter* PlayerCharacter = Cast<ADreamCatcherCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
-	if (!PlayerCharacter || !PlayerCharacter->GetHealthComponent())
-	{
-		GetWorldTimerManager().SetTimer(BindPlayerTimerHandle, this, &ADreamCatcherGameMode::BindPlayerDeath, 0.1f, false);
-		return;
-	}
+	BoundHealthComponent = HealthComponent;
+	HealthComponent->OnDeathFinished.AddUniqueDynamic(this, &ThisClass::HandlePlayerDeath);
 
-	PlayerCharacter->GetHealthComponent()->OnDeath.RemoveDynamic(this, &ADreamCatcherGameMode::HandlePlayerDeath);
-	PlayerCharacter->GetHealthComponent()->OnDeath.AddDynamic(this, &ADreamCatcherGameMode::HandlePlayerDeath);
-	bPlayerDeathBound = true;
+	// If binding was delayed, do not miss an already completed death sequence.
+	if (HealthComponent->GetDeathState() == EDCLyraDeathState::DeathFinished)
+	{
+		HandlePlayerDeath(PlayerCharacter);
+	}
 }
 
 void ADreamCatcherGameMode::HandlePlayerDeath(AActor* DeadActor)
 {
-	if (bRestartQueued)
+	const UDCLyraHealthComponent* HealthComponent = BoundHealthComponent.Get();
+	if (bRestartQueued || !HealthComponent || HealthComponent->GetOwner() != DeadActor)
 	{
 		return;
 	}
 
 	bRestartQueued = true;
-	GetWorldTimerManager().SetTimer(RestartLevelTimerHandle, this, &ADreamCatcherGameMode::RestartCurrentLevel, RestartLevelDelay, false);
+	UE_LOG(LogDC, Log, TEXT("[R3-1] Player death finished: [%s]. Level restart delay: %.2f seconds."),
+		*GetNameSafe(DeadActor), FMath::Max(RestartLevelDelay, 0.0f));
+
+	if (RestartLevelDelay > 0.0f)
+	{
+		GetWorldTimerManager().SetTimer(RestartLevelTimerHandle, this, &ThisClass::RestartCurrentLevel, RestartLevelDelay, false);
+	}
+	else
+	{
+		// SetTimer with a zero rate clears a timer. Queue instead, and never reload inside the death delegate.
+		RestartLevelTimerHandle = GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::RestartCurrentLevel);
+	}
 }
 
 void ADreamCatcherGameMode::RestartCurrentLevel()

@@ -3,7 +3,7 @@
 #include "Character/DCPawnData.h"
 #include "Character/DCPawnExtensionComponent.h"
 #include "Components/DCCombatComponent.h"
-#include "Components/DCHealthComponent.h"
+#include "Character/DCLyraHealthComponent.h"
 
 void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 {
@@ -40,7 +40,8 @@ void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 	if (BoundHealthComponent)
 	{
 		BoundHealthComponent->OnHealthChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleHealthChanged);
-		HandleHealthChanged(BoundHealthComponent->GetCurrentHealth(), BoundHealthComponent->GetMaxHealth());
+		BoundHealthComponent->OnMaxHealthChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleHealthChanged);
+		HandleHealthChanged(BoundHealthComponent, 0.0f, 0.0f, nullptr);
 	}
 
 	if (BoundCombatComponent)
@@ -83,6 +84,7 @@ void UDCPlayerHUDWidget::UnbindFromCurrentCharacter()
 	if (BoundHealthComponent)
 	{
 		BoundHealthComponent->OnHealthChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleHealthChanged);
+		BoundHealthComponent->OnMaxHealthChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleHealthChanged);
 		BoundHealthComponent = nullptr;
 	}
 
@@ -110,9 +112,14 @@ void UDCPlayerHUDWidget::UnbindFromCurrentCharacter()
 	ObservedCharacter = nullptr;
 }
 
-void UDCPlayerHUDWidget::HandleHealthChanged(float CurrentHealth, float MaxHealth)
+void UDCPlayerHUDWidget::HandleHealthChanged(UDCLyraHealthComponent* HealthComponent, float OldValue, float NewValue,
+                                          AActor* Instigator)
 {
-	BP_OnHealthChanged(CurrentHealth, MaxHealth);
+	// Both delegates use this signature. NewValue is not necessarily Health (it may be MaxHealth).
+	if (HealthComponent && HealthComponent == BoundHealthComponent.Get())
+	{
+		BP_OnHealthChanged(HealthComponent->GetHealth(), HealthComponent->GetMaxHealth());
+	}
 }
 
 void UDCPlayerHUDWidget::HandleUltimateChargeChanged(float NormalizedCharge)
