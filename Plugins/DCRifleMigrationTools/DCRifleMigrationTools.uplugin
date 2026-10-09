@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "DreamCatcher Rifle Migration Diagnostics",
+	"Description": "Editor-only, bounded package-copy diagnostics using Unreal AssetTools. No runtime module or content.",
+	"Category": "Editor",
+	"EnabledByDefault": false,
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "DCRifleMigrationTools",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}

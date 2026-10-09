@@ -10,6 +10,7 @@
 #include "Character/DCPawnData.h"
 #include "Components/GameFrameworkComponentManager.h"
 #include "DCLogChannels.h"
+#include "DreamCatcherPlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
@@ -37,6 +38,11 @@ ADCPlayerState::ADCPlayerState(const FObjectInitializer& ObjectInitializer) : Su
 	// ASC 상태가 빠르게 갱신될 수 있도록 설정합니다.
 	SetNetUpdateFrequency(100.0f);
 	MyTeamID = FGenericTeamId::NoTeam;
+}
+
+ADreamCatcherPlayerController* ADCPlayerState::GetDCPlayerController() const
+{
+	return Cast<ADreamCatcherPlayerController>(GetOwner());
 }
 
 UAbilitySystemComponent* ADCPlayerState::GetAbilitySystemComponent() const

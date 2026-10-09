@@ -17,6 +17,13 @@
 	],
 	"Plugins": [
 		{
+			"Name": "DCRifleMigrationTools",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		},
+		{
 			"Name": "ModelingToolsEditorMode",
 			"Enabled": true,
 			"TargetAllowList": [
@@ -88,6 +95,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "CommonLoadingScreen",
+			"Enabled": true
+		},
+		{
 			"Name": "UIExtension",
 			"Enabled": true
 		},
@@ -96,7 +107,27 @@
 			"Enabled": true
 		},
 		{
+			"Name": "Spatialization",
+			"Enabled": true
+		},
+		{
 			"Name": "GameSubtitles",
+			"Enabled": true
+		},
+		{
+			"Name": "AsyncMixin",
+			"Enabled": true
+		},
+		{
+			"Name": "AnimationWarping",
+			"Enabled": true
+		},
+		{
+			"Name": "AnimationLocomotionLibrary",
+			"Enabled": true
+		},
+		{
+			"Name": "DTLSHandlerComponent",
 			"Enabled": true
 		}
 	]

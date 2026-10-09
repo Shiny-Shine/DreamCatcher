@@ -75,6 +75,10 @@ public:
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator,
 	                         AActor* DamageCauser) override;
 
+	// Ported from LyraCharacter: keep the ASC's crouching state in sync with CharacterMovement.
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+
 	UFUNCTION(BlueprintPure, Category="Components")
 	UDCLyraHealthComponent* GetHealthComponent() const { return HealthComponent; }
 

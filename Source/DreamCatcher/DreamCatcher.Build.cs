@@ -13,6 +13,7 @@ public class DreamCatcher : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"InputCore",
+			"ApplicationCore",
 			"EnhancedInput",
 
 			"GameplayAbilities",
@@ -32,7 +33,10 @@ public class DreamCatcher : ModuleRules
 			"CommonUser",
 			"CommonGame",
 			"CommonUI",
+			"UIExtension",
+			"AsyncMixin",
 			"GameSubtitles",
+			"CommonLoadingScreen",
 			"DeveloperSettings"
 		});
 
@@ -40,7 +44,9 @@ public class DreamCatcher : ModuleRules
 			"GameplayMessageRuntime",
 			"Niagara",
 			"SlateCore",
-			"CommonInput"
+			"CommonInput",
+			"AudioMixer",
+			"AudioModulation"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {
@@ -62,6 +68,8 @@ public class DreamCatcher : ModuleRules
 
 		PublicDependencyModuleNames.Add("PhysicsCore");
 		PrivateDependencyModuleNames.Add("NetCore");
+		// Original GameInstance parent required by the imported weapon audio Blueprint.
+		PrivateDependencyModuleNames.AddRange(new[] { "CoreOnline", "DTLSHandlerComponent" });
 
 		SetupIrisSupport(Target);
 

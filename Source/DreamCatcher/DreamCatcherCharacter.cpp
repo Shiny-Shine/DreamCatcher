@@ -171,6 +171,12 @@ void ADreamCatcherCharacter::OnAbilitySystemInitialized()
 	UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent();
 	check(ASC);
 
+	// The PlayerState ASC can outlive its previous pawn's crouching state.
+	if (ASC->GetAvatarActor() == this)
+	{
+		ASC->SetLooseGameplayTagCount(DCGameplayTags::Status_Crouching, IsCrouched() ? 1 : 0);
+	}
+
 	HealthComponent->InitializeWithAbilitySystem(ASC);
 
 	InitializeGASAimStateListeners();
@@ -179,6 +185,16 @@ void ADreamCatcherCharacter::OnAbilitySystemInitialized()
 
 void ADreamCatcherCharacter::OnAbilitySystemUninitialized()
 {
+	if (UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent())
+	{
+		// PawnExtension clears the avatar before this callback. Do not touch a replacement avatar's tags.
+		const AActor* Avatar = ASC->GetAvatarActor();
+		if (!Avatar || Avatar == this)
+		{
+			ASC->SetLooseGameplayTagCount(DCGameplayTags::Status_Crouching, 0);
+		}
+	}
+
 	HealthComponent->UninitializeFromAbilitySystem();
 
 	UninitializeGASAimStateListeners();
@@ -1228,6 +1244,26 @@ void ADreamCatcherCharacter::ToggleCrouch()
 	{
 		Crouch();
 	}
+}
+
+void ADreamCatcherCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	if (UDCAbilitySystemComponent* DCASC = GetDCAbilitySystemComponent())
+	{
+		DCASC->SetLooseGameplayTagCount(DCGameplayTags::Status_Crouching, 1);
+	}
+
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+}
+
+void ADreamCatcherCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	if (UDCAbilitySystemComponent* DCASC = GetDCAbilitySystemComponent())
+	{
+		DCASC->SetLooseGameplayTagCount(DCGameplayTags::Status_Crouching, 0);
+	}
+
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 }
 
 float ADreamCatcherCharacter::GetCurrentLookSensitivityMultiplier() const

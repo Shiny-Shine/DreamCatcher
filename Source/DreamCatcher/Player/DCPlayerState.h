@@ -8,6 +8,7 @@
 #include "System/GameplayTagStack.h"
 #include "DCPlayerState.generated.h"
 
+class ADreamCatcherPlayerController;
 class UAbilitySystemComponent;
 class UDCAbilitySet;
 class UDCAbilitySystemComponent;
@@ -27,6 +28,10 @@ class DREAMCATCHER_API ADCPlayerState : public APlayerState, public IAbilitySyst
 
 public:
 	ADCPlayerState(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+	// Ported from ALyraPlayerState::GetLyraPlayerController (project-specific owner cast).
+	UFUNCTION(BlueprintCallable, Category = "Lyra|PlayerState")
+	ADreamCatcherPlayerController* GetDCPlayerController() const;
 
 	// IAbilitySystemInterface 구현.
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
