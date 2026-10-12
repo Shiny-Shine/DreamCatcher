@@ -145,11 +145,11 @@ bool FDCWeaponSpreadFoundationTest::RunTest(const FString& Parameters)
 	return !HasAnyErrors();
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCWeaponSpreadRecoveryDelayTest,
-	"DreamCatcher.R6.Weapon.SpreadRecoveryDelay",
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCWeaponOriginalSpreadRecoveryTest,
+	"DreamCatcher.R6.Weapon.OriginalSpreadRecovery",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
-bool FDCWeaponSpreadRecoveryDelayTest::RunTest(const FString& Parameters)
+bool FDCWeaponOriginalSpreadRecoveryTest::RunTest(const FString& Parameters)
 {
 	using namespace DCWeaponFoundationTests;
 	FTestWorldWrapper Fixture;
@@ -178,7 +178,8 @@ bool FDCWeaponSpreadRecoveryDelayTest::RunTest(const FString& Parameters)
 	SetTestCurve(*HeatPerShot, FVector2D(0.0, 1.0), FVector2D(10.0, 1.0));
 	SetTestCurve(*Cooling, FVector2D(0.0, 2.0), FVector2D(10.0, 2.0));
 	RecoveryDelay->SetPropertyValue_InContainer(Weapon, 0.15f);
-	// Advance beyond the delay so an uninitialized LastFireTime=0 cannot pass this test.
+	// The local Lyra source leaves its separate LastFireTime initialized to zero.
+	// Past world startup, firing updates the base activity clock but does not gate cooling.
 	Fixture.TickTestWorld(1.0f);
 	Weapon->OnEquipped();
 	Weapon->UpdateFiringTime();
@@ -186,27 +187,31 @@ bool FDCWeaponSpreadRecoveryDelayTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("First shot adds heat"), Weapon->GetCalculatedSpreadAngle(), 8.0f);
 	Fixture.TickTestWorld(0.1f);
 	Weapon->Tick(0.1f);
-	TestEqual(TEXT("No cooling before the recovery delay"), Weapon->GetCalculatedSpreadAngle(), 8.0f);
+	TestTrue(TEXT("Original recovery cools on the next Tick, within the configured delay"),
+		FMath::IsNearlyEqual(Weapon->GetCalculatedSpreadAngle(), 8.0f - 2.0f * 0.1f, KINDA_SMALL_NUMBER));
 
 	Weapon->UpdateFiringTime();
 	Weapon->AddSpread();
-	TestEqual(TEXT("Next shot accumulates heat during the delay"), Weapon->GetCalculatedSpreadAngle(), 9.0f);
+	TestTrue(TEXT("Next shot adds heat to the already cooled value"),
+		FMath::IsNearlyEqual(Weapon->GetCalculatedSpreadAngle(), 8.8f, KINDA_SMALL_NUMBER));
 	Fixture.TickTestWorld(0.1f);
 	Weapon->Tick(0.1f);
-	// 0.20 s since the first shot, but only 0.10 s since the second shot.
-	TestEqual(TEXT("Each shot restarts the full recovery delay"), Weapon->GetCalculatedSpreadAngle(), 9.0f);
+	// Only 0.10 s since the second shot: no new 0.15 s hold is introduced.
+	TestTrue(TEXT("Repeated firing does not restart a post-shot cooling delay"),
+		FMath::IsNearlyEqual(Weapon->GetCalculatedSpreadAngle(), 8.8f - 2.0f * 0.1f, KINDA_SMALL_NUMBER));
 
 	Fixture.TickTestWorld(0.06f);
 	Weapon->Tick(0.06f);
-	// Preserve the original per-Tick cooling calculation once the delay has elapsed.
-	TestTrue(TEXT("Cooling resumes using the original curve after the delay"),
-		FMath::IsNearlyEqual(Weapon->GetCalculatedSpreadAngle(), 9.0f - 2.0f * 0.06f, KINDA_SMALL_NUMBER));
+	TestTrue(TEXT("Crossing the configured delay adds no discontinuity to original cooling"),
+		FMath::IsNearlyEqual(Weapon->GetCalculatedSpreadAngle(), 8.8f - 2.0f * (0.1f + 0.06f), KINDA_SMALL_NUMBER));
 	Fixture.TickTestWorld(0.05f);
 	Weapon->Tick(0.05f);
 	TestTrue(TEXT("Cooling continues without another shot"),
-		FMath::IsNearlyEqual(Weapon->GetCalculatedSpreadAngle(), 9.0f - 2.0f * (0.06f + 0.05f), KINDA_SMALL_NUMBER));
+		FMath::IsNearlyEqual(Weapon->GetCalculatedSpreadAngle(), 8.8f - 2.0f * (0.1f + 0.06f + 0.05f), KINDA_SMALL_NUMBER));
+	TestEqual(TEXT("Original configured recovery-delay value remains intact"),
+		RecoveryDelay->GetPropertyValue_InContainer(Weapon), 0.15f);
 	Weapon->OnUnequipped();
-	AddInfo(TEXT("Synthetic positive-delay regression only; actual rifle PIE, presentation, and networking require separate verification."));
+	AddInfo(TEXT("Local Lyra source compatibility with synthetic curves only; actual rifle PIE, presentation, and networking require separate verification."));
 	return !HasAnyErrors();
 }
 

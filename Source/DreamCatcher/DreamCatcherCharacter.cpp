@@ -1266,6 +1266,12 @@ void ADreamCatcherCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHal
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
 }
 
+bool ADreamCatcherCharacter::CanJumpInternal_Implementation() const
+{
+	// same as ACharacter's implementation but without the crouch check
+	return JumpIsAllowedInternal();
+}
+
 float ADreamCatcherCharacter::GetCurrentLookSensitivityMultiplier() const
 {
 	return ModeCamera && ModeCamera->IsActive()

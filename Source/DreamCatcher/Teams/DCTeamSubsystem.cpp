@@ -347,7 +347,11 @@ bool UDCTeamSubsystem::CanCauseDamage(const UObject* Instigator, const UObject* 
 {
 	if (bAllowDamageToSelf)
 	{
-		if ((Instigator == Target) || (FindPlayerStateFromActor(Cast<AActor>(Instigator)) == FindPlayerStateFromActor(Cast<AActor>(Target))))
+		// Single-life NPCs need not have PlayerStates. Two missing states do not
+		// identify the same combatant; preserve real actor/shared-PlayerState self damage.
+		const ADCPlayerState* InstigatorPlayerState = FindPlayerStateFromActor(Cast<AActor>(Instigator));
+		if ((Instigator && Instigator == Target)
+			|| (InstigatorPlayerState && InstigatorPlayerState == FindPlayerStateFromActor(Cast<AActor>(Target))))
 		{
 			return true;
 		}

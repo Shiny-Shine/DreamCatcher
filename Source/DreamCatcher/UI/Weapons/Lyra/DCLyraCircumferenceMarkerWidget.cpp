@@ -24,11 +24,12 @@ void UDCLyraCircumferenceMarkerWidget::ReleaseSlateResources(bool bReleaseChildr
 
 TSharedRef<SWidget> UDCLyraCircumferenceMarkerWidget::RebuildWidget()
 {
+	// Preserve Lyra's UMG bridge: its OutsideRadius property was not forwarded.
+	// Slate keeps a deterministic false default rather than the source's uninitialized bit.
 	MyMarkerWidget = SNew(SDCLyraCircumferenceMarkerWidget)
 		.MarkerBrush(&MarkerImage)
 		.Radius(this->Radius)
-		.MarkerList(this->MarkerList)
-		.ReticleCornerOutsideSpreadRadius(bReticleCornerOutsideSpreadRadius);
+		.MarkerList(this->MarkerList);
 
 	return MyMarkerWidget.ToSharedRef();
 }
@@ -39,7 +40,6 @@ void UDCLyraCircumferenceMarkerWidget::SynchronizeProperties()
 
 	MyMarkerWidget->SetRadius(Radius);
 	MyMarkerWidget->SetMarkerList(MarkerList);
-	MyMarkerWidget->SetReticleCornerOutsideSpreadRadius(bReticleCornerOutsideSpreadRadius);
 }
 
 void UDCLyraCircumferenceMarkerWidget::SetRadius(float InRadius)

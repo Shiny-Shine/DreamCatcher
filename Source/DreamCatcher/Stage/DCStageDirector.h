@@ -5,6 +5,16 @@
 #include "DCStageDirector.generated.h"
 
 class ADCEncounterController;
+class ADCStageDirector;
+
+UENUM(BlueprintType)
+enum class EDCStageRunState : uint8
+{
+	NotStarted,
+	Running,
+	Completed,
+	Failed
+};
 
 UENUM(BlueprintType)
 enum class EDCStagePhaseType : uint8
@@ -36,6 +46,10 @@ struct FDCStagePhaseDefinition
 	TObjectPtr<ADCEncounterController> Encounter = nullptr;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FDCStagePhaseStartedSignature, ADCStageDirector*, Director,
+	int32, PhaseIndex, const FText&, PhaseTitle, EDCStagePhaseType, PhaseType);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCStageEndedSignature, ADCStageDirector*, Director, bool, bSucceeded);
+
 UCLASS()
 class DREAMCATCHER_API ADCStageDirector : public AActor
 {
@@ -46,6 +60,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Stage")
 	void StartStage();
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Stage")
+	void FailStage();
+	UFUNCTION(BlueprintPure, Category="Stage")
+	EDCStageRunState GetRunState() const { return RunState; }
+	UFUNCTION(BlueprintPure, Category="Stage")
+	int32 GetCurrentPhaseIndex() const { return CurrentPhaseIndex; }
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FDCStagePhaseStartedSignature OnStagePhaseStarted;
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FDCStageEndedSignature OnStageEnded;
 
 protected:
 	virtual void BeginPlay() override;
@@ -66,15 +90,32 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Stage")
 	void BP_OnStageCompleted();
+	UFUNCTION(BlueprintImplementableEvent, Category="Stage")
+	void BP_OnStageFailed();
 
 private:
 	void AdvancePhase();
 	void StartCurrentPhase();
+	void QueueNextPhase();
+	void FinishStage(bool bSucceeded);
+	void UnbindCurrentEncounter();
+	void AbortEncounters();
+	bool ValidatePhases() const;
 
 	UFUNCTION()
 	void HandleEncounterCompleted(ADCEncounterController* CompletedEncounter);
+	UFUNCTION()
+	void HandleEncounterFailed(ADCEncounterController* FailedEncounter);
+	UFUNCTION()
+	void HandleEncounterDestroyed(AActor* DestroyedEncounter);
 
 	int32 CurrentPhaseIndex = INDEX_NONE;
-	bool bStageStarted = false;
+	EDCStageRunState RunState = EDCStageRunState::NotStarted;
+	TWeakObjectPtr<ADCEncounterController> ActiveEncounter;
+	bool bAdvanceQueued = false;
+	bool bEndingPlay = false;
 	FTimerHandle PhaseTimerHandle;
+#if WITH_DEV_AUTOMATION_TESTS
+	friend struct FDCStageFlowTestAccess;
+#endif
 };

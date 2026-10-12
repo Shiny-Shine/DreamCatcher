@@ -1,5 +1,6 @@
 #include "Stage/DCEncounterController.h"
 #include "AI/DCEnemySpawner.h"
+#include "Engine/World.h"
 #include "TimerManager.h"
 
 ADCEncounterController::ADCEncounterController()
@@ -19,26 +20,25 @@ void ADCEncounterController::BeginPlay()
 
 void ADCEncounterController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	bEndingPlay = true;
 	GetWorldTimerManager().ClearTimer(StartTimerHandle);
-
-	for (ADCEnemySpawner* Spawner : Spawners)
+	for (const TWeakObjectPtr<ADCEnemySpawner>& Spawner : PendingSpawners)
 	{
-		if (Spawner)
-		{
-			Spawner->OnSpawnerCleared.RemoveDynamic(this, &ADCEncounterController::HandleSpawnerCleared);
-		}
+		UnbindSpawner(Spawner.Get());
 	}
-
+	PendingSpawners.Reset();
 	Super::EndPlay(EndPlayReason);
 }
 
 void ADCEncounterController::StartEncounter()
 {
-	if (bStarted || bCompleted)
+	if (bStartRequested || bStarted || bCompleted || bFailed || bEndingPlay || bAborted)
 	{
 		return;
 	}
 
+	bStartRequested = true;
+	if (!FMath::IsFinite(StartDelay) || StartDelay < 0.0f) { FailEncounter(); return; }
 	if (StartDelay > 0.0f)
 	{
 		GetWorldTimerManager().SetTimer(StartTimerHandle, this, &ADCEncounterController::StartEncounterInternal, StartDelay, false);
@@ -51,52 +51,121 @@ void ADCEncounterController::StartEncounter()
 
 void ADCEncounterController::StartEncounterInternal()
 {
-	if (bStarted || bCompleted)
+	if (bStarted || bCompleted || bFailed || bEndingPlay || bAborted)
 	{
 		return;
 	}
 
 	bStarted = true;
-	RemainingSpawners = 0;
+	bStartingSpawners = true;
+	PendingSpawners.Reset();
 
+	// Register the complete, unique set before activating any spawner. Activation
+	// can synchronously clear an empty spawner or report a configuration failure.
 	for (ADCEnemySpawner* Spawner : Spawners)
 	{
-		if (!Spawner)
+		if (!Spawner) { continue; } // Preserve intentionally empty array entries.
+		if (!IsValid(Spawner) || Spawner->GetWorld() != GetWorld() || Spawner->IsActorBeingDestroyed() || Spawner->HasSpawnFailure())
 		{
-			continue;
+			FailEncounter();
+			bStartingSpawners = false;
+			return;
 		}
-
-		Spawner->OnSpawnerCleared.RemoveDynamic(this, &ADCEncounterController::HandleSpawnerCleared);
-		Spawner->OnSpawnerCleared.AddDynamic(this, &ADCEncounterController::HandleSpawnerCleared);
-
-		++RemainingSpawners;
-		Spawner->ActivateSpawner();
+		if (Spawner->IsSpawnerCleared() || PendingSpawners.Contains(Spawner)) { continue; }
+		PendingSpawners.Add(Spawner);
+		Spawner->OnSpawnerCleared.AddUniqueDynamic(this, &ThisClass::HandleSpawnerCleared);
+		Spawner->OnSpawnerFailed.AddUniqueDynamic(this, &ThisClass::HandleSpawnerFailed);
+		Spawner->OnDestroyed.AddUniqueDynamic(this, &ThisClass::HandleSpawnerDestroyed);
 	}
 
-	BP_OnEncounterStarted();
-
-	// 연결된 스포너가 하나도 없으면 즉시 완료 처리.
-	if (RemainingSpawners == 0)
+	// Snapshot configuration order; callbacks can modify the pending set.
+	TSet<TWeakObjectPtr<ADCEnemySpawner>> Activated;
+	const TArray<TObjectPtr<ADCEnemySpawner>> ConfiguredSpawners = Spawners;
+	for (ADCEnemySpawner* Spawner : ConfiguredSpawners)
 	{
-		bCompleted = true;
-		BP_OnEncounterCompleted();
-		OnEncounterCompleted.Broadcast(this);
+		if (bEndingPlay || bFailed) { break; }
+		if (IsValid(Spawner) && PendingSpawners.Contains(Spawner) && !Activated.Contains(Spawner))
+		{
+			Activated.Add(Spawner);
+			Spawner->ActivateSpawner();
+		}
 	}
+	if (!bEndingPlay && !bFailed) { BP_OnEncounterStarted(); }
+	bStartingSpawners = false;
+	TryCompleteEncounter();
 }
 
 void ADCEncounterController::HandleSpawnerCleared(ADCEnemySpawner* ClearedSpawner)
 {
-	if (ClearedSpawner)
+	if (!bStarted || bCompleted || bFailed || bEndingPlay || bAborted || !IsValid(ClearedSpawner)
+		|| !ClearedSpawner->IsSpawnerCleared() || ClearedSpawner->HasSpawnFailure()
+		|| PendingSpawners.Remove(ClearedSpawner) == 0)
 	{
-		ClearedSpawner->OnSpawnerCleared.RemoveDynamic(this, &ADCEncounterController::HandleSpawnerCleared);
+		return;
 	}
+	UnbindSpawner(ClearedSpawner);
+	TryCompleteEncounter();
+}
 
-	RemainingSpawners = FMath::Max(0, RemainingSpawners - 1);
+void ADCEncounterController::TryCompleteEncounter()
+{
+	if (!bStarted || bCompleted || bFailed || bEndingPlay || bAborted || bStartingSpawners || PendingSpawners.Num() != 0) { return; }
+	bCompleted = true;
+	BP_OnEncounterCompleted();
+	if (!bEndingPlay) { OnEncounterCompleted.Broadcast(this); }
+}
 
-	if (RemainingSpawners == 0 && !bCompleted)
+void ADCEncounterController::HandleSpawnerFailed(ADCEnemySpawner* FailedSpawner)
+{
+	if (FailedSpawner && FailedSpawner->HasSpawnFailure() && PendingSpawners.Contains(FailedSpawner)) { FailEncounter(); }
+}
+
+void ADCEncounterController::HandleSpawnerDestroyed(AActor* DestroyedSpawner)
+{
+	if (PendingSpawners.Contains(Cast<ADCEnemySpawner>(DestroyedSpawner))) { FailEncounter(); }
+}
+
+void ADCEncounterController::UnbindSpawner(ADCEnemySpawner* Spawner)
+{
+	if (Spawner)
 	{
-		bCompleted = true;
-		BP_OnEncounterCompleted();
-		OnEncounterCompleted.Broadcast(this);
+		Spawner->OnSpawnerCleared.RemoveDynamic(this, &ThisClass::HandleSpawnerCleared);
+		Spawner->OnSpawnerFailed.RemoveDynamic(this, &ThisClass::HandleSpawnerFailed);
+		Spawner->OnDestroyed.RemoveDynamic(this, &ThisClass::HandleSpawnerDestroyed);
 	}
+}
+
+void ADCEncounterController::FailEncounter()
+{
+	if (bCompleted || bFailed || bEndingPlay || GetWorld()->bIsTearingDown) { return; }
+	bFailed = true;
+	GetWorldTimerManager().ClearTimer(StartTimerHandle);
+	for (const TWeakObjectPtr<ADCEnemySpawner>& Spawner : PendingSpawners) { UnbindSpawner(Spawner.Get()); }
+	PendingSpawners.Reset();
+	OnEncounterFailed.Broadcast(this);
+}
+
+void ADCEncounterController::AbortEncounter()
+{
+	if (bEndingPlay || bAborted || !GetWorld() || !GetWorld()->IsGameWorld() || !HasAuthority() || GetNetMode() == NM_Client) { return; }
+	bAborted = true;
+	GetWorldTimerManager().ClearTimer(StartTimerHandle);
+	// Completed spawners can still own Pawns finishing the death sequence.
+	TSet<TWeakObjectPtr<ADCEnemySpawner>> Owned;
+	for (ADCEnemySpawner* Spawner : Spawners)
+	{
+		if (IsValid(Spawner) && Spawner->GetWorld() == GetWorld()) { UnbindSpawner(Spawner); Owned.Add(Spawner); }
+	}
+	PendingSpawners.Reset();
+	const bool bNotifyFailure = !bCompleted && !bFailed;
+	if (!bCompleted) { bFailed = true; }
+	for (const TWeakObjectPtr<ADCEnemySpawner>& Spawner : Owned)
+	{
+		if (ADCEnemySpawner* Actor = Spawner.Get(); Actor && !Actor->IsActorBeingDestroyed())
+		{
+			// Finite Lyra EndPlay defers only its own Pawn/Controller cleanup safely.
+			Actor->Destroy();
+		}
+	}
+	if (bNotifyFailure && !bEndingPlay && !GetWorld()->bIsTearingDown) { OnEncounterFailed.Broadcast(this); }
 }

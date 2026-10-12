@@ -48,6 +48,12 @@ public class DreamCatcher : ModuleRules
 			"AudioMixer",
 			"AudioModulation"
 		});
+		// Original AI development lookup and opt-in WorldSettings map validation.
+		PrivateDependencyModuleNames.Add("AssetRegistry");
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("MessageLog");
+		}
 
 		PublicIncludePaths.AddRange(new string[] {
 			"DreamCatcher",

@@ -2,22 +2,27 @@
 
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "AbilitySystem/DCGameplayTags.h"
+#include "Blueprint/UserWidget.h"
 #include "Character/DCPawnData.h"
 #include "Character/DCPawnExtensionComponent.h"
 #include "Character/DCLyraHealthComponent.h"
 #include "Engine/World.h"
+#include "Engine/LocalPlayer.h"
 #include "Equipment/DCEquipmentDefinition.h"
 #include "Equipment/DCEquipmentManagerComponent.h"
 #include "Equipment/Lyra/DCLyraEquipmentInstance.h"
 #include "Equipment/Lyra/DCLyraEquipmentManagerComponent.h"
 #include "Equipment/Lyra/DCLyraQuickBarComponent.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/HUD.h"
 #include "GameModes/Lyra/DCLyraGameState.h"
 #include "Inventory/DCInventoryItemDefinition.h"
 #include "Inventory/DCInventoryItemInstance.h"
 #include "Inventory/DCInventoryManagerComponent.h"
 #include "Player/DCPlayerState.h"
 #include "TimerManager.h"
+#include "UI/Weapons/Lyra/DCLyraWeaponUserInterface.h"
+#include "Weapon/Lyra/DCLyraWeaponInstance.h"
 #include "Weapon/Lyra/DCLyraWeaponStateComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCRifleIntegrationActors)
@@ -112,6 +117,8 @@ void ADCRifleIntegrationController::TryEquipWhenReady()
 
 void ADCRifleIntegrationController::ClearIntegrationRifle()
 {
+	// UI is local, even when equipment ownership is authoritative elsewhere.
+	RemoveWeaponReticleHost();
 	if (GetWorld()) { GetWorldTimerManager().ClearTimer(EquipTimer); }
 	if (!HasAuthority() || bClearingLoadout || !GrantedRifle) { return; }
 	TGuardValue<bool> Clearing(bClearingLoadout, true);
@@ -141,9 +148,95 @@ void ADCRifleIntegrationController::OnUnPossess()
 
 void ADCRifleIntegrationController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	bWeaponReticleHostEndingPlay = true;
 	ClearIntegrationRifle();
 	DetachPawnListener();
 	Super::EndPlay(EndPlayReason);
+}
+
+void ADCRifleIntegrationController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+	UpdateWeaponReticleHost();
+}
+
+void ADCRifleIntegrationController::UpdateWeaponReticleHost()
+{
+	APawn* ControlledPawn = GetPawn();
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (bWeaponReticleHostEndingPlay || bClearingLoadout || !IsLocalController()
+		|| !LocalPlayer || !LocalPlayer->GetViewportClient() || !WeaponReticleHostClass
+		|| !IsValid(ControlledPawn) || !ControlledPawn->HasActorBegunPlay())
+	{
+		RemoveWeaponReticleHost();
+		return;
+	}
+
+	const AHUD* CurrentHUD = GetHUD();
+	UDCPawnExtensionComponent* Extension = UDCPawnExtensionComponent::FindPawnExtensionComponent(ControlledPawn);
+	UDCAbilitySystemComponent* ASC = Extension ? Extension->GetDCAbilitySystemComponent() : nullptr;
+	UDCLyraHealthComponent* Health = UDCLyraHealthComponent::FindHealthComponent(ControlledPawn);
+	if ((CurrentHUD && !CurrentHUD->bShowHUD) || !IsValid(Extension) || Extension->IsAbilitySystemUninitializing()
+		|| !Extension->HasReachedInitState(DCGameplayTags::InitState_GameplayReady)
+		|| !IsValid(ASC) || ASC->GetAvatarActor() != ControlledPawn
+		|| ASC->HasMatchingGameplayTag(DCGameplayTags::Status_Death) || !IsValid(Health) || Health->IsDeadOrDying())
+	{
+		RemoveWeaponReticleHost();
+		return;
+	}
+
+	UDCLyraEquipmentManagerComponent* Equipment = ControlledPawn->FindComponentByClass<UDCLyraEquipmentManagerComponent>();
+	UDCLyraWeaponInstance* Weapon = Equipment ? Equipment->GetFirstInstanceOfType<UDCLyraWeaponInstance>() : nullptr;
+	UDCInventoryItemInstance* Item = IsValid(Weapon) ? Cast<UDCInventoryItemInstance>(Weapon->GetInstigator()) : nullptr;
+	if (!IsValid(Item))
+	{
+		// The original widget updates on valid weapon changes, not on an empty slot.
+		RemoveWeaponReticleHost();
+		return;
+	}
+
+	if (WeaponReticleHost && (!IsValid(WeaponReticleHost) || WeaponReticlePawn.Get() != ControlledPawn
+		|| WeaponReticleHost->GetClass() != WeaponReticleHostClass.Get() || !WeaponReticleHost->IsInViewport()))
+	{
+		RemoveWeaponReticleHost();
+	}
+	if (WeaponReticleHost || bWeaponReticleHostCreationFailed)
+	{
+		return;
+	}
+	if (WeaponReticleHostClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		bWeaponReticleHostCreationFailed = true;
+		UE_LOG(LogDCRifleIntegration, Error, TEXT("[R7] Reticle host class must be concrete: %s"), *GetNameSafe(WeaponReticleHostClass.Get()));
+		return;
+	}
+
+	WeaponReticleHost = CreateWidget<UDCLyraWeaponUserInterface>(this, WeaponReticleHostClass);
+	if (!IsValid(WeaponReticleHost) || !WeaponReticleHost->AddToPlayerScreen())
+	{
+		RemoveWeaponReticleHost();
+		// Avoid retrying/logging every frame; a new eligible lifetime can try again.
+		bWeaponReticleHostCreationFailed = true;
+		UE_LOG(LogDCRifleIntegration, Error, TEXT("[R7] Could not display reticle host: %s"), *GetNameSafe(WeaponReticleHostClass.Get()));
+		return;
+	}
+	WeaponReticlePawn = ControlledPawn;
+	UE_LOG(LogDCRifleIntegration, Log, TEXT("[R7] Reticle host shown. Pawn=%s Weapon=%s Item=%s Class=%s"),
+		*GetNameSafe(ControlledPawn), *GetNameSafe(Weapon), *GetNameSafe(Item), *GetNameSafe(WeaponReticleHostClass.Get()));
+}
+
+void ADCRifleIntegrationController::RemoveWeaponReticleHost()
+{
+	UDCLyraWeaponUserInterface* HostToRemove = WeaponReticleHost.Get();
+	// Release our state before Blueprint Destruct callbacks can re-enter cleanup.
+	WeaponReticleHost = nullptr;
+	WeaponReticlePawn.Reset();
+	bWeaponReticleHostCreationFailed = false;
+	if (IsValid(HostToRemove))
+	{
+		HostToRemove->RemoveFromParent();
+		UE_LOG(LogDCRifleIntegration, Log, TEXT("[R7] Reticle host removed."));
+	}
 }
 
 ADCRifleIntegrationGameMode::ADCRifleIntegrationGameMode()

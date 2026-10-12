@@ -4,7 +4,7 @@
 
 - 결정 상태: 승인됨
 - 이식 정책 갱신: 2026-09-10 KST, 사용자 승인
-- 진행 현황 갱신: 2026-10-09. **R1 감사 보완2건 통과:** 실패태그5개 원본 매핑 복구와 DefaultGameData 단일 재저장 후 비에디터 GameData/Integration 맵 로드·종료0, 별도 재로드 및 기존 회귀8건 통과. AssetManager C++나 R6/재장전 규칙은 변경하지 않았다. 다음은 R6 실제 회복지연 재현/최소 변경안이며 R2/3/4/5의 남은 통합 회귀와 R7 착수 보류는 유지한다. 사운드 사용자 통과·R 현재 미재현/관찰 상태도 유지한다.
+- 진행 현황 갱신: 2026-10-11. **일반 적은 Lyra AIController·BT/EQS 행동 묶음 자체를 재사용**한다. 교정본 사용자 재빌드와 native24건 **전체 통과(실패·보고서경고0)**를 확인했다. 원본 픽업 Blueprint 조사에서 GamePhase/PostGame gate 의존성을 추가 확인해 사용자 승인으로 원본5파일·검사2파일·필요 Redirect/원본 태그2개를 작성했으며 **이 추가분은 재빌드·실행 대기**다. 기존 플레이어·맵·스포너는 그대로이며 원본 AI/픽업 에셋 저장·새 맵 연결은 아직 미완료다. 온라인 호스팅·리플레이는 후속 작업이다.
 - 엔진 버전: Unreal Engine 5.8
 - 기준 프로젝트: DreamCatcher
 - 참고 프로젝트: Lyra Starter Game 5.8
@@ -2406,6 +2406,1467 @@ IA_Crouch 자체의 Bool/Pressed 규칙은 그대로다. 새 매핑의 추가 tr
 
 **현재 남은 것은 사용자 화면 확인2개:** (1) 통합 맵에서 Left Ctrl 웅크림/해제 자세와 카메라 높이, (2) 조준/연사 시 비정상적 이중 반동·떨림 여부. 마지막 사용자 답변은 ‘아직 확인하지 않았습니다’이며 이후 정상이라는 보고가 없어 완료로 추정하지 않는다. 이 확인이 정상이고 다른 문제가 없다면 **R7-1/2 원본 ReticleHost·라이플 조준점/탄약 표시 연결**의 원본 근거·차이·정확한 코드/에셋 범위를 제시하고 승인받는다. 기존0.10/10월9일 R7 제안은 참고 이력이지 자동 적용 권한이 아니다. 새 R7 코드/에셋은 이번에 변경하지 않았다.
 
+### 2026-10-10 사용자 화면 확인 완료 — R7-1/2 실제 무기 UI 연결안
+
+> 아래는 승인 전 제안 기록이다. 후속 사용자 승인으로 다음 절의 코드2파일을 작성했으며, 현재는 사용자 빌드 뒤 에셋 자동화를 이어갈 상태다.
+
+사용자가 웅크림/해제 자세·카메라 높이 및 조준/연사 화면·조작감이 정상이라고 확인했다. 따라서 **R7 전으로 정한 이번 R0~R6 마감 범위는 자동 검사+사용자 확인까지 완료**한다. 이 범위에 새 감사를 계속 추가하지 않는다. 모든 장치/복제/실맵/전체 R8 시각/패키징 검증까지 완료했다는 의미는 아니며 기존 별도 항목은 유지한다.
+
+현재 단계는 **R7-1/2 원본 ReticleHost·라이플 조준점/탄약 위젯의 실화면 연결 제안**이다. 준비된 native UI 기반과 기존 Rifle 위젯을 다시 작성하지 않는다. 아직 새 코드·에셋 묶음의 승인/적용 전이다.
+
+**확인한 원본/현재 근거**
+
+- 원본 `/ShooterCore/UserInterface/HUD/W_WeaponReticleHost`의 현재 SHA256은 `fbab64d38d1ee305921176263df4fbea5021440a4cf6948d5bc79ca5ee138430`으로 `Saved/Diagnostics/R5UIFoundation/UIAudit_20261008_A3/source.json`의 보호 기록과 동일하다. 따라서 그때 읽은 원본 그래프/WidgetTree 정보를 이번 범위 판단에 재사용했다.
+- Host는 LyraWeaponUserInterface 부모이며 VisWrapper(SizeBox)/WidgetStack(Overlay)를 가진다. OnWeaponChanged에서 실제 장비 Instigator의 ReticleConfig.ReticleWidgets를 읽어 CreateWidget/InitializeFromWeapon/AddChildToOverlay(가운데 정렬)하며 기존 SpawnedWidgets를 제거한다. Tick에는 Pawn/HealthComponent 변경과 OnDeathStarted 바인딩·표시 갱신도 있다. 정리 경로의 실제 동작은 연결 후 검증한다.
+- 대상 DCLyraWeaponUserInterface와 Redirect는 존재하고, 기존 `RifleCore_Prepared_0247`의 ID_Rifle/W_Reticle_Rifle/W_AmmoCounter_Rifle을 재사용할 수 있다. native UI는 실제 EquipmentManager의 무기 및 non-null Inventory Instigator를 사용한다. 유효한 새 무기만 갱신하는 NativeTick 구조이므로 무기 없음/수명 종료의 외부 Host 제거도 연결 범위에 포함한다.
+- 현재 Config에는 DefaultUIPolicy 지정이 없고 전체 Experience/RootLayout/UIExtension 표시 경로가 미연결이다. 원본 LAS_ShooterGame_StandardHUD는 ShooterCore를 활성화하는 ActionSet이다. 기존 `ADreamCatcherPlayerController::HUDWidgetClass`는 `TSubclassOf<UDCPlayerHUDWidget>`이므로 원본 Host를 그 속성에 그대로 넣는 것은 타입이 맞지 않는다.
+
+**제약·대안·선택한 차이**
+
+원본 최종 경로는 UIPolicy/OverallLayout→ShooterHUD/UIExtension 슬롯→Host다. 전체 정책/RootLayout/ActionSet을 지금 동시에 이식하는 대안은 공용 UI·메뉴/입력·추가 의존성까지 변경 범위가 넓어진다. 이식이 불가능한 것이 아니라 아직 연결하지 않은 범위다.
+
+이번 제안은 **통합 테스트 Controller에 전용 Host 클래스/인스턴스를 두고 로컬 플레이어 화면에 직접 표시·제거**하여 원본 Host/자식 위젯/무기·아이템 데이터 연결을 먼저 검증한다. 표시 시작/종료 주체만 원본 GameFeature/UI 슬롯과 다르고, Host 내부 레이아웃·무기/탄약/퍼짐 계산 그래프는 보존한다. 전체 HUD 및 R7-3/최종 슬롯 경로가 끝났다고 보고하지 않으며 후속 연결 범위를 삭제하지 않는다. 임시로 ShooterCore 요구 flag를 지우거나 원본 HUD를 제거하지 않는다.
+
+**승인받을 정확한 범위**
+
+1. `Source/DreamCatcher/Development/DCRifleIntegrationActors.h/.cpp`2파일: 전용 Host 클래스 지정/인스턴스 보관 및 로컬 생성·제거. 유효한 무기+아이템에서 표시하고 무기 없음·사망·조종해제·EndPlay를 확인하여 잔여/중복 표시를 막는다. 장비 부여/발사/재장전 규칙과 기존 HUDWidgetClass는 바꾸지 않는다.
+2. 원본 Host를 Unreal 내부 복제/Migrate로 새 `/Game/LyraMigration/UI/R7/W_WeaponReticleHost`에 이식하고 기존 native Redirect로 parent/변수/노드 타입과 참조를 검사한다. 기존 목적지는 없음을 확인했으며 기존 에셋을 덮어쓰지 않는다.
+3. 기존 `/Game/DreamCatcher/GAS/Test/R5/Integration/BP_DC_RifleController`에만 새 Host 클래스를 설정한다. ID_Rifle 및 기존 조준점/탄약 위젯은 재사용하며 수정하지 않는다. 공용 Config/HUD/다른 맵/게임 입력모드는 변경하지 않는다.
+
+기존 UI와 실제 중복이 발견되면 대상/변경안을 추가 설명한다. 예전 제안의 ‘필요 시 테스트 HUD 사본 조준점 숨김’을 현재 포괄 승인으로 취급하지 않으며, 이번 명시 범위에 기존 HUD 삭제/숨김은 포함하지 않는다. 새 범용 복사기/감사기/검증 프레임워크를 만들지 않고 기존 이식/조회 기능과 한정 에셋 자동화만 사용한다.
+
+**검증/분담:** 코드 작성 → 사용자 Development Editor/Win64 빌드 → 에셋 자동 이식·설정·Compile·별도 재로드 → 실제 Item/Weapon 데이터·발사/재장전 탄약 변화·조준/퍼짐 표시·사망/장비 없음/Pawn 교체 정리와 중복 확인 → 사용자 짧은 화면 확인 순서다. 새 UPROPERTY가 아직 없는 기존 DLL에서 Controller 설정을 억지로 저장하지 않는다. C++ 빌드와 패키징은 사용자 담당이다. 명중/처치 UI의 모든 기능이나 최종 전체 HUD까지 이번 묶음으로 완료 처리하지 않는다.
+
+이번 턴은 기존 자료/소스/설정의 읽기와 문서 갱신뿐이다. 게임 C++/Config/에셋 변경, 빌드/패키징, 새 Unreal 실행은 하지 않았다.
+
+### 2026-10-10 R7 Host 표시·정리 코드 작성 — 사용자 빌드 대기
+
+사용자가 위 R7 묶음을 승인했다. 이 턴에서는 `Source/DreamCatcher/Development/DCRifleIntegrationActors.h/.cpp`2파일에 코드만 작성했다. 빌드·패키징·Unreal 실행·에셋 저장은 하지 않았다. 새 reflected 속성이 필요하므로 Host 이식/Controller BP 클래스 설정은 사용자 빌드 후 수행한다.
+
+**작성한 연결:**
+
+- `WeaponReticleHostClass`: 원본 이식 부모인 `UDCLyraWeaponUserInterface`의 subclass만 지정하는 EditDefaultsOnly 속성. 기본None이므로 기존 동작에는 UI가 추가되지 않는다. 기존 공용 `HUDWidgetClass` 타입을 바꾸거나 다른 HUD를 삭제하지 않는다.
+- `WeaponReticleHost`: 로컬 인스턴스를 보관하는 Transient/VisibleInstanceOnly 속성과 소유 Pawn 추적. PlayerTick에서 로컬 플레이어·viewport 준비, Pawn GameplayReady와 해당ASC, 생존 상태, 실제 Equipment의 Weapon+Inventory Instigator를 확인한다. 조건을 만족하면 AddToPlayerScreen으로1개를 생성하며 기존 인스턴스가 유효하면 재생성하지 않는다. 현재HUD의 bShowHUD도 따르고 게임 입력모드는 변경하지 않는다.
+- 원본 NativeTick이 처리하지 않는 빈 슬롯/무기 없음, 사망/ASC 미준비/해제, Pawn 변경을 표시 연결에서 정리한다. ClearIntegrationRifle의 authority 조건 이전에 로컬 UI를 제거하므로 UI 정리를 서버 소유권에 종속시키지 않는다. 기존 OnPossess/OnUnPossess/ASC 해제의 ClearIntegrationRifle 경로를 재사용하며, EndPlay는 재생성 차단 후 제거한다.
+- 자체 widget/Pawn 참조를 먼저 비운 뒤 RemoveFromParent를 호출해 Blueprint Destruct의 정리 재진입에 대비한다. 추상 클래스/생성·화면추가 실패는 로그를 남기고 같은 준비 상태에서 매프레임 반복하지 않는다. 정상적인 무기 교체의 child widget 갱신/탄약/퍼짐 계산은 원본 Host/기존 위젯에 맡긴다.
+
+**범위/확인:** 엔진 PlayerTick, LocalPlayer.GetViewportClient, UWidget.IsInViewport, UUserWidget.AddToPlayerScreen의 선언 및 기존 component API를 읽었다. CPP에서 신규 UI 함수/include와 UI 정리 연결만 제거한 내용이 작업 전과 동일하여 기존 장비 부여·GameplayReady 대기·GameMode 코드는 보존됨을 확인했다. 공용 Controller/UI native/Build.cs/Config/기존 UI 및Controller BP/ID_Rifle/DLL/Git인덱스13파일 해시 불변, diff 공백 오류0. 신규 범용 도구·검사 프레임워크·모듈 의존성은 추가하지 않았다.
+
+**현재 판정:** 코드 작성/정적 확인 완료, UHT/C++ 빌드·새 Host 에셋 이식·Controller 클래스 지정·실제 UI 표시/레이아웃/구독 정리/중복 검사는 미검증이다. ‘코드에 경로가 있다’와 실제 성공을 구분한다. 원본 Host/자식 위젯은 아직 수정하지 않았고 새 R7 목적지도 만들지 않았다. 원본 UIExtension/GameFeature 슬롯 대신 테스트 Controller가 표시/제거하는 승인된 구성 차이는 그대로다.
+
+**다음:** 사용자 Development Editor/Win64 빌드 확인 후, 이미 승인한 `/Game/LyraMigration/UI/R7/W_WeaponReticleHost` 이식/타입 및그래프 확인과 `/Game/DreamCatcher/GAS/Test/R5/Integration/BP_DC_RifleController.WeaponReticleHostClass` 설정을 자동화한다. 기존 ID_Rifle/Reticle/AmmoCounter 위젯을 재사용하고, Compile·재로드·실제 무기/아이템·발사/재장전·해제/사망/Pawn 교체 검증을 수행한다. 그 뒤 사용자에게 짧은 화면 확인만 요청한다. 새 속성이 구DLL에 없는데도 억지로 에셋에 기록하지 않는다. 사용자 수동 에셋 작업은 필요 없으며 전체 HUD/슬롯·R7을 미리 완료 처리하지 않는다.
+
+### 2026-10-10 R7 Host 이식·독립 UI 자동 검사 통과 — 사용자 화면 확인 대기
+
+사용자 빌드는15:00:17 시작/44.65초 Succeeded, DLL15:01:00/4,380,160bytes로 확인했다. 이미 승인한 R7 에셋 묶음을 이어서 적용했다. 이번에는 게임 C++/Config 변경이나 C++ 빌드·패키징을 실행하지 않았다.
+
+**실제 변경:** 원본 `/ShooterCore/UserInterface/HUD/W_WeaponReticleHost`의 새 `/Game/LyraMigration/UI/R7/W_WeaponReticleHost` 준비 사본을 원본 프로젝트에서 Unreal API로 생성·저장/Migrate했다. 대상에서는 이 새 Host와 `/Game/DreamCatcher/GAS/Test/R5/Integration/BP_DC_RifleController`의 `WeaponReticleHostClass`1항목만 저장했다. 기존 ID_Rifle/W_Reticle_Rifle/W_AmmoCounter_Rifle·공용 HUD·다른 맵은 유지했다. 한정 자동화2개 `Scripts/Editor/r7_reticle_host_setup.py`, `r7_reticle_host_probe.py`를 추가했으며 범용 도구는 확장하지 않았다.
+
+**이식 검증과 실패 이력:** 첫 Migrate는 파일은 생성했으나 FindInBlueprintManager의 검색 DB에 같은 경로 Blueprint를 등록하는 ensure로 전체 실패다(`R7Host-prepare_1515.log`). 저장본을 덮어쓰거나 오류를 무시하지 않고 새 원본 프로세스에서 원본/사본 그래프·WidgetTree·기본값을 재검증했다. 원본/대상 준비 파일은 바이너리 해시가 달라 byte-identical이 아니며, 의미상 비교는 별도로 수행했다. 대상에서 발견한 차이는 기존 ClassRedirect에 따른 Cast 출력 핀 `AsLyra Inventory Item Instance`→`AsDCInventory Item Instance`1개와 연결 참조의 이름 대응뿐이었다. 해당 대응 외 그래프2개/노드65개의 핀·값·연결, WidgetTree2개 및 초기 변수값이 일치했다. 원본 실행 그래프를 임의 수정하지 않았다.
+
+15:13:46 대상 저장,15:14:26 별도 프로세스 재로드/Compile/클래스 설정 유지 검사가 통과했다. 최종 부모는 `DCLyraWeaponUserInterface`, package 의존성은 Engine StandardMacros 및 DreamCatcher/SlateCore/UMG/UMGEditor로 ShooterCore/LyraGame 잔여 참조가 없다. 근거 `Saved/Diagnostics/R7ReticleHost/assign1515.json`, `reload1514.json` 및 대응 로그. 원본 ShooterCore Host의 SHA256은 작업 전과 동일하다.
+
+**실제 PIE:** NullRHI 실행은 Host 등록1개까지만 되고 자식 위젯 생성이 없어 실패했다. 성공으로 처리하거나 NativeTick/OnWeaponChanged를 수동 호출해 우회하지 않았다. 렌더링을 켠 별도 PIE에서 같은 에셋/코드를 실행하여 **15:17:50 `host_data_and_lifecycle_pass`,15:18:14 Automation 성공1/실패0/보고서경고0**, Error/ensure/Fatal0을 확인했다. 근거 `Saved/Logs/R7Host-PIERender1.log`, `Saved/Automation/R7HostPIE_20261010_Render/index.json`.
+
+- NativeTick에서 실제 W_Reticle_Rifle/W_AmmoCounter_Rifle2개 생성, 둘 다 현재 Weapon/Inventory Item과 일치했다. 아이템 탄약30→27→30, 위젯 퍼짐2→약3.70→2, 조준 시 퍼짐0/첫발정확도true를 확인했다.
+- 빈 슬롯/조종해제/사망 시 Host0, 재장착/권한 Pawn 순차 교체 시 새 Host1개 및 새 무기/아이템 연결을 확인했다. PIE 종료 제거 로그도 있다. 해당 로컬 플레이어의 viewport 최상위 UMG는 Host1개였다.
+- 자동 검사는 탄약의 실제 Item 연결/변화와 UI getter를 확인했다. 탄약 표시의 렌더링 결과·머티리얼/텍스트 가독성, 픽셀 단위 레이아웃/중복, 모든 delegate 구독 해제를 완전히 증명한 것은 아니다. GameplayCue를 프로세스에서만 비활성화하고 무음 실행했으므로 FX/오디오 증거도 아니다. 장치/DPI/네트워크/최종 전체 HUD는 미검증이다.
+- 종료 후 재로드 체크포인트의 보호37경로(원본/재사용 위젯/새 Host/Controller/Config/게임 코드/Git인덱스)의 상태 불변을 확인했다. 검사 중 에셋 저장0이다.
+
+**현재 판정/다음:** R0~R6 합의 마감 상태 유지. R7-1/2 승인된 독립 화면 연결 묶음은 구현·자동 검사를 완료했고 사용자 화면 확인만 남았다. 추가 빌드·수동 에셋 설정 없이 `L_DC_RifleIntegration`에서 조준점/탄약이 중복 없이 보이고 발사·R재장전·조준 때 표시가 자연스러운지 확인한다. 이후 R7-3 Aim/Scope·명중/처치 표시와 최종 HUD/슬롯 경로의 근거·차이·정확한 변경 범위를 제시한다. 원본 GameFeature/UI 슬롯 대신 통합 Controller가 표시/제거한다는 승인된 차이는 유지되며, 전체 R7 완료는 아니다.
+
+### 2026-10-10 R7 사용자 피드백 — 원본 크기·회복 차이 진단 / 수정 미적용
+
+사용자는 기능 작동을 확인했지만 원본보다 조준점 크기가 크고 사격 후 회복이 바로 시작되지 않는다고 보고했다. 추가 확인은 **정지 Hip와 조준/사격 후 모두 크다**이다. 앞선 자동 검사로 기능/수명은 통과했지만 시각 동등성은 통과하지 않았다. 다음 R7-3으로 넘기기 전에 이 차이를 해결한다. 기존 R0~R6의 다른 통과 항목을 전부 재개하지 않는다.
+
+**읽기 전용 근거:** 원본/대상 commandlet4회에서 Reticle/무기/설정/머티리얼 기본값을 읽었다. 에셋 저장·Blueprint Compile·게임 코드/Config 변경·C++ 빌드·패키징은0이다. 자료는 `Saved/Diagnostics/R7ReticleComparison/source.json`, `target.json`, `source-detail.json`, `target-detail.json`, 로그는 `Saved/Logs/R7Reticle-{SourceRead,TargetRead,SourceDetail,TargetDetail}.log`다. 임시 Saved 조사 스크립트만 사용했다.
+
+| 항목 | 원본/대상 비교 및 판정 |
+|---|---|
+| 발사 후 회복 시작 | 원본 LastFireTime은0 초기화 외 갱신이 없지만,10/9 대상 AddSpread에 갱신을 추가했다. 대상은 실제0.15초 후부터 회복하며 발사간격0.12초 연사 중 냉각도 억제한다. **원본과 다른 동작의 원인 확정**이다. 즉시 기본 크기로 리셋된다는 뜻이 아니라 원본은 추가 발사 후 대기 없이 곡선에 따라 줄기 시작한다는 뜻이다. |
+| 조각 배치 | 양쪽 CrossHairs 옵션true/이미지6×20/초기반경24는 동일하다. 대상에서만10/6 추가한 UMG→Slate 옵션 전달로 반경+3 UI단위가 활성화된다. **크기 차이의 유력 원인**이다. 원본 Slate bitfield는 명시적 초기화가 없어 모든 원본 실행에서false라고 단정할 수 없으며 동일조건 렌더 차이는 아직 미검증이다. |
+| UI 배율 | 원본은ScaleToFit, 대상은ShortestSide. 양쪽ApplicationScale1/DPI곡선/설계1920×1080은 같지만 비16:9에서는 배율이 달라진다.1280×960이면 약0.667/0.889다. 같은 실제 viewport 조건의 기여도는 미검증이다. GameMode HighDPI도true/false 차이가 있으나 이를 현재 PIE 원인으로 확정하지 않는다. |
+| 보존된 값 | Reticle66노드의 핀/연결/값은 기존 native/구조체 대응 후 동일. Widget9개 배치/변환, SizeBox128/58, 열/퍼짐/냉각 곡선과 배율, Hip기본FOV80/ADS70도 동일하다. MIC 부모와 조회한scalar/vector/texture/override값도 동일. StaticParameters는보호속성으로 미조회이며 부모 머티리얼 전체 렌더 동등성을 보증하지 않는다. |
+
+**원본 보존 대안/제안 범위(승인 전):** 이전 두 보완을 활성 경로에서 원복한다. `DCLyraRangedWeaponInstance.cpp`의 AddSpread 시계 갱신을 제거하고 `DCLyraCircumferenceMarkerWidget.cpp`의 추가 OutsideRadius 전달을 제거한다. 관련 `DCWeaponFoundationAutomationTests.cpp`, `DCCircumferenceAutomationTests.cpp`도 ‘보완 기능이 작동하는가’에서 ‘원본 호환 동작인가’로 기대값을 수정한다. Slate의 false 초기화는 안전한 결정값으로 남기는 것을 권장한다. 원본 미초기화 변수까지 그대로 복사하는 대안은 결과가 안정적이지 않아 원본 시각 동등성을 보증할 방법이 아니다. 이 안전 초기화는 원본 raw코드와의 잔여 차이로 명시한다.
+
+기존 보완을 유지하고 에셋Radius/RenderScale/Delay값을 줄여 맞추는 대안은 원본 데이터와 무기 동작을 함께 바꾸므로 원본 재사용 우선 목표에 맞지 않는다. 제안안에서는 무기 곡선·지연 데이터0.15·위젯/머티리얼·오디오·Config를 수정하지 않는다. 전역 UI 정책을 원본으로 맞추는 안은 다른 HUD/디자이너UI까지 영향이 있고, Host 한정 배율 보정은 원본 전체 레이아웃 경로와 다른 추가 구현이다. 우선 코드 차이를 복원해 같은 viewport/FOV에서 비교한 뒤 남는 배율 차이에 대해서만 선택안을 제시한다.
+
+**다음:** 사용자의 코드 작업 승인 → 위 CPP4개/문서 수정 → 사용자 빌드 → 같은 해상도/화면비율/FOV/정지·연사 조건에서 회복 시작/최대 퍼짐/조각 간격 비교. R7 화면 일치 및 원본 Slate의 실제 픽셀 결과는 아직 미검증이다. 이번 진단을 수정 완료나 원본100%일치로 보고하지 않는다.
+
+### 2026-10-10 원본 회복·조각 배치 복원 코드 반영 — 사용자 빌드 대기
+
+사용자가 위4개 CPP 수정안을 승인했다. 이번에는 아래 코드와 상태 문서만 변경했으며 C++ 빌드·패키징·Unreal 실행·에셋 저장은 하지 않았다.
+
+1. `Weapon/Lyra/DCLyraRangedWeaponInstance.cpp`: AddSpread에서 이전 LastFireTime 갱신과 주석3줄만 제거했다. 원본 AddSpread 및 기존 UpdateSpread 함수 본문과 일치한다. 별도시계0 초기값과 `TimeSinceFired > SpreadRecoveryCooldownDelay` 조건, 에셋 지연0.15/곡선/배율은 유지한다. 월드 기동 이후의 발사마다 추가 회복 대기를 만들던 보완만 원복하며, 기반 활동 시계·발사간격·AutoReload·사운드를 변경하지 않았다.
+2. `UI/Weapons/Lyra/DCLyraCircumferenceMarkerWidget.cpp`: RebuildWidget/SynchronizeProperties의 추가 OutsideRadius 전달을 제거하고 원본 연결을 설명하는 주석을 추가했다. 원본처럼 UMG Radius/MarkerList/Brush만 연결한다. 에셋의true값은 그대로지만 새 Slate는 기존 안전 기본값false를 사용한다. 원본 미초기화 bit를 복제하지 않는 안전 차이는 승인대로 유지한다. Slate CPP/헤더/독립 옵션API는 이번에 수정하지 않았다.
+3. `Tests/DCWeaponFoundationAutomationTests.cpp`: 기존 `SpreadRecoveryDelay`를 `OriginalSpreadRecovery`로 대체했다. 같은 transient fixture/합성 곡선/지연0.15에서 월드시간1초 이후 첫 발사8,0.1초 Tick7.8, 두 번째 발사8.8, 이후 Tick8.6/8.48/8.38을 기대한다. 반복 발사 후에도 추가 대기를 시작하지 않으며 설정값0.15가 보존되는지를 검사한다. 기존2개 무기 검사는 변경하지 않았다.
+4. `Tests/DCCircumferenceAutomationTests.cpp`: 기존 WidgetLifecycle의 브러시를 조회한 라이플 크기6×20으로 두고, UMG옵션true/반경24에서 Slate가false 및 조각위치(0,-24)를 유지하는지 검사한다. false→true 동기화/Slate 재생성에서도 추가반폭3을 적용하지 않고, Radius/MarkerList 전달·자원 해제는 계속 확인한다. 기존 SlateGeometry/DependencyRegistration은 그대로다.
+
+**정적 확인:** 원본과 비교한4개 함수(AddSpread/UpdateSpread/RebuildWidget/SynchronizeProperties)의 본문은 이름/주석/공백 정규화 후 일치한다. Ranged CPP는 승인한3줄 제거 외 작업 전과 같다. 기대값 산술 점검/diff 공백 오류0. Config/uproject/Git인덱스/DLL, 원본 대응 헤더·Slate·Reticle·Integration코드, Host/Controller/맵/라이플 위젯·무기·발사·재장전·머티리얼 등 보호22파일 SHA256 불변이다. 이 확인은 UHT/C++ 컴파일이나 C++ 테스트 실행이 아니다.
+
+**현재/다음:** 코드 작성 완료, 사용자 Development Editor/Win64 빌드 대기다. 이후 `DreamCatcher.R6.Weapon`3건(새 OriginalSpreadRecovery 포함)과 `DreamCatcher.R5.Reticle.Circumference`3건을 기존 별도 프로세스에서 재실행하고, 동일 viewport/FOV의 실제 라이플 회복/크기를 비교한다. 이전 ‘지연 안에서는 회복하지 않아야 함’ 검사는 현재 목표와 반대인 과거 보완 검증이므로 그대로 통과 기준에 사용하지 않는다. 새 코드의 런타임·원본 화면 동등성은 아직 미검증이다. 에셋/전역 DPI 정책은 그대로이며 추가 마이그레이션은 필요 없다. R7의 다음 기능은 이 화면 차이를 확인한 뒤 진행한다.
+
+### 2026-10-10 원본 호환 복원 검증 통과 — DPI 정책 변경은 승인 대기
+
+**빌드:** 사용자 UBT16:08:52 시작/30.72초 Succeeded, 수정CPP4개 컴파일, DLL16:09:22/4,382,720bytes를 확인했다. Codex는 빌드/패키징이나 새 게임 코드/Config/에셋 변경을 하지 않았다.
+
+**검사 결과:**16:15:13 `Saved/Automation/R7OriginalRestore_20261010_B/index.json`에서 무기3건(OriginalSpreadRecovery/SpreadAndAttenuation/ItemTagCost), Circumference3건(DependencyRegistration/SlateGeometry/WidgetLifecycle), 실제 Project.Maps.PIE1건 모두 성공했다. 성공7/실패·보고서경고0, `Saved/Logs/R7OriginalRestore-ChecksPIE2.log` Error/Fatal/ensure0이다. 첫 실행은 C++6건 통과 후 진단 Python이 엔진의 ScriptName=SlateLibrary 대신 SlateBlueprintLibrary라는 모듈 별칭을 사용해 PIE 실패했다. 기존 native 반사 API 호출로 교정한 후 전체를 다시 검증했고, 첫 실패를 성공으로 재해석하지 않는다.
+
+**실제 회복/UI 데이터:** 기존6발 관찰 코드를 Saved 진단에서 재사용했다. 실제 라이플30→24 발사 후0.028808초에 열2.765054/퍼짐4.937660°,0.045475초에2.698387/4.889452°,0.062142초에2.631720/4.841244°로 감소했다. 설정 지연0.15초를 추가로 기다리지 않는 원본 호환 경로가 실행됐다. 정지 Hip의 최종퍼짐2°/투영반경24.518799, 실제 Host의Reticle/AmmoCounter2개 및 같은Weapon/Item 연결도 확인했다. UMG Radius는 투영 getter와 같았다. 조각 반폭+3 미전달은 수정된 C++WidgetLifecycle/SlateGeometry에서 검증했다. 이 코드 원복 묶음의 자동 검증은 완료다.
+
+**남은 DPI 차이 및 process-only 비교:**
+
+| 검사 조건 | 현재 정책 | 원본 정책을 해당 프로세스에만 적용 |
+|---|---:|---:|
+| viewport |1813×1326|1813×1326|
+| Hip FOV |80|80|
+| UI 배율 API |1.227778(ShortestSide)|0.944271(ScaleToFit)|
+| 정지 최종퍼짐/투영반경 |2°/24.518799|2°/24.518799|
+
+16:18:17 별도 실행에서 command-line ini override로만 원본 ScaleToFit을 넣었다.16:18:31 `Saved/Automation/R7OriginalDPIProcess_20261010/index.json` 성공1/실패·경고0, `R7OriginalRestore-DPIProcess.log` Error/Fatal/ensure0이다. 그 실행에서도6발 후0.033708초부터 냉각됐다. 프로젝트 Config 파일은 불변이다.
+
+위 약1.30024배는 **현재 창 조건에서 API로 확인한 정책 배율 비율**이다. 원본 프로젝트의 동일조건 실제 렌더링과 픽셀30%차이를 측정했다는 뜻이 아니다. Python으로 조회한 cached geometry는 local size0/scale1이라 실제 픽셀 검증으로 쓰지 않는다. 원본 Slate의 미초기화 bit와 안전한false 초기화의 실제 시각 비교, 사용자 수정후 화면, 최종RootLayout의 전체UI 동등성은 아직 미검증이다. 결과자료는 `Saved/Diagnostics/R7ReticleComparison/restore-pie.json`, `restore-pie-original-dpi.json`이다.
+
+**범위 보존:** gameCPP4/Config3/uproject/Git인덱스/DLL/Host·Controller·맵·Reticle·무기·머티리얼 등 보호16경로 해시 불변, 에셋 저장0. 원본라이플 발사Cue를 프로세스에서만 비활성화하고 무음 실행했으므로 연출/소리/네트워크 검사로 확대하지 않는다.
+
+**권장 다음 변경안(아직 미적용):** 원본 정책 재사용을 위해 `Config/DefaultEngine.ini`의 `/Script/Engine.UserInterfaceSettings`에 `UIScaleRule=ScaleToFit`1항목만 추가한다. 같은 현재 ApplicationScale1/DesignScreenSize1920×1080, HighDPI, 기존 위젯/머티리얼/무기 데이터는 그대로 둔다. 원본과 같은 화면 비율별 UI배율 계산을 쓰게 되지만 모든 UMG에 영향을 주므로 다른HUD·디자이너UI의 크기/클리핑 확인이 필요하다. 대안은 Host한정 배율 보정이나, 이는 원본전체UI정책과 다른 추가 구현이므로 원본보존 우선안은 아니다. 사용자 승인 후에만 Config를 바꾸고 재시작/배율·대표화면을 확인한다. C++ 빌드는 필요 없다. R7 화면 일치가 확인되기 전에는 R7-3 다음 기능을 진행하지 않는다.
+
+### 2026-10-10 원본 ScaleToFit 영구 적용 — 재로드/PIE 통과, 사용자 화면 대기
+
+사용자가 위 Config1항목의 적용을 승인했다. 실행 중인 Unreal Editor가 없는 것을 확인한 뒤 `Config/DefaultEngine.ini`에 다음만 추가했다.
+
+```ini
+[/Script/Engine.UserInterfaceSettings]
+UIScaleRule=ScaleToFit
+```
+
+다른 설정은 수정하지 않았다. 승인된3줄(섹션/값/빈줄)을 제거한 파일의 개행정규화해시는 작업 전과 동일하다. ApplicationScale1/DesignScreenSize1920×1080/HighDPI false는 그대로고 게임C++/에셋/무기·머티리얼값 변경, 빌드·패키징은0이다.
+
+**검증:** UI용 command-line ini override 없이 새 렌더링 PIE를 실행했다.16:26:04에 실제 viewport1813×1326/FOV80, DPI API0.94427085를 읽어 원본ScaleToFit 계산0.94427083과 일치함을 확인했다. 실제 Host의Reticle/AmmoCounter2개와 같은Weapon/Item 연결, 정지 최종퍼짐2°/투영반경24.518799,6발30→24 뒤0.037769초부터 회복도 통과했다.16:26:18 Automation PIE 성공1/실패·보고서경고0, Error/Fatal/ensure0이다.
+
+- 로그: `Saved/Logs/R7PersistedDPI-PIE.log`
+- 관찰: `Saved/Diagnostics/R7ReticleComparison/restore-pie-persisted-dpi.json` (`persisted_dpi_verified=true`, `original_dpi_in_this_process_only=false`)
+- 보고서: `Saved/Automation/R7PersistedDPI_20261010/index.json`
+- 대표해상도1920×1080/1280×720/1280×960/2560×1080의 정책 기대배율은1/0.666667/0.666667/1이다. 이는 원본공식과 현재기본값의 계산이며 여러해상도 실제 렌더 검사로 보고하지 않는다.
+- 게임CPP4·다른Config2·uproject/Git인덱스/DLL/Host·Controller·맵·Reticle·무기·머티리얼15경로 해시 불변, DefaultEngine의 승인범위외 불변을 검사 종료 후 확인했다. 기존6건C++성공을 다시 빌드/확장하지 않았다. GameplayCue process-only 비활성/무음 검사라 FX/음향/네트워크 증거도 아니다.
+
+**현재/다음:** 원본 회복/조각배치 코드와 UI배율 정책의 적용·자동검증은 통과했다. 추가 C++빌드/재마이그레이션 없이 에디터재시작 후 통합맵에서 원본과 가능한 같은 viewport/Hip 조건의 크기·회복을 확인한다. 전역정책영향으로 다른HUD/디자이너UI의 가독성·잘림도 확인한다. 사용자 최신화면/실제 원본픽셀A/B/전체HUD·장치별 동등성은 아직 미검증이다. 확인 후에 R7-3의 원본 Aim/Scope·명중/처치/전체슬롯 연결안을 제시한다.
+
+### 2026-10-10 사용자 크기·회복 확인 완료 — R7-3 기존 ADS/처치 경로 조사
+
+사용자가 직전 수정 후 정상 작동을 확인했다. 조준점 크기/회복/배율 수정 묶음은 사용자 확인까지 완료다. 이미 통과한수정 때문에추가빌드/마이그레이션/전체R0~R6재감사를요구하지 않는다. 모든해상도/다른디자이너UI/복제까지포괄완료한것은아니다.
+
+다음 R7-3에서는 이미 이식된 원본 신호경로를 먼저 확인했다. 이번턴에게임C++/Config/에셋을고치거나빌드/패키징하지않았다. 기존그래프/타입조회와한정Saved진단만사용했다.
+
+**실제 입력·피해·처치 관찰:** 통합맵의 기존Ability를 입력Action으로 활성화했다. Shoulder1→Hip0, Scope1→Hip0이동작했고 단발로 표적100→88/탄약30→29, 추가연사로88→0/탄약21이었다. 실제사망에서 원본 Elimination 애니메이션이 재생됐다(16:51:34,animation time0.03355/playing=true). 근거`Saved/Logs/R7Signals-PIE3.log`, `Saved/Diagnostics/R7Signals/signals.json`, `elimination.png`. 메시지Broadcast/애니메이션Play함수를직접호출해성공을만들지않았다.
+
+**ADS 비활성은 이식 누락으로 판정하지 않는다:**
+
+- `R7Signals-ADSMessageTrace.log`16:57에서 Gameplay.Message.ADS의ON=true/false와 실제BP_DC_RifleController를정상발신했다. 실제Ability도LocallyControlled=true/Controller일치였다. ReticleOwner도일치했고ADS/처치리스너2개가존재했다.
+- 발신GA_DC_ADS_Base와수신W_Reticle_Rifle의핀서브타입은같은`/Game/LyraMigration/ADS/Struct_UIMessaging`였다. 근거`ads-read.json`, `type-read.json`. 클래스/구조체표시이름만보고임의치환하지않는다.
+- 로컬원본과대상모두`ADS` CustomEvent의실행출력(`K2Node_CustomEvent_0.then`)과`IsAnimationPlayingForward`입력(`K2Node_CallFunction_11.execute`)이비어있다. 아래의ON분기/정·역재생그래프는존재하나이진입실행선이없다. 기존원본조회`R7ReticleComparison/source.json`과대상조회에서동일하며원본uasset해시도현재와일치한다. 원본의의도적비활성인지실수인지까지는확정하지않는다.
+- 실제애니메이션객체의길이도ADS0.160017초/Elimination0.960017초로존재한다. 문제를새애니메이션/메시지발신코드로대체할이유는없다.
+
+**정책/선택:** 최신사용자선호인원본동작보존을기본방향으로비활성상태를유지한다. 기존Aim/Scope카메라·퍼짐동작과이별도UMG애니메이션은구분한다. 만약별도ADS연출활성화를원하면승인대상은W_Reticle_Rifle의위실행선1개이며,기존원본애니메이션/ON분기/정·역재생은보존한다. ‘현재로컬원본에는없던실행동작이켜짐’이라는차이를설명한후에만수정한다. 위선호를전체HUD기능삭제/축소승인으로해석하지않는다.
+
+**명중 표시 범위/제한:** 실제HitMarker 브러시8×8/기간0.4초를확인했다. 원본과대상의기본기간은같아기존기간전달보완이이값에서새로운시간차이를만들지는않는다. WeaponState의서버확인/팀CanCauseDamage판정과원본TODO(무적등0피해에도성공표시가능)는그대로유지한다. 일반명중스크린샷은편집viewport를캡처하여명중마커픽셀/페이드의증거로채택하지않았다. 처치스크린샷은실제PIE연출을확인했다. 네이티브명중배열·약점/빗나감·정확한페이드·네트워크는미검증이다.
+
+**실패이력/보존:** 첫PIE는비변수위젯EliminationMarker의속성조회오류,후속PIE는ADS애니메이션이실행돼야한다는검사가정때문에실패했다. 원본도미연결임을뒤늦게확인했지만실패보고서를전체성공으로바꾸지않는다. 마지막추적Automation성공은ADS표시활성화가아닌메시지추적성공이다. 보호13경로해시불변/에셋저장0이다. 노드의내부StructType은Python보호속성이라미조회로기록했으며이를핀형식치환의근거로사용하지않는다. 새범용도구/검사프레임워크/게임코드노출API는추가하지않았다.
+
+**다음:** 원본비활성ADS연출은기본유지하고,실제일반명중/약점/빗나감·페이드의남은확인을마무리한다. 짧은사용자시각확인이효율적이면그절차를제시한다. 전체HUD/슬롯경로와R7전체는미완료이며,새변경이필요하면원본근거·차이·대상파일을먼저설명한다.
+
+### 2026-10-10 일반 명중 사용자 확인 및 약점/빗나감 마감 — Root UI 다음 묶음 제안
+
+사용자가 일반 명중 표시/사라짐까지 정상 확인했다. 기존 완료 항목은 보존하고 한정 PIE에서 남은 약점/빗나감/팀 판정을 점검했다. 게임 C++/Config/에셋 변경과 빌드·패키징은 하지 않았다.
+
+| 실제 라이플 조건 | 피해 | 사격 후 탄약 | 화면 관찰 |
+|---|---:|---:|---|
+| 일반 적 표적 |12|29|일반 명중 표시|
+| WeakSpot 물리재질 |18|28|Critical 브러시의 노란 중앙 표시,0.65초 후 소멸|
+| 허공으로 빗나감 |0|27|명중 표시 없음|
+| 같은 팀 표적 |0|26|명중 표시 없음|
+
+임시 PIE 표적에만 물리재질/팀을 적용하고 기존 라이플 Ability/GE 경로로 실제 사격했다. `Gameplay.Zone.WeakSpot`→전용Critical 브러시의실제위젯맵도확인했다. 기존ConfigureTestTeams/입력주입/물리재질API를재사용했으며 가짜메시지/명중확인호출은0이다. 종료시물리재질·팀·위치를복구했고에셋저장은0이다. 네이티브명중배열 직접읽기,정확히0.4초의프레임측정,네트워크는범위밖이다.
+
+**근거/검사판정:** `Saved/Logs/R7HitZones-PIE2.log`17:19:17의 `damage_and_zone_binding_pass`, `Saved/Diagnostics/R7HitZones/observations.json`. 엔진 공개 `TakeAutomationScreenshotOfUI`로 게임viewport를 직접 캡처하여 이전전역Shot의편집viewport오캡처를피했다. 이미지8개는 `Saved/Automation/Tmp/L_DC_RifleIntegration/R7Zones_20261010_{body,weak,miss,friendly}_{hit,fade}/Windows/D3D12_SM6/` 및 보고서imageCompare에있다.17:19:50 `Saved/Automation/R7HitZones_20261010_B/index.json`은 succeededWithWarnings1/failed0이며 비교기준이없는신규스크린샷경고8건이다. 기준이미지를임의승인/생성하지않았고원본golden픽셀동등성통과로보고하지않는다. Error/Fatal/ensure0, 기존Manny PoseAsset/광원경고는별도다. 첫실행의보호된LatentActionInfo.UUID설정오류는진단코드만교정했다.
+
+보호11경로(Config3/uproject/Git인덱스/DLL/WeaponState·HitMarker CPP/맵/Host/Reticle)해시불변이다. Saved한정스크립트/문서 외 수정은없다. 기존기능검증/일반명중 사용자확인과이번화면관찰을합쳐 **단일Standalone 통합맵의 독립 무기UI·주요피드백 검증 묶음은 마감**한다. 비활성 ADS 애니메이션은 로컬원본과 동일하게 유지한다. 전체HUD/슬롯·복제·모든해상도까지R7완료로확대하지않는다.
+
+**다음 원본Root UI 연결 제안 — 아직 미적용**
+
+- 원본 근거: `B_LyraUIPolicy`는 CommonGame.GameUIPolicy부모와 W_OverallUILayout의LayoutClass를갖는다. W_OverallUILayout은PrimaryGameLayout부모이며 Game/GameMenu/Menu/Modal4레이어를등록한다. 원본 DefaultGame.ini는LyraUIManagerSubsystem.DefaultUIPolicyClass에그정책을지정한다. 두원본파일의현재해시는10/8실조회와같다.
+- 현재 제약: 대상의해당2에셋과DefaultUIPolicyClass지정이없다. 기본레이어의Game/GameMenu/Modal3개는현재Config/native선언에서확인되지않고Menu만HUDLayout native로선언돼있다. DCUIManagerSubsystem/CommonGame, DCLocalPlayer(UCommonLocalPlayer), DCGameInstance(UCommonGameInstance), AddWidgets/WorldActionBase/HUD C++와관련module은이미있으므로다시작성하지않는다.
+- 변경 에셋: 새 `/Game/LyraMigration/UI/R7/Foundation/B_LyraUIPolicy`, `/Game/LyraMigration/UI/R7/Foundation/W_OverallUILayout`. Unreal내부복제/마이그레이션으로가져오고정책의LayoutClass경로만새복사본으로대응한다. 이미존재하는목적지/공용에셋은덮어쓰지않는다.
+- 변경 Config: `DefaultGame.ini`의`/Script/DreamCatcher.DCUIManagerSubsystem`에새정책Class경로1항목, `DefaultGameplayTags.ini`에원본UI.Layer.Game/GameMenu/Modal3개선언을추가한다. 실제태그재로드에서중복/누락도확인한다. 이름/경로대응외원본정책·레이아웃동작은보존한다.
+- 영향/대안: 모든로컬플레이어의기본Root생성/포커스처리에영향이있다. 현재Controller직접표시를유지하는대안은가능하지만원본Root/슬롯은미완료다. 전체ShooterHUD를한번에연결하는대안은메뉴/자막/터치/기타위젯과ShooterCore/Experience의의존성처리가함께필요하다. 이번에는원본Root2개를실제로연결하는범위를제안하며후속범위를삭제하지않는다.
+- 제외/검증: 새 C++/Build.cs/도구확장/기존Reticle직접표시제거/HUDClass교체/다른맵변경은없다. 원본StandardHUD의ShooterCore요구flag를지우지않는다. 승인후새프로세스재로드/Root1개/4레이어/기존무기UI·입력회귀를확인한다. C++빌드나패키징은필요없다. 전체HUD/최종슬롯은다음필수연결단계이며이묶음만으로완료처리하지않는다.
+
+### 2026-10-10 승인된 원본 Root UI 이식 — 에셋/설정 완료, 런타임 연결 미완료
+
+사용자 승인 범위의 새 에셋2개와 Config2개를 적용했다. 원본 `/Game/UI/B_LyraUIPolicy`, `/Game/UI/W_OverallUILayout`을 원본 프로젝트의 새 `/Game/LyraMigration/UI/R7/Foundation/`에 복제하고 정책의 LayoutClass만 새 레이아웃으로 대응한 뒤, 엔진 API로 DreamCatcher의 같은 경로에 Migrate했다. 기존 에셋 덮어쓰기/외부 바이너리 복사/일괄 참조 교체는 하지 않았다. `DefaultGame.ini`의 DCUIManagerSubsystem에 새 정책 클래스 경로를 지정하고 `DefaultGameplayTags.ini`에 Game/GameMenu/Modal3개를 추가했다(Menu는 기존 native 선언 유지).
+
+**원본 보존/검증:** 한정 레시피 `Scripts/Editor/r7_root_ui_setup.py`에서 기존 그래프 조회를 재사용했다. 준비·저장→별도 Migrate→별도 대상 로드/Compile의 3프로세스로 검사했다. 앞선 새 Migrate의 검색DB ensure 재현을 피하도록 이미 사용한 엔진 legacy API를 프로세스 한정으로 선택했으며 원본 UI 로직/프로젝트 CVar는 변경하지 않았다. 17:40:19 prepare_B,17:41:25 migrate_A,17:42:38 verify_A의 종료0/complete와 그래프 노드/핀/연결·WidgetTree 구성·조회한 designer 값·부모·정책참조 일치, 원본 경로/추가 content 의존성 없음, 보호 파일 불변을 확인했다. 근거: `Saved/Diagnostics/R7RootUI/{prepare_B,migrate_A,verify_A}.json`, `Saved/Logs/R7Root-*.log`. 첫 prepare_A는 조회 속성명 오류로 저장 전에 중단했고 bIsEnabled로 교정했다. 픽셀 동등성/모든 직렬화 속성 비교까지 확대하지 않는다.
+
+**실제 연결 실패:** 설정 적용 후 17:43:59 통합맵 PIE에서 viewport Root가 없었다. `Saved/Automation/R7RootUI_20261010_A/index.json`은 failed1이며 프로세스 종료0은 성공 근거가 아니다. `Scripts/Editor/r7_root_ui_probe.py`는 Root1개와 원본4레이어에 대한 임시 빈 위젯 Push/Pop, 기존 무기UI 회귀를 검사하지만 Root 첫 조건에서 중단됐다. 따라서 런타임4레이어/Root/전체HUD 완료로 표시하지 않는다. 새 C++/빌드·패키징/기존 Controller Reticle 표시 제거/HUDClass·맵 변경은 하지 않았다.
+
+**당시 누락된 원본 근거와 승인안 — 아래 후속 승인으로 코드 적용:**
+
+후속 런타임 진단에서 새 정책 경로 정상, CurrentPolicy 인스턴스1개, Root0개가 확인됐다(`R7Root-PIE_DiagnoseD.log`17:50:31). 기존 Host1개·Reticle/Ammo2개·사격30→27/재장전30·조준·장비해제/재장착·UnPossess/Pawn교체·사망 시 UI 정리 회귀는 17:50:36 통과, `Saved/Automation/R7RootUI_20261010_DiagnoseD/index.json`17:51:00 성공1/실패·보고서경고0이다. Root/레이어 검증 실패와 이 기존경로 성공은 별개다. Error/Fatal/ensure0이며 Cue비활성/무음의 한정 검사라 FX·사운드/사용자 포커스·조작감을 다시 확인한 것은 아니다. 진단 초반3회는 Python 비노출타입/전역객체조회 시 메서드명 충돌로 실패했고 엔진의 공개 getall/obj list로 교정했다. 에셋/게임코드 수정으로 우회하지 않았다. 보호 파일 해시는 승인한 Config 변경 외 불변이다.
+
+- Lyra 원본 PlayerController는 `ACommonPlayerController`를 상속한다. CommonPlayerController.ReceivedPlayer의 `OnPlayerControllerSet.Broadcast`를 GameUIPolicy.NotifyPlayerAdded가 받아 CreateLayoutWidget을 실행한다. Engine GameInstance는 LocalPlayer를 등록한 뒤 Controller를 생성하므로 이 후속 알림이 필요하다.
+- 현재 `ADreamCatcherPlayerController`는 `APlayerController` 직계라 이 알림 경로가 없다. DCLocalPlayer의 유사한 이름의 함수는 팀 관찰만 한다. CommonPlayerController/GameUIPolicy/GameUIManagerSubsystem/ModularPlayerController CPP는 로컬 Lyra 원본과 동일하다. 앞선 ‘C++ 없이 완료 가능’ 안내는 이 부모 의존성을 놓친 판단이었다. 원본 이식 불가가 아닌 연결 누락이다.
+- 제안 대상은 `Source/DreamCatcher/DreamCatcherPlayerController.h`의 include/부모를 `ACommonPlayerController`로 변경하는 범위다. 이미 CommonGame/ModularGameplayActors가 Public 의존성이어서 모듈 추가는 없다. 기존 클래스명/자식BP/카메라/입력/HUD 구현은 보존한다. 원본 알림뿐 아니라 Modular receiver·GameActorReady·ControllerComponent ReceivedPlayer/PlayerTick까지 모든 자식 Controller에 활성화되는 차이를 함께 검증해야 한다. 전체 원본 PlayerController의 나머지 기능까지 완료하는 범위는 아니다.
+- 대안은 현재 부모 유지+연결 알림 직접 구현 또는 Root 지연 생성이지만, 원본의 Controller/PlayerState/Pawn/Modular 수명을 부분 대체한다. 원본 재사용 우선에 따라 기존 CommonPlayerController를 연결하는 안을 우선했다. 제안 당시에는 미적용이었으며 아래 후속 승인으로 코드만 적용했다. 사용자 C++ 빌드 → Root/4레이어/입력/사격·재장전/Host·Pawn 수명 재검사는 아직 남아 있다.
+- 기존 독립 무기UI의 사용자 확인은 유지한다. 전체 ShooterHUD/11개 위젯/StandardHUD의 ShooterCore 요구·Experience 연결을 삭제해 단계를 줄이지 않는다. 최종 슬롯 경로 검증 전 기존 직접표시는 제거하지 않는다. 글로벌 Root의 다른 맵·포커스/모든 장치·복제 검증은 여전히 별도다.
+
+### 2026-10-10 원본 Controller 부모 연결 코드 적용 — 사용자 빌드 대기
+
+사용자가 직전 수정안을 승인하여 `Source/DreamCatcher/DreamCatcherPlayerController.h`의 include/부모 2줄만 `CommonPlayerController.h` / `ACommonPlayerController`로 변경했다. 기존 CPP·멤버·클래스명·자식 Blueprint·입력/카메라/HUD 코드는 보존했다. 이미 있는 원본 부모의 Controller/PlayerState/Pawn 알림과 Modular receiver/Ready/ControllerComponent tick을 상속하며 수동 Broadcast·지연 생성 우회는 만들지 않았다. 전체 LyraPlayerController 기능 이식 완료로 해석하지 않는다.
+
+생성자의 `Super(ObjectInitializer)`, 기존 Controller 및 통합 Controller 수명 override의 Super 호출, CommonGame/ModularGameplayActors Public 의존성을 정적으로 확인했다. Config·에셋·맵·DLL·기존 CPP·Build.cs·uproject·Git 인덱스 등 보호15파일은 그대로다. 문서2개 외 추가 파일 변경/도구 확장은 없으며 C++ 빌드·패키징·Editor·PIE를 실행하지 않았다. **UHT/컴파일 및 변경 후 Root/4레이어 성공은 미검증**이다.
+
+다음은 사용자 에디터 종료 → Development Editor / Win64 빌드 → 새 DLL로 재시작 → 기존 `Scripts/Editor/r7_root_ui_probe.py`의 Root1개/4레이어 임시 Push·Pop 및 기존 Host/사격·재장전·조준·장착/해제·Pawn교체·사망 회귀 검사다. 이 상속을 사용하는 다른 맵/Controller, 사용자 포커스·조작감, 복제는 별도 확인한다. 기존 Reticle 직접 표시·HUDClass를 아직 바꾸지 않으며 최종 ShooterHUD/슬롯/Experience 연결 전환은 후속 승인 범위다. 현재 상태는 **R7 Root 연결 코드 적용·사용자 빌드 대기**, R7 전체 완료가 아니다.
+
+### 2026-10-10 Root·4레이어 자동 검증 통과 — 다음 QuickBar UI 묶음 제안
+
+사용자 빌드는18:00:01 시작·36.64초 Succeeded·DLL18:00:37(4,383,744 bytes)로 확인했다. 새 DLL을 사용하는 별도 렌더링 PIE에서 정책이 Root1개를 자동 생성하고 Game/GameMenu/Menu/Modal4태그가 원본 stack에 각각 임시 빈 위젯을 Push·Pop했다. 연결 알림이나 Root생성을 검사에서 직접 대신하지 않았다. 기존 Host1개·Reticle/Ammo2개, 사격30→27/재장전30·조준·빈슬롯/재장착·UnPossess/Pawn교체·사망 UI 정리도 통과했고 같은 Root를 유지했다.
+
+근거는 `Saved/Logs/R7Root-AfterBuildB.log`18:03:57~18:04:03, `Saved/Diagnostics/R7RootUI/PIE-observations.json`, `Saved/Automation/R7RootUI_20261010_AfterBuildB/index.json`18:04:26 성공1/실패·보고서경고0이다. Error/Fatal/ensure/InvalidGameplayTag0. 첫 AfterBuildA는 Root생성 후 검사 경로 가정에서 실패하여 기존 `r7_root_ui_probe.py`의 조회만 원본 Blueprint 변수4개로 교정했다. 게임 C++/Config/에셋/맵/DLL/uproject/Git인덱스 등 보호15파일은 불변이며 빌드·패키징은 Codex가 실행하지 않았다. Cue비활성/무음의 단일 PIE이므로 FX·소리·멀티플레이 검증이 아니다. 사용자는 새 빌드의 실제 마우스 포커스/표시를 아직 확인하지 않았다고 답했다. **Root 연결 자동 검증은 통과, 사용자 확인/다른 맵·장치/전체R7은 미완료**로 구분한다.
+
+**다음 승인 제안 — 아직 새 코드·Config·에셋 변경 없음**
+
+- 원본 `W_QuickBar`, `W_QuickBarSlot`, `W_WeaponAmmoAndName`3개와 필수 입력·폰트·머티리얼 참조를 새 `/Game/LyraMigration/UI/R7/Equipment/` 범위에서 이식·재로드하고 실제 Inventory/QuickBar 데이터와 독립 연결해 검사한다. 원본 DCLyraTaggedWidget/QuickBar/Inventory 계층과 기존 도구를 재사용한다. 그래프/애니메이션/표시 값은 보존하고 타입·경로 대응만 허용한다. 기존 공용 에셋 덮어쓰기, 게임 C++/Config 추가 수정, 최종 HUDClass/슬롯 교체는 포함하지 않는다.
+- 10/8 조사 참조 메타데이터상 QuickBar의 재귀 content66개에는 ShooterCore3위젯/QuickSlot3액션과 공용 아트가 포함된다. 66은 준비 후보 manifest 상한이며 완료/전체 native 호환 증거가 아니다. 원본UI3개와 ShooterHUDLayout의 현재 해시는 당시 조사와 같다. 목적지 충돌·native API·공용 참조가 맞지 않으면 이식 불가로 단정하지 않고 미검증/별도 승인 범위를 제시한다.
+- 특히 원본 Reload UI는 `/Game/Input/Actions/IA_Weapon_Reload`를 Inject한다. 현재 통합 입력은 이미 이식된 `/Game/LyraMigration/BaseInput/Actions/IA_Weapon_Reload`를 사용한다. 이름만 같은 별도 Action을 만들어 성공으로 취급하지 않고 동일 Action 참조 연결을 검사한다. QuickSlot 키/클릭의 실제 입력 수신은 별도 미검증이다.
+- 전체 ShooterHUDLayout은 재귀 content484개에 메뉴→설정/프론트엔드 맵까지 연결되고 `/Script/GameSettings`가 포함된다. 대상에는 원본 GameSettings 플러그인이 없다. 따라서 전체 HUD를 지금 무조건 로드 가능하다고 보장하지 않는다. 전체 일괄 이식은 메뉴/설정/프론트엔드의 추가 범위 승인이 필요한 대안이며, 메뉴/터치/자막/11개 위젯·ShooterCore요구 삭제는 승인하지 않았다. QuickBar부터 실제 에셋 준비를 진행하되 전체 HUD/슬롯·Experience 연결은 미완료 필수 후속으로 유지한다.
+
+### 2026-10-10 승인된 QuickBar 에셋 묶음 — 66개 이식, 대상 native 부모 누락으로 검증 중단
+
+**적용 범위/결과:** 사용자 승인 후 원본 QuickBar3위젯과 의존성66개의 현재 metadata/10월8일 조사값을 대조했다. 새 `/Game/LyraMigration/UI/R7/Equipment/`에 엔진 Advanced Copy의 메모리 복사→원본5BP 상태/Graph.Nodes 타입·그래프/WidgetTree 비교→명시적 새 에셋만 저장했다. 대상3위젯은 `W_QuickBar`, `W_QuickBarSlot`, `W_WeaponAmmoAndName`, 공용 의존성은 이 루트의 Input/Actions와 LyraStarterGame 하위다.18:26:06 원본 prepare_A,18:27:38 별도 migrate_A가 complete/종료0이다. 대상66개와 준비 사본66개의 파일 해시가 같고 원본/동반 파일·기존 활성 경로 등344보호경로 불변이다. 새레시피 `r7_quickbar_setup.py`, `r7_quickbar_target.py`만 추가했으며 게임C++/Config/기존에셋/빌드·패키징은 변경/실행하지 않았다.
+
+**최소 경로 대응/실패 이력:** Advanced Copy에서 Reload Inject 노드의 Action literal1개가 남아 새 사본 InputAction으로 대응했다. 원본 노드/핀/연결 변경은 없다. 로딩 조회에 보인 미연결 BreakStruct2개는 컴파일 임시객체로, 엔진GC 전후 조회를 통일하고 실제 Graph.Nodes 기반 타입 보고서까지 비교했다. 초기 memory_A의 비노출 Python 설정 타입 오류, memory_B/C의 임시노드 차이, memory_D/E의 Reload literal 차이는 모두 저장 전 중단으로 남긴다. 해당 검사를 우회하거나 원본에 있는 기능을 제거하지 않았다.
+
+**대상 로드의 실제 차단:** `Saved/Logs/R7Quick-target_A.log`18:29:58에서 `Equipment/LyraStarterGame/UI/Foundation/Widgets/InputActionWidget`이 `/Script/LyraGame.LyraActionWidget` 부모를 찾지 못했다. 뒤따른 `WidgetBlueprintCompiler.cpp:815` ensure는 W_QuickBar의 InputActionWidget 변수/GUID 누락이다. Engine diagnostics guard가 저장을 막았고 대상66개 파일은 이식 직후 그대로다. 따라서 대상 부모/타입 변환·Compile·재로드·실제QuickBar PIE는 **미완료**, 신규 위젯은 활성 경로에 연결하지 않았다. 사용자는 부모 준비 전 이 BP를 열어 저장하지 않는다. 근거는 `Saved/Diagnostics/R7QuickBar/prepare_A.json`, `migrate_A.json`, `Saved/Logs/R7Quick-{prepare_A,migrate_A,target_A}.log`이다.
+
+**다음 변경안 — 아직 미적용/별도 승인 필요**
+
+- 원본 `Source/LyraGame/UI/Foundation/LyraActionWidget.h/.cpp`의 부모는 UCommonActionWidget이다. AssociatedInputAction으로 EnhancedInput의 할당 키를 조회하고 CommonInput에서 해당 장치의 아이콘을 얻으며, 조회할 수 없으면 Super::GetIcon으로 돌아간다. GetEnhancedInputSubsystem은 바인딩된 위젯의 LocalPlayer를 먼저 사용한다. 이2메서드/속성을 그대로 보존한다.
+- 대상 `Source/DreamCatcher/UI/Foundation/DCLyraActionWidget.h/.cpp`2개를 추가하고 클래스/include/module표기만 대응한다. CommonUI/EnhancedInput/Public 및 CommonInput/Private 모듈은 이미 있어 Build.cs 추가는 없다. 대안인 UCommonActionWidget 단순 재부모화는 EnhancedInput 재바인딩 키 아이콘 선택을 없애므로 원본 보존 목표와 달라 채택하지 않는다.
+- `DefaultEngine.ini`에 `/Script/LyraGame.LyraActionWidget`→`/Script/DreamCatcher.DCLyraActionWidget` ClassRedirect1개, LyraQuickBarSlotsChangedMessage/ActiveIndexChangedMessage→기존 DCLyra 대응 StructRedirect2개만 추가한다. 메시지 필드 계약은 기존 원본 이식 코드에 있다. 이번 로드 시도는 두 Struct만 프로세스 한정으로 대응했으며 프로젝트 Config는 건드리지 않았고 부모 실패 때문에 그 변환의 런타임 성공도 미검증이다.
+- 사용자 승인 후 코드/Config만 반영하고 사용자 C++빌드 후 에셋 준비를 재개한다. 부모 사전 검사를 먼저 수행하여 누락 상태에서 WidgetBlueprint를 또 로드하지 않는다. 새5BP 타입/참조 대응 저장, 기존 게임플레이와 동일한 Reload Action 참조 연결, override없는 새 프로세스 재로드 및 실제 Inventory·QuickBar 데이터 검사를 순서대로 진행한다. 기존 활성 HUD/Reticle/맵과 전체HUD/슬롯 교체는 여전히 범위 밖이다.
+
+이 단계에서 새 에셋 66개가 존재한다는 사실과 QuickBar가 게임에서 정상 동작한다는 판정은 구분한다. QuickSlot 입력/클릭·이미지·장치·최종HUD슬롯 및 전체R7은 미완료다. Root의 사용자 실제 포커스 확인 역시 아직이다.
+
+### 2026-10-10 원본 ActionWidget 코드·Redirect 적용 — 사용자 빌드 대기
+
+사용자가 위 부모 준비안을 승인하여 `Source/DreamCatcher/UI/Foundation/DCLyraActionWidget.h/.cpp`2개와 `DefaultEngine.ini`의 ClassRedirect1/StructRedirect2행을 적용했다. `LyraActionWidget`→`DCLyraActionWidget`, 두 QuickBar 변경 메시지→기존 DCLyra 메시지를 연결한다. 원본 AssociatedInputAction·GetIcon·GetEnhancedInputSubsystem을 보존하며 실제 할당 키/장치 아이콘 조회, 바인딩 소유 LocalPlayer 선택, 기본 아이콘 fallback의 동작을 축소하지 않는다.
+
+두 소스 파일은 DC 이름/include/generated 파일명·module export·공백 정규화 후 원본 전체와 일치했다. CommonUI/EnhancedInput/CommonInput 및 기존 메시지2개를 재사용하므로 Build.cs/메시지 구현 추가는 없다. 이번 Redirect3행 외 Config 본문, 이식한 QuickBar66개와 기존 Root/Host/맵/Controller/DLL/코드·레시피 등83보호파일은 불변이다. 게임 에셋 저장·UHT/C++ 빌드·패키징·Editor/PIE 실행은 하지 않았다.
+
+**현재 완료 범위는 코드·설정 적용과 정적 비교뿐이다.** 사용자 에디터 종료 → Development Editor/Win64 빌드 → 새 DLL에서 부모 사전 검사 → 기존 target 레시피로 새5BP 타입/현재 Reload InputAction 대응·저장 → override없는 재로드 → 실제 QuickBar UI 검증 순서로 재개한다. 이전 target_A의 부모 누락 실패를 이번 코드의 검증 성공으로 바꾸지 않는다. 빌드 전 신규 BP 저장을 피하며 QuickBar 런타임·슬롯 키/클릭·장치·전체HUD와 R7 전체는 미완료로 유지한다.
+
+### 2026-10-10 QuickBar 데이터·표시 복원 및 독립 PIE 통과 — 정식 입력/HUD 연결은 후속
+
+**빌드/변경 범위:** 사용자18:38:57 빌드가20.34초 Succeeded, DLL18:39:17(4,393,984 bytes)임을 확인했다. 기존 승인66개 이식 묶음의 새 사본만 원본 참조·값으로 복원했다. 게임C++/Config/기존공용에셋/맵/활성HUD 변경과 Codex 빌드·패키징은 없다. 기존 한정 `r7_quickbar_target.py`를 사용하고 `r7_quickbar_probe.py`는 기존Root/Host 검사를 재사용한다.
+
+**실제 보완:** BP5개 타입 및 현재 사용 중인 Reload InputAction 참조를 저장했다. 이어 원본과 대조해 사본의 브러시/폰트/SlotInputAction25필드 중17개 누락 참조, CompositeFont2개의 FontFace/언어권/스타일 구성, 머티리얼24개 부모·파라미터·함수/커브/텍스처 참조, CycleQuickbar 입력안내 DataTable 행을 복원했다. 함수 복사본의 입력GUID 차이로 연결이 해제될 때 원래 핀 이름/출력/입력 노드를 기록·복원하고 대조했다. 동일 이름의 기존공용 에셋을 무조건 재사용하거나 원본 수치/계산식을 바꾸지 않았다.
+
+**재로드 판정:**19:50:42 `Saved/Diagnostics/R7QuickBar/verify_F.json`과 `R7Quick-verify_F.log` complete/종료0.5BP 그래프·타입,66개 패키지 참조,25스타일,폰트2/머티리얼24/입력안내1의 원본 대응값 검사를 통과했다. 저장0이며674개 원본/대상/기존 경로 보호값은 뒤의 PIE 후에도 불변이다. 원본 데이터 조회 기록은 `source_brushes.json`, `source_font_input.json`, `original_reference_values.json`에 있고 변경기록은 `styles_A_style_changes.json`, `hard_references_C_hard_reference_changes.json`, `restore_data_A_restored_data.json`에 있다(모두 Saved/Diagnostics/R7QuickBar).
+
+**독립 PIE 판정:**19:52:37~19:52:51 실제 Item/QuickBar3슬롯에 연결해 탄창/예비탄30/60→27/60→30/57, 슬롯총탄약90→87을 확인했다. 빈슬롯 선택/재장착·메시지 갱신·UnPossess/Pawn교체와 기존Root/ReticleHost 수명회귀도 통과했다. 슬롯 전환은 실제컴포넌트API이며 물리키/클릭을 검증한 것은 아니다. QuickBar를 테스트스크립트가 임시 생성/제거했으므로 정식HUD 수명이나 사망 시 자동제거 완료로 확대하지 않는다. 사망 직후에도 장비가 남는 원본 데이터 구간은 그대로 관찰했다.
+
+`Saved/Automation/R7QuickBar_20261010_E/index.json`19:53:18은 **succeededWithWarnings1/failed0**, 경고는 신규 스크린샷 기준없음1건뿐이다. 로그 `Saved/Logs/R7Quick-PIE_E.log`의 Error/Fatal/ensure0. 보고서의 `imageCompare/56057345/L_DC_RifleIntegration/R7QuickBar_20261010_initial/Windows/D3D12_SM6/Incoming.png`에서 숫자·총기아이콘·선택강조·EMPTY2칸이 정상 렌더링됨을 확인했다. 검사용왼쪽배치/렌더링캡처이지 원본 픽셀동등성·정식HUD배치 승인이 아니다. 기준이미지는 생성/승인하지 않았다. 기존 방향광 경고와 Cue비활성/무음 조건은 별도로 남는다.
+
+**원본을 보존한 비활성 부분:** 무기 이름은 원본의 WeaponNameWidget가Collapsed이고 EventGraph.K2Node_CallFunction_6(SetText)의 실행핀이 미연결이다. 이름표시를 요구했던 검사 기대를 교정했으며 에셋 동작은 켜지 않았다. IsSelected도 빈슬롯에서는 원본 애니메이션캐시가 남을 수 있어 논리적 선택은 원본 IsThisTheActiveQuickbarSlot로 검증했다.
+
+**실패를 구분할 것:** target_B는 기존Redirect 표시명 차이, target_C/verify_A~C는 잔류참조, hard_references_A/B는 함수연결 손실, PIE_A는 None브러시, PIE_B/C는 이름표시 기대 오류였다. PIE_D는 데이터 통과에도 경고85건/깨진 글리프가 있어 화면완료가 아니었다. None이 된 참조는 레지스트리에 더 이상 나타나지 않을 수 있으므로 단순 package-closure 통과로 원본필드 보존을 주장하지 않는다. 최종 원본값 복원 뒤 verify_F와 PIE_E가 최신이다.
+
+**다음 단계/미검증:** 이 묶음은 QuickBar의 독립 이식·데이터·화면 검사 통과다. 게임에 영구 표시하거나 기존 HUD/Reticle 경로를 교체한 것은 아니다. 실제1~3/휠/클릭 입력, 최종HUD슬롯/Experience, 사용자포커스·장치·복제는 남는다. 원본 GA_QuickbarSlots/B_QuickBarComponent2개를 읽기전용으로 조사했다(`next_input_read.json`, `R7Quick-NextInputRead.log`). GA는 OnSpawn/Independent/InstancedPerActor/LocalPredicted로 `InputTag.Ability.Quickslot.CycleForward`, `SelectSlot`, `CycleBackward`3이벤트를 기다리고 EventMagnitude를 정수화하여 슬롯을 선택하거나 순환API를 호출한다. B_QuickBarComponent의 조회한 이벤트에는 실행 연결이 없다. 입력 이벤트를 발신하는 원본 경로는 아직 미검증이며 먼저 확인한 뒤 정확한 연결 변경안/승인을 제시한다. 새GA·입력·AbilitySet·Config 수정은 아직 하지 않았다. 전체HUD의 메뉴/설정 의존성을 삭제하지 않으며 전체R7은 미완료다.
+
+### 2026-10-10 QuickSlot 발신부 조사 완료 — 다음 입력 연결 묶음은 승인 전
+
+`Saved/Diagnostics/R7QuickBar/sender_read_B.json`(20:09:22)과 `input_target_read_B.json`(20:19:00), 대응 `R7Quick-SenderRead_B.log`/`R7Quick-InputTargetRead_B.log`를 근거로 한다. 두 읽기 전용 실행은 종료0, 명시적 저장/Compile0, Error/Fatal/ensure0, 원본40/대상48 파일·동반 경로 불변이다. 원본 중복Cue와 대상 애니메이션/이식 참조 경고는 남으며 PIE 검증은 아니다. 초기A는 조회 도우미의 경로 범위/API 오류로 중단됐고 B가 최신이다.
+
+| 입력 | 확인한 실제 원본 경로 |
+|---|---|
+| 숫자1/2/3 | IA_QuickSlot1/2/3의 Pressed trigger → B_Hero_ShooterMannequin의 Triggered → ChangeQuickbarSlot(0/1/2, SelectSlot) |
+| 휠위/아래 | IA_QuickSlot_CycleForward/Backward의 Triggered → 같은 함수에 Cycle 태그와 기본 NewSlotIndex0 전달 |
+| D-pad오른쪽/왼쪽 | 같은 CycleAction; 해당 IMC 행에 InputTriggerPressed |
+| 슬롯 클릭 | W_QuickBarSlot.On_SelectionBorder_MouseButtonDown_0 → InjectInputForAction(SlotInputAction, 값1) → 동일 Pawn 입력 경로 |
+
+`ChangeQuickbarSlot`은 Controller의 QuickBar.GetSlots()[NewSlotIndex]가 유효할 때 Pawn 자신에게 GameplayEvent를 보낸다. EventMagnitude에 인덱스를 넣고 OnSpawn GA_QuickbarSlots가 SelectSlot/순환API를 호출한다. 따라서 숫자키는 빈 슬롯을 선택하지 않으며, **휠 발신에도 슬롯0이 유효해야 하는 원본 조건**이 있다. 이후 native 순환은 빈 슬롯을 건너뛴다. 이전 독립 검사에서 component API로 빈 슬롯을 선택한 것을 원본 물리 입력 동작으로 해석하지 않는다. 원본 조건을 개선 명목으로 임의 변경하지 않는다.
+
+**확인된 대상 제약:** 통합 BP_DC_RiflePawn은 DreamCatcherCharacter를 부모로 사용하고 원본 Hero는 B_Hero_Default 계층에 있다. 원본 Hero 전체에는 초기 Inventory/권총/외형/아웃라인 등 다른 의존성도 있다. 지금 전체 Pawn을 교체하는 대신 **입력 이벤트5개와 ChangeQuickbarSlot 함수만 원본대로 이식**하는 안을 제안한다. 전체 원본 재사용이 불가능하다는 뜻은 아니며, 전체 교체는 해당 계층·초기화·애니메이션 회귀를 포함한 별도 범위다. 현재 Hero 매핑4개/입력Config/AbilitySet4개에는 QuickSlot이 없지만 Pawn의 구형 직접키 **1=EquipItem, 2=UnequipItem, 3=AddSpread**는 연결돼 있다. 중복 방지를 위해 이 통합 사본의 세 바인딩만 해제하고 원본 테스트BP와 키4 출력은 보존한다.
+
+**정확한 다음 제안(미적용):**
+
+- `/Game/LyraMigration/UI/R7/Equipment/Abilities/GA_QuickbarSlots`: 원본 GA 신규 사본. 기존 native Redirect 사용, 원본 OnSpawn/이벤트 수신/선택 로직 유지.
+- 같은 Equipment/Input/Actions 아래 CycleForward/Backward Action2개 신규 이식. 기존 IA_QuickSlot1/2/3 재사용. 원본 IMC_ShooterGame 중 관련7행만 신규 `/Game/DreamCatcher/GAS/Test/R5/Integration/IMC_DC_QuickSlots`로 분리하고 BP_DC_RiflePawn의 Hero 매핑에 추가한다. 다른 발사/이동/ADS 매핑을 통째로 덮어쓰지 않는다.
+- 신규 `/Game/DreamCatcher/GAS/Test/R5/Integration/AS_DC_QuickSlots`를 DA_DC_RiflePawn.AbilitySets에 추가한다. 기존 공용 AbilitySet을 수정하거나 AbilityInputActions만 추가하여 GameplayEvent를 대신했다고 처리하지 않는다.
+- BP_DC_RiflePawn에 원본 발신 노드/함수를 옮기고 해당 사본의 기존1~3 디버그 바인딩을 해제한다. `Config/DefaultGameplayTags.ini`에 원본 `InputTag.Ability.Quickslot.{SelectSlot,CycleForward,CycleBackward}`3개만 등록한다.
+- 부분 그래프의 무손실 자동 이식은 아직 미검증이다. 기존 Editor 기능으로 새 사본에서 시험하고 노드/핀/기본값을 대조한다. 실패 시 구체적 제약과 원본 노드 수동 복사 대안을 먼저 알리며, 임의 native 재작성이나 범용 도구 확장을 하지 않는다. 기존 QuickBar 클릭 그래프와 게임 C++는 현재 제안상 변경하지 않는다.
+
+승인 후 별도 프로세스 재로드와 원본 비교 → 실제 Action/GameplayEvent/GA 경유 전환 → 빈 슬롯 거부·두 Item 간 전환·반복·Pawn 교체·발사/재장전 회귀를 검사한다. 검사용 두 번째 Item은 테스트 월드의 임시 데이터로만 사용하고 새 무기 지급 정책으로 저장하지 않는다. 클릭의 원본 함수 실행과 실제 OS 마우스 포커스 확인은 구분한다. **현재는 조사/제안 완료이지 입력 구현 완료가 아니다.** 최종HUD/Experience 배치·수명, 사용자 포커스, 게임패드/터치, 복제는 계속 미검증이며 R7 진행 중이다. 이번에는 코드/Config/에셋 수정·빌드·패키징을 하지 않았다.
+
+### 2026-10-10 QuickSlot 승인 후 메모리 이전 제약 확인 — 입력 적용 미완료
+
+사용자가 위 입력 연결 묶음을 승인했다. 기존 엔진 기능으로 원본 Hero의 새 메모리 복사본에서 입력 이벤트5개와 ChangeQuickbarSlot 호출5개만 남긴 뒤, 함수/이벤트 그래프를 새 Pawn으로 옮기는 시도를 했다. `Saved/Logs/R7Slot-memory_A.log`20:28:14에서 `Blueprint.FunctionGraphs`가 **protected and cannot be read**라며 접근을 거부해 종료-1로 중단됐다. 그래프 이전 후 Compile/원본 비교/저장에 도달하지 않았으므로 무손실 이식 통과가 아니다.
+
+원본 근거는 엔진 `EdGraphUtilities.h`의 CloneGraph/ExportNodesToText/ImportNodesFromText 일반 C++ static API와 위 Python 실행 오류다. Python의 직접 이동 경로가 막혔다는 뜻이지 원본 Blueprint 이식이 불가능하다는 뜻이 아니다. 속성 보호 해제나 바이너리 변경으로 우회하지 않았다. 원본/대상88개 파일·동반 경로는 종료 후 기존 조회 해시와 일치했고 QuickSlot_memory_A 에셋 폴더도 양쪽에 생성되지 않았다. 게임 C++/Config/에셋/활성 경로 변경·빌드·패키징은 없으며, 실패한 시도는 실행차단한 `Saved/Diagnostics/R7QuickBar/quickslot_transfer_memory_attempt.py`로만 보존했다.
+
+**다음 방식 선택을 요청한다.** 원본 함수1개와 입력10노드를 Editor에서 수동 복사하면 원본 그래프를 그대로 보존하고 신규 C++ 빌드를 피할 수 있다. 나머지 GA/Action/IMC/AbilitySet/태그 설정은 승인된 자동화로 처리한다. 자동화를 유지하려면 이번 QuickSlot의 정확한 원본/목적지에만 한정한 최소 Editor C++ 연결함수를 별도 승인 후 추가하여 기존 엔진 복사 API를 호출할 수 있다. 이 경우 사용자 빌드가 필요하고, 도구가 생겨도 재로드/핀/동작 검증 전에는 성공으로 취급하지 않는다. 두 대안 모두 원본 숫자/휠/클릭 조건을 바꾸지 않는 것이 목표이며 일반 C++ 게임 로직으로 대체하는 안이 아니다. 범용 도구 확장이나 원본 규칙 변경은 승인 범위에 없다. **방식 결정 전 기존 테스트 Pawn/키 바인딩을 변경하지 않는다.** 전체 R7은 계속 진행 중이다.
+
+### 2026-10-10 QuickSlot 최소 Editor 연결함수 승인·작성 — 빌드 및 실행 대기
+
+사용자가 앞선 선택지2(최소 C++ 연결함수)를 승인했다. `Plugins/DCRifleMigrationTools/Source/DCRifleMigrationTools/Public/DCRifleMigrationLibrary.h`와 신규 `Private/DCQuickSlotGraphTransfer.cpp`에 `CopyQuickSlotInputGraphs`를 추가했다. 기존 모듈 의존성만 사용하며 게임 런타임 코드는 변경하지 않는다.
+
+이 함수는 기존 isolated Commandlet 검사와 `-DCR7QuickSlotTransfer`를 요구하고, 정확히 다음 복사 경로만 허용한다.
+
+- Lyra: `/ShooterCore/Game/B_Hero_ShooterMannequin` → 신규 `/Game/LyraMigration/UI/R7/Equipment/Diagnostics/BP_QuickSlotInputSource`
+- DreamCatcher: 위 이식된 준비용 Pawn → `/Game/DreamCatcher/GAS/Test/R5/Integration/BP_DC_RiflePawn` 또는 신규 `/Game/LyraMigration/UI/R7/Equipment/Diagnostics/BP_DC_RiflePawn_QuickSlotPreview`
+
+원본 함수12노드와 입력 이벤트/호출10노드를 엔진 CloneGraph로 복제한다. 입력 부분 추출은 저장하지 않은 임시 그래프에서만 하며, 원본 Hero의 그래프/멤버/부모/저장 상태를 변경하지 않는다. 새 그래프 내부의 자기 BP/생성클래스/스켈레톤클래스 참조만 목적지로 대응한다. 원본 함수의 인덱스 유효성·슬롯0 조건·GameplayEvent/트리거/태그는 native 게임 코드로 대체하거나 수정하지 않는다. 기존 그래프 덮어쓰기/중복 QuickSlot/dirty 기존 대상/준비용 저장본 덮어쓰기/범위 밖 링크는 거부한다. 에셋 저장과 명시적 Compile은 호출자가 원본 비교를 포함해 별도로 수행한다. 실패 프로세스는 저장 없이 폐기하고, 성공 반환도 메모리 복사만 의미한다.
+
+신규 `Scripts/Editor/r7_quickslot_transfer_probe.py`는 사용자 빌드 뒤 원본 Lyra의 별도 Commandlet에서 실제 원본 복사→Blueprint Compile→노드/핀/타입/기본값 대조→중복 호출 거부→보호 파일 불변을 검사하도록 준비했다. **에셋 저장은 없는 검증**이며 실제 저장/재로드나 물리 입력/PIE 통과를 대신하지 않는다. 이미 있는 원본 조회/스냅샷 도우미를 재사용하며 범용 검사 프레임워크는 추가하지 않았다.
+
+작성 시 Python AST·저장/마이그레이션/삭제 호출 없음·기존 원본 JSON의12+10노드 및 연결 폐쇄성·diff 공백 검사만 통과했다. **UHT/C++ 컴파일과 새 연결함수 실행은 아직 미검증**이다. 이번에는 Codex 빌드/패키징/Editor 실행·Config·에셋·키 바인딩 변경이 없다. 다음은 사용자 Development Editor/Win64 빌드 확인 후 메모리 검증 및 승인된 원본 입력 묶음의 후속 적용이다. 새 GA/Action/IMC/AbilitySet/태그와 기존1~3 해제는 아직 적용 전이며 전체 R7은 미완료다.
+
+### 2026-10-10 QuickSlot 빌드 확인·메모리 검사 실패 및 한정 교정
+
+사용자 UBT 빌드는 **20:38:34 시작,16.22초 Succeeded**이며 DCQuickSlotGraphTransfer.cpp/UHT/링크 후 플러그인DLL이20:38:50(636,928 bytes)에 갱신됐다. Codex는 빌드하지 않았다. 원본 Lyra의 별도 Commandlet로 `r7_quickslot_transfer_probe.py`, run=bridge_A를 실행했으나 `R7Slot-bridge_A.log`20:39:50에서 **NewObject<UObject>가 abstract 클래스 생성 ensure**를 내고, 이어 CloneGraph에서 access violation/종료3으로 중단됐다. API 로드/빌드 성공과 그래프 복사 성공은 별개다.
+
+Codex의 연결함수 내부 결함이다. 엔진 K2Node_CallFunction.cpp의 PostDuplicate→FixupSelfMemberContext(2084/1911 부근)도 복사 노드의 정상 Blueprint/생성클래스 문맥에 의존한다. 임시 소유자를 엔진 CreateBlueprint로 초기화한 transient 자식BP로 바꾸고, 그 BP가 소유한 기본 EventGraph만 제거한 뒤 원본 그래프를 복사하도록 교정했다. PostDuplicate가 스켈레톤에 아직 없는 함수의 자기 참조를 재해석할 수 있으므로, **새로 복사된 호출 노드의 FunctionReference만 원본 그대로 복원**하고 기존 자기 클래스 참조 대응을 적용한다. 게임 동작을 native 로직으로 대체하거나 원본 조건을 수정한 것은 아니다. C++ 연결함수/주석과 검증 스크립트의 native 호출 전 체크포인트 기록만 보완했다.
+
+종료 후 원본40/대상48 파일·동반 경로88개 불변과 준비용BP 미생성을 확인했다. 원본·대상 에셋 저장, 활성 플레이어/키/Config 변경, Codex 빌드·패키징은 없다. Fatal로 Python finally가 실행되지 않아 이번 실패에는 성공 receipt가 없으며 로그와 별도 사후 해시 확인을 근거로 남긴다. **교정 코드의 재빌드/실행은 아직 미검증**이다. 사용자 재빌드 후 새 프로세스로 동일 원본 메모리 복사/Compile/비교를 다시 확인해야 하며, 현재 QuickSlot 연결 또는 R7 완료로 표시하지 않는다.
+
+### 2026-10-10 교정본 원본 그래프 검증 통과 / 실제 Action 바인딩 참조 보완
+
+사용자 재빌드는20:44:46 시작·14.94초 Succeeded, Editor 플러그인DLL20:45:00(639,488 bytes)로 확인했다. **20:53:12 `Saved/Logs/R7Slot-bridge_G.log`와 `Saved/Diagnostics/R7QuickBar/slot_bridge_G.json`은 complete/종료0**이다. 함수12노드+입력 이벤트/호출10노드 복사→Blueprint Compile→원본 노드/핀/타입/기본값 비교, 중복 적용 거부/대상불변, 원본 등록 그래프/보호파일 불변, 에셋 저장0/미생성을 통과했다. 기존 원본 중복Cue 경고 등과 구분하며 Error/ensure/Fatal0이다. 이전 native 충돌 교정은 이 범위에서 검증됐지만 실제 입력/PIE/저장·재로드 성공은 아니다.
+
+bridge_B는 Python bool+out을 tuple로 해석한 스크립트 오류였다(실제 성공str/실패None). C/D는 CloneGraph의 자동 이름 EdGraph_2/3로 인해 함수 이름을 찾지 못한 문제였으며, 기존 공개 RenameGraph 경로로 원본 이름/함수 등록을 복원했다. E/F의 원본 비교 차이는 OnTeamOrCosmeticsChanged의 연결 없는 K2Node_MakeStruct_0(장치 효과 인자) 임시객체였다. 실제 Graph.Nodes에 없는 객체임을 BlueprintGraphEditor의 노드/주석 목록으로 확인하고 등록된 노드들만 비교하여 G에서 통과했다. 실제 노드/연결 삭제를 허용하거나 원본 수치를 바꾼 것이 아니다.
+
+다음으로 승인한 새 에셋4개(준비용 Pawn/GA/순환Action2개)를 `Scripts/Editor/r7_quickslot_assets.py`로 준비했다. **20:55:51 `R7Slot-prepare_A.log`는 K2Node_EnhancedInputAction.InputAction의 protected Python 접근에서 중단**, `slot_assets_prepare_A.json` complete=false/asset_saves=0/protected_unchanged=true다. 입력 노드의 출력핀 DefaultObject와 실제 InputAction 멤버는 별개이므로 핀 문자열만 수정하는 방식으로 통과시키지 않았다. 기존 에셋/Config/키는 변경하지 않았다.
+
+이 실제 제약을 해소하도록 기존 QuickSlot 한정 C++에 `RetargetQuickSlotInputActions`를 추가하고 준비 스크립트를 연결했다. 정확한 `/Game/LyraMigration/UI/R7/Equipment/Diagnostics/BP_QuickSlotInputSource`의 QuickSlotInput10노드 중 EnhancedInputAction_1~5만 검사한다. 원본 Slot1/2/3/CycleBackward/CycleForward와 승인한 이식 경로의5쌍, 같은 InputAction 클래스/ValueType, 이미 로드된 대상만 허용한다. 엔진 참조 치환을 이 새 그래프 객체 범위에만 적용하고 바인딩 멤버와 출력핀을 모두 확인한다. 에셋 로드/저장/Compile·새 게임 입력 로직은 추가하지 않는다. prepare/verify/migrate는4개 고정 패키지에 한정하고 성공한 prepare receipt를 CLI baseline으로 명시하게 했다.
+
+**참조 보완 C++의 빌드/실행은 미검증**이다. Python AST2개와 정적검사만 수행했고 Codex 빌드·패키징은 없다. 사용자 빌드 후 fresh prepare_B로 재개하고, 성공한 결과만 baseline으로 사용해 별도 프로세스 verify/migrate를 진행한다. 이후 대상 Redirect 적용·능력/매핑/태그 및 통합 Pawn 연결·1~3 디버그 바인딩 해제·PIE를 완료해야 한다. 현재는 원본 그래프 메모리 검증 하위 단계만 통과했고, 전체 QuickSlot 입력과 R7은 미완료다.
+
+### 2026-10-10 QuickSlot 입력 연결·재로드·실제 PIE 통과 — 다음은 정식 HUD 슬롯
+
+사용자 빌드는21:03:12 시작·15.78초 Succeeded, 플러그인DLL21:03:27(649,216 bytes)다. 이번에는 새 C++ 변경이나 Codex 빌드·패키징이 없다. 이미 승인한 한정 연결함수와 일회성 에셋 자동화를 사용했다.
+
+**적용한 범위**
+
+- 원본 새 준비용4개: `Equipment/Abilities/GA_QuickbarSlots`, `Equipment/Input/Actions/IA_QuickSlot_CycleForward`, `IA_QuickSlot_CycleBackward`, `Equipment/Diagnostics/BP_QuickSlotInputSource`(앞의 공통 루트 `/Game/LyraMigration/UI/R7/`). prepare_B21:04에 원본 그래프/실제 바인딩/핀을 비교 후 저장, migrate_C21:08에 새 프로세스 재로드/Compile/의존성 검사 후 정확한4개를 이식했다. 기존 IA_QuickSlot1/2/3과 원본 Hero/GA/매핑은 덮어쓰지 않았다.
+- 대상의 새 Blueprint2개를 기존 Redirect로 로드·Compile하고 원본 구조/정책을 확인하여 target_prepare_C21:16에 저장했다. 능력의 AssetTag `Ability.Type.Passive.ChangeQuickbarSlot` 누락을 원본 Config와 로드 경고로 확인하고 **사용자에게 추가 승인을 받은 뒤 등록**했다. 기존 승인 입력태그3개와 합쳐 Config/DefaultGameplayTags.ini에 원본 태그4개가 추가됐다.
+- 통합 BP_DC_RiflePawn에 원본 ChangeQuickbarSlot12노드와 입력 이벤트/호출10노드를 연결하고 구형1/2/3 디버그 입력만 해제했다. 4번 출력·기존 나머지 그래프/공용 캐릭터·원본 테스트BP·맵·Controller/HUD는 보존했다.
+- 신규 IMC_DC_QuickSlots에는 원본 숫자1/2/3·휠위/아래·D-pad좌/우7행과 Pressed trigger2개의 클래스/threshold0.5/tick=false를 보존했다. Hero의 기존4개 매핑을 유지하고 priority1/register=true로 추가했다. 신규 AS_DC_QuickSlots에는 원본 GA 부여값 **AbilityLevel1, InputTag.Ability.Quickslot**을 그대로 넣고 DA_DC_RiflePawn의 기존4 AbilitySet 뒤에 추가했다. 원본 슬롯0 유효성 조건·빈슬롯 거부/건너뛰기·GameplayEvent 경로는 바꾸지 않았다.
+
+**근거/검증**
+
+- `Saved/Diagnostics/R7QuickBar/slot_assets_prepare_B.json`, `slot_assets_migrate_C.json`, `slot_assets_verify_D.json`: 원본·이식 준비/재로드/원본 부여값.
+- `slot_target_preview_D.json`21:25: 메모리 사본 연결/Compile/비교·저장0. 사본에만 생기는 기존 Heat/Spread 디버그 문구의 현지화 namespace/key 차이는 표시문구가 동일함을 확인했다. 실제 적용은 원래 Pawn에서 하므로 이 예외를 실제 Pawn 변경에 허용하지 않았다.
+- `slot_target_apply_A.json`21:28: 통합 Pawn/PawnData와 신규 IMC/AbilitySet4개 저장. `slot_target_verify_A.json`21:31: 별도 재로드/Compile/원본 그래프/7개 매핑행·트리거/부여항목/기존 매핑 보존·저장0.
+- **`Saved/Automation/R7QuickSlotInput_20261010_B/index.json`21:37:58 성공1/실패0/경고0**, `Saved/Logs/R7Slot-PIE_B.log` Error/Fatal/ensure0. `slot_pie_PIE_B.json` complete=true, 실제 Pawn2개에서7단계씩14관찰을 통과했다. Action 주입→실제 BP 발신→원본GA→QuickBar/Equipment로 두 실아이템 선택, 빈슬롯 거부, 정/역순환, 원본 클릭 핸들러, 반복을 확인했다. 기존 발사30→27/재장전30, 조준, Root1개/4레이어, ReticleHost 교체·UnPossess·Pawn 재생성·사망 정리 회귀도 통과했다. 이후 보호86파일·동반 경로가 그대로다.
+
+실패 보고서도 남겼다. migrate_B는 CVar 설정 시점 문제로 복사 전에 중단됐고 C는 기존 성공 방식의 프로세스 한정 ini override를 사용했다. target_prepare_A/B의 누락태그/타입표시명과 preview_A~C의 입력선 제거 기대값/미리보기 현지화ID 차이를 각각 구분했다. PIE_A의 순환 실패는 검사에서 wheel Action을 여러 프레임 유지한 탓이었다. 원본 wheel Action에는 Pressed trigger가 없으므로 한 프레임 펄스로 주입한 B에서 통과했다. 원본 게임 규칙을 고쳐 검사를 통과시킨 것이 아니다.
+
+**완료 범위와 다음 단계:** 승인된 QuickSlot 에셋·입력 연결 및 위 재로드/PIE 범위는 완료다. 두 번째 라이플과 QuickBar 표시는 검사 스크립트가 PIE에서만 만들고 제거했으며 지급 정책·정식HUD로 저장하지 않았다. 현재 기본 라이플은1개라2/3빈슬롯 선택과 순환이 화면상 변화를 만들지 않는 것이 정상이다. 매핑 데이터와 Action 주입을 확인했지만 물리키/실제 OS 클릭·포커스, 실기기 게임패드/터치, 복제/패키징은 미검증이다. 클릭 함수 직접 호출과 실제 클릭 경험을 구분한다. Cue 비활성/무음 검사라 오디오·연출 재검증도 아니다.
+
+다음은 원본 `/ShooterCore/Experiences/LAS_ShooterGame_StandardHUD`의 `W_ShooterHUDLayout→UI.Layer.Game`, `QuickBar→HUD.Slot.Equipment` 정식 표시/수명 경로다. 이전 원본 감사에는 Layout1·Widget11개, GameAndMenu/CapturePermanently·게임메뉴/장치연결 위젯과 ShooterCore 의존성이 확인돼 있다. 정확한 이식/활성 연결 범위·제약·대안을 먼저 제시하고 승인받는다. 나머지HUD/메뉴/장치 기능을 삭제하거나 임시 QuickBar 표시를 전체 원본HUD 완료로 보고하지 않는다. 기존 Controller Reticle 표시 경로와 전체 Experience/최종HUD 교체는 이번에 변경하지 않았으며 **전체 R7은 계속 진행 중**이다.
+
+### 2026-10-10 정식 HUD 경로 재점검 — R7/R13 연계와 순서 제안 이력(아래 후속 승인)
+
+새 게임 변경 없이 기존 원본 감사·현재 소스·실에셋 CDO를 확인했다. `Saved/Diagnostics/R7QuickBar/hud_route_current.json`/`Saved/Logs/R7HUD-RouteRead.log`22:08:42은 읽기 전용 종료0/에셋 저장0/명시적Compile0이며 보호 파일 불변이다. 실제 BP_DC_RifleGameMode.HUDClass는 `/Script/Engine.HUD`, GameStateClass는 DCLyraGameState이고, Controller는 직접 WeaponReticleHostClass를 표시하며 HUDWidgetClass=None이다. GameMode는 아직 Experience 선택 대신 직접 PawnData 공급 경로다.
+
+DCGameFeatureAction_AddWidgets/WorldActionBase, DCLyraHUD/HUDLayout, UIExtension 기반은 이미 있다. AddWidgets는 DCLyraHUD receiver/ready 알림을 구독하고 Layout을 UI.Layer에 넣은 뒤 LocalPlayer context의 위젯 extension을 등록/회수한다. 따라서 단순 QuickBar AddToPlayerScreen과 정식 HUD/Action 수명은 다르며 이 기반을 다시 만들 필요는 없다.
+
+원본 StandardHUD와 ShooterHUDLayout의 파일 해시는 기존 UIAudit_20261008_A3/source.json과 같았다. 그 감사의 Layout1/Widget11개, QuickBar→HUD.Slot.Equipment, Reticle→HUD.Slot.Reticle, GameAndMenu/CapturePermanently, EscapeMenuClass/ControllerDisconnectedScreen, GameFeaturesToEnable=[ShooterCore] 설정을 재확인했다. 원본 감사의 dependency map으로 계산한 참조 범위는 Layout484/StandardHUD541개(Engine/Script 제외)로, 기존 파일과 중복 경로를 포함한다. 실제 신규 이식 수나 모든 참조의 현시점 검증 완료를 의미하지 않는다.
+
+**원본 보존을 위한 제약:** 원본 UI/LyraSettingScreen.h/.cpp는 GameSettings 플러그인의 GameSettingScreen과 Settings/LyraGameSettingRegistry를 사용한다. 대상에서 해당 플러그인/SettingScreen/Registry 대응을 찾지 못했다. Registry는 원본 Replay/DLC 분기도 참조한다. SettingsLocal/Shared 등 준비된 기반을 재작성하지 않되, Escape/설정까지 원본대로 작동시키려면 이 R13 성격의 의존성과 Experience/Feature 선택 경로를 함께 다뤄야 한다. 원본 ActionSet이 요구하는 ShooterCore도 대상에서 준비되지 않았고 ExperienceManagerComponent에는 이름을 찾지 못하면 ensure를 내는 코드 경로가 있다. 이번에 전체 ActionSet을 활성화한 것은 아니므로 실제 전체 로드/활성화/메뉴는 미검증이다. 원본 이식 불가라고 단정하거나 참조/flag를 삭제하지 않는다.
+
+**승인 전 순서 제안:** 사용자의 실제 전투 작업 우선 정책을 고려하면, R7의 완료된 Reticle/QuickSlot 연결은 유지하고 남은 정식 HUD/메뉴/Experience를 R13 통합 묶음으로 명시적으로 남긴 뒤 R8의 원본 애니메이션 상태 점검/변경안을 먼저 진행하는 안을 권고한다. 다른 선택은 지금 R7+필수 R13 의존성의 전체 연결을 선행하는 것이다. 임시 표시를 원본 HUD 완료로 취급하거나 메뉴/터치/장치/나머지위젯을 삭제하는 안은 제안하지 않는다. 어느 방향이든 전체 목표와10월16일 완료 범위는 그대로다. **사용자가 순서를 선택하기 전에는 R8로 전환하거나 새 코드/Config/에셋을 수정하지 않는다.** 현재 판정은 R7 진행 중이며, 범위를 선택한 후 정확한 변경 묶음을 제시한다.
+
+### 2026-10-10 후속 승인 — R7 잔여 HUD는 R13 통합 / R8 변경안 먼저
+
+사용자가 1번안을 선택했다. **R7의 남은 정식 HUD 작업을 미완료로 보존해 R13과 함께 처리하고 R8의 변경안부터 제시**한다. 위의 순서 선택 대기는 해소됐지만 새 게임 C++/Config/에셋 변경의 포괄 승인은 아니다. 이번에는 아래 읽기 전용 확인과 문서 갱신만 했으며 에디터 실행·에셋 저장·C++ 빌드·패키징은 하지 않았다.
+
+**R7/R13 인계:** 완료된 Reticle/탄약/명중 표시 및 Root/QuickSlot 연결을 재작성하지 않는다. StandardHUD/Layout, QuickBar→HUD.Slot.Equipment, 남은 원본 위젯·Escape/설정·장치 화면, Experience/GameFeature/AddWidgets의 활성화·회수와 기존 Controller 직접 표시 경로의 최종 교체는 R13 통합 작업으로 남긴다. R7 전체 완료가 아니며 삭제/축소/자동 제외하지 않는다. 실제 입력·포커스/게임패드·터치/복제/패키징의 미검증과 10월16일 전체 목표도 유지한다.
+
+**R8 현재 확인:** 원본 `Source/LyraGame/Animation/LyraAnimInstance.h/.cpp`, `Character/LyraCharacterMovementComponent.h/.cpp`와 대상 `Source/DreamCatcher/Animation/DCAnimInstance.h/.cpp`, `Character/DCCharacterMovementComponent.h/.cpp`를 대조했다. 이름/include/export/CVar/stat/Category 대응 후 4개 모두 일치하므로 신규 기반 이식은 제안하지 않는다. 다음 기존 에셋을 우선 재사용한다.
+
+- `/Game/Characters/Heroes/Mannequin/Animations/ABP_Mannequin_Base`
+- 같은 Animations 아래 `LinkedLayers/ALI_ItemAnimLayers`, `LinkedLayers/ABP_ItemAnimLayersBase`, `Locomotion/Rifle/ABP_RifleAnimLayers`, `Locomotion/Rifle/ABP_RifleAnimLayers_Feminine`, `Locomotion/Unarmed/ABP_UnarmedAnimLayers`
+- 같은 Animations 아래 `Actions/MM_Rifle_Reload`, `Actions/MM_Rifle_Reload_Additive` 및 `/Game/Characters/Heroes/Abilities/AN_Reload`
+- `/Game/LyraMigration/Rifle/Diagnostics/Explicit/RifleCore_Prepared_0247/`의 `GA_Weapon_ReloadMagazine`, `GA_Weapon_Reload_Rifle`, `GA_Weapon_AutoReload`와 기존 WeaponInstance 장착/해제 연결
+
+**검증 한계와 대안:** 위 애니메이션 관련9개는 현재 파일이 존재하나 원본과 바이너리 해시는 다르다. 이식 후 저장 차이일 수도 있어 손상이나 동작 차이로 단정하지 않고 현재 그래프/데이터 동일성을 미검증으로 둔다. 원본 그래프·CDO·참조·Montage/Notify 설정을 비교한 후 재사용/필요 참조 교정 여부를 정한다. 일괄 재복사/Retarget은 기존 수정과 공용 참조를 덮을 수 있으므로 제안하지 않는다. 원본 LyraCharacter native 기본값과 대상 캐릭터의 이동/캡슐 값 차이도 확인했지만 실제 Pawn BP override와 애니메이션 영향을 아직 비교하지 않았으므로 공용 C++ 수치를 임의 교체하지 않는다. 기존 기본 발사/재장전 PIE 및 사용자 웅크림/조준 확인을 전체 R8 Layer/IK/취소 검증으로 승격하지 않는다.
+
+**첫 작업 묶음 제안(아직 실행 전):**
+
+1. 위 기존 에셋과 `/Game/DreamCatcher/GAS/Test/R5/Integration/BP_DC_RiflePawn`의 AnimClass/mesh/Movement/장비 Layer 연결을 원본과 읽기 전용 대조한다. Aim Offset·IK/ControlRig·슬롯/소켓·Notify는 실제 참조를 따라 필요한 범위만 확인한다.
+2. 기존 단일 PIE와 입력/장비 검사 절차를 재사용하여 이동/정지/방향 전환/점프·낙하/웅크림/조준·발사, 장착·해제·교체 시 실제 Layer와 태그/지면 상태를 확인한다. 새 범용 프레임워크는 만들지 않는다.
+3. 수동 R·탄창 소진 자동 재장전·좌클릭 유지 후 해제→R, 재장전 도중 취소·사망·무기 교체를 관찰한다. 원본 탄약 갱신 시점과 취소 분기를 기준으로 이중 증감/잔류 태그/이전 무기 Montage·Layer 잔류를 확인한다. 사격으로 재장전을 취소하는 원본 규칙을 임의 변경하지 않는다.
+4. 사용자에게 이동/공중/조준·발사·재장전 화면과 전환의 짧은 확인을 요청한다. 자동 상태 관찰만으로 발 미끄러짐·IK·전환 품질을 완료 처리하지 않는다.
+
+현재 확정된 새 게임 C++/Config 수정은 없다. 실불일치가 나오면 **원본 근거·구체적 제약·원본 보존 대안·정확한 파일/속성·동작 차이**를 제시하고 해당 교정만 승인받는다. 원본 재장전 규칙 변경, 공용 캐릭터/디자이너 맵 변경, 대량 재이식, R7/R13 최종HUD 활성화는 이 첫 묶음의 권한에 포함하지 않는다. 현 상태는 **R8 변경안 제시/실행 승인 대기**다.
+
+### 2026-10-10 R8 첫 묶음 실행 — 기존 에셋 비교·단일 PIE 관찰 / 게임 수정 없음
+
+사용자가 기존 에셋 비교와 실제 동작 검증을 승인했고, 수정이 필요하면 먼저 변경안을 보도록 했다. 한정 진단 스크립트는 `Saved/Diagnostics/R8/`에만 작성했고 기존 graph/export/PIE helper를 재사용했다. 새 범용 도구, 게임 C++/Config/에셋 저장, C++ 빌드·패키징은 없다. R7 잔여 HUD의 R13 통합/미완료 상태는 유지한다.
+
+**에셋 근거:** `source_C/report.json`, `target_C/report.json` 및 `R8-SourceRead_C.log`22:35:35/`R8-TargetRead_C.log`22:35:39 KST에 각15개 조회 종료0/저장0/ensure0을 기록했다. 기본 AnimBP/Item Layer 인터페이스·기반/Rifle·Feminine·Unarmed Layer는 기존 reader의 노드·핀 기록과 CDO가 같다. 비-K2 AnimGraph 노드 속성은 이 reader가 전부 읽지 않으며 전체 T3D에는 PoseWatch/객체 순서/컴파일 산출물 차이가 있다. CDO 및 graph 기록 일치를 전체 포즈/바이너리 동일성으로 확대하지 않는다. 원본 WeaponInstance/재장전 GA에는 기존 승인한 native 타입/표시명/Hero 대응과 현지화ID 차이가 있고 탄약/재장전 규칙을 새로 변경한 것은 아니다.
+
+실제로 GA_Weapon_Reload_Rifle이 지정하는 `/Game/Weapons/Rifle/Animations/AM_MM_Rifle_Reload`를 추적해 `montage_source/report.json`, `montage_target/report.json` **22:41:08/20** 조회 성공을 확인했다. **길이2.2초·Montage T3D·Notify5개 동일**이며 reflected 차이는 `/Engine/Transient.AnimDataController_N` 프로세스별 인스턴스 이름뿐이다. Additive sequence 주요 속성/길이2.2초/66프레임·67키는 같지만 editor 데이터 모델 표현 차이가 있어 전체 raw pose 비교는 미검증이다. FootPlant ControlRig 로드는 성공했으나 export 차이의 전체 의미는 미검증이고, 기본 AnimBP의 EnableControlRig/UseFootPlacement는 원본/대상 모두 false다. 이를 원본에서 기본 활성이라고 추정하여 켜지 않는다.
+
+**실제 동작 근거:** `pie_B.json`은 **22:40:55** 42구간/396관찰 완료, `Saved/Automation/R8Observations_B/index.json`은 **22:41:40 성공1/실패·보고서경고0**, `R8-PIE_B.log` Error/Fatal/ensure0이다. 관찰 후 `evaluation.json`의 한정 조건20개가 통과했다. 이는 구현 진척20건이 아니라 기존 동작/데이터/보호 조건 검사다.
+
+- 이동/정지/좌우전환 시 속도·가속 상태, 점프 상승/낙하/착지 시 AnimBP 상태 및 GroundDistance, 웅크림/해제, ADS·사격·재장전 태그 전달을 관찰했다.
+- 수동 재장전: 탄창26→30, 예비60→56. 자동 재장전 후 좌클릭을 계속 유지해 재사격하고 놓은 뒤 R: 탄창27→30, 예비26→23. 이전 R 불능은 이 조건에서도 재현되지 않았고 원인 수정 확정으로 보고하지 않는다.
+- 사격으로 재장전 취소 시 추가 탄약 지급 없이 발사했고, 무기 교체 도중 두 아이템 탄약이 유지됐으며 원래 슬롯 복귀 후에도 지연 지급이 없었다. 사망 도중 취소 후3초 관찰에서22/23 유지, 재장전 태그와 Montage 정리를 확인했다.
+- 빈 슬롯 해제 시 활성 Layer가 Rifle→Unarmed, 재장착 시 Rifle로 돌아왔다. 사망 직후 Rifle Layer 유지 자체를 오류로 판정하지 않는다(사망 중 포즈/해제 규칙은 원본 분기와 구분).
+- 실제 EnhancedInput 주입/QuickBar 전환을 사용했으나 점프는 Character.Jump 호출이다. 두 번째 라이플은 PIE 임시 아이템이며 지급정책/에셋으로 저장하지 않았다. 단일 로컬PIE·Cue 비활성/무음 검사이므로 실제 물리 입력·시각 품질·사운드·장치·네트워크·패키징 검증은 아니다. 종료 후 보호545경로가 불변이다.
+
+**검사 교정 이력:** read_A의 기존 모듈 top-level 실행, read_B의 AnimBP 중첩 그래프에 맞지 않는 orphan 필터는 검사 한계로 기록하고 에셋 오류로 단정하지 않았다. C에서는 원문/한계를 보존했다. PIE_A는 버튼 해제가 자동 재장전 완료 전이어서 과거 증상 조건을 충족하지 못했고 B에서 완료 후 재사격까지 기다렸다. 후처리에서 순간 ammo30이10Hz 표본 사이에 다음 발사로29가 되는 점과 transient controller 이름 차이를 원자료로 확인했다. refill의 예비탄30 차감과29→27 재사격, 이후 R의 정확한 증감을 검사하는 조건으로 교정했으며 게임 변경은 없다.
+
+**수정 제안 — 승인 전/미적용:** 원본 Pawn의 실제 component override와 대상 차이가 확인됐다. 원본 애니메이션 타이밍에 영향을 주는 이동값6개를 통합 테스트 `BP_DC_RiflePawn.CharMoveComp`에만 원본 값으로 설정하는 안을 권고한다. 현재 동작 고장이 재현됐다는 의미가 아니라 원본 일치를 위한 교정이다.
+
+| 속성 | 현재 통합 Pawn | 원본 B_Hero_ShooterMannequin |
+|---|---:|---:|
+| MaxAcceleration | 2048 | 1200 |
+| BrakingDecelerationWalking | 1800 | 1400 |
+| BrakingFriction | 0 | 3 |
+| BrakingFrictionFactor | 2 | 1 |
+| AirControl | 0.2 | 0.4 |
+| JumpZVelocity | 420 | 500 |
+
+MaxWalkSpeed600/GravityScale1/CrouchedHalfHeight65는 원본과 같으므로 유지한다. 위6개 적용 시 가속·감속/방향전환 응답, 공중 제어, 점프 높이·체공시간이 달라진다. 원본 BP 값을 그대로 쓰며 임의 튜닝을 섞지 않는다. C++/Config/공용 Character/디자이너 맵/재장전 규칙은 변경하지 않는 범위다. 승인되면 기존 에디터 API로 해당 BP만 설정·Compile·저장하고 별도 재로드·동작 회귀 후 사용자 화면/조작감 확인을 진행한다. 이 범위에는 C++ 재빌드가 필요하지 않다.
+
+**원본 보존 제약/대안:** 원본 Hero는 SKM_Manny_Invis, mesh Z=-88, capsule radius35/half-height90이며 대상은 보이는 SKM_Manny, Z=-90,42/96이다. 현재 표시 구조와 원본의 별도 CharacterParts 경로를 구분하지 않고 Invis만 지정하면 캐릭터 표시가 없어질 수 있다. 권고안은 이번 이동값6개 교정에서 메시·캡슐·카메라를 보존하는 것이다. 완전한 원본 표시 구조가 필요하면 원본 CharacterParts·보이는 파트·메시/캡슐·카메라를 묶어 별도 검증/승인한다. 원본 이식 불가라고 판정하지 않는다. 이 차이와 raw pose/FootPlant Rig/사용자 화면 확인은 미검증으로 남긴다. **현재는 R8 첫 비교/관찰 묶음 완료, 전체 R8 진행 중, 이동값 교정안 승인 대기**다.
+
+### 2026-10-10 R8 후속 승인·실행 — 통합 Pawn 이동값6개 원본화
+
+사용자가 앞서 제시한 이동값6개 교정을 승인했다. `/Game/DreamCatcher/GAS/Test/R5/Integration/BP_DC_RiflePawn.CharMoveComp`만 MaxAcceleration1200/BrakingDecelerationWalking1400/BrakingFriction3/BrakingFrictionFactor1/AirControl0.4/JumpZVelocity500으로 설정했다. `Scripts/Editor/r8_movement_defaults.py`는 기존 에디터 조회/컴포넌트/export helper를 재사용하는 단일 에셋 작업이며 새 범용 도구가 아니다. 게임 C++·Config·공용 Character·재장전·메시/캡슐/카메라·디자이너 맵은 그대로다. C++ 빌드·패키징은 하지 않았다.
+
+**적용/재로드:** `Saved/Logs/R8Movement-Apply_B.log` **22:49:28 KST** 저장1개, `R8Movement-Verify_A.log` **22:50:33** 새 프로세스 재로드/저장0이 성공했다. `Saved/Diagnostics/R8/movement_Apply_B/report.json`, `movement_Verify_A/report.json`에 변경 전/후6값, 나머지 CDO 텍스트·그래프 동일성, 보호562경로 불변을 기록했다. 저장 전 비교를 통과한 뒤 해당 BP만 저장했으며 재로드 CDO/그래프는 저장 직후와 같았다. Apply_A는 기존값이 부모 기본값이라 T3D에 생략되고 변경 후6개 override 줄이 새로 생긴 점 때문에 저장 전에 중단됐다. diff가 정확히 승인6줄임을 확인하여 그6값은 별도 수치 검사하고 나머지 텍스트를 그대로 비교하도록 교정했다. A 저장0, B가 성공본이다.
+
+**기존 PIE 회귀:** `pie_Movement_A.json`은 **22:51:48**42구간/396관찰 완료다. `evaluation_Movement_A.json`의22개 한정 조건은 실패0으로 통과했다. 원본 값6개가 런타임에서 실제 적용됐고 MaxWalkSpeed600/GravityScale1/CrouchedHalfHeight65, 캡슐42/96 및 visible SKM_Manny는 유지됐다. 이동/정지/전환·점프/낙하/착지·웅크림·조준/발사/재장전 상태 전달, Rifle/Unarmed Layer, 수동·자동 재장전 후R, 재장전 중 취소/교체/사망의 탄약/태그/Montage 정리를 재확인했다. 비교 대상으로 사용한 나머지 원본/대상 파일과 Pawn의 승인된 저장 후 해시를 합친 보호579경로도 불변이다. 조건 수 증가를 기능 구현 진척으로 보고하지 않는다.
+
+**다음 사용자 확인:** 별도 C++ 재빌드 없이 통합 맵을 다시 열고 이동 시작·멈춤·좌우전환, 점프·착지, 웅크림/조준 중 이동의 짧은 플레이를 확인한다. 발 미끄러짐/자세 튐/손과 총의 어긋남 및 변경된 가속·공중 제어·점프 조작감을 본다. 이번 자동 실행은 단일 로컬PIE·입력 주입이며 점프는 Character.Jump 호출, Cue비활성/무음이다. 전체 시각 포즈·FootPlant Rig 동등성, 물리 입력·사운드·장치·복제·패키징의 새 검증은 아니다. 원본의 Invis 메시·별도 CharacterParts 표시 구조와 대상 visible 메시/캡슐 차이는 그대로 기록한다.
+
+**에디터 검사 최종 종료:** `Saved/Automation/R8Movement_A/index.json` **22:52:33 성공1/실패·보고서경고0**, `R8-PIE_Movement_A.log` Error/Fatal/ensure0, 프로세스 종료0을 확인했다. 관찰만 끝나고 에디터 결과를 확인하지 않은 상태가 아니다.
+
+**현재 판정:** 승인된 이동값6개 적용·재로드·자동 관찰 범위 완료, 사용자 화면 확인 대기. 전체 R8 진행 중이며 R7 잔여HUD/R13 통합과 기존 미검증을 유지한다. 이 결과로 다른 게임 코드·Config·에셋 변경을 자동 승인하지 않는다.
+
+### 2026-10-10 사용자 SpaceBar 실패 — 남은 FoundationTest 부여 확인 / Jump 수정안 승인 전
+
+사용자가 SpaceBar를 누르면 점프가 아니라 디버그 로그만 나온다고 보고했다. 최신 `Saved/Logs/DreamCatcher.log`22:56의 Foundation Input Pressed/Released는 `GA_DC_FoundationTest_C_0`에서 발생한다. `Saved/Diagnostics/R8/jump_target/report.json` **22:59:41**, `jump_source/report.json` **22:59:57**의 별도 읽기 전용 조회는 종료0/저장0/명시적Compile0/보호파일 불변이다. 게임 코드·Config·에셋 수정과 빌드·패키징은 하지 않았다.
+
+**확정 원인:** `IMC_Player.SpaceBar → /Game/Input/Actions/IA_Jump → DA_DC_RifleInput.AbilityInputActions(InputTag.Jump) → AS_DC_FoundationTest.GrantedGameplayAbilities → GA_DC_FoundationTest`이다. 이 GA의 그래프는 PrintString/WaitInputRelease/EndAbility로, 실제 Jump 호출이 없다. 통합 Hero의 원본 입력 경로에서는 Character의 legacy JumpAction 직접 바인딩까지 진행하지 않는다. 현재 PawnData의 다른 AbilitySet에도 실제 Jump Ability 부여가 없다. 따라서 최근 JumpZVelocity500 적용에 따른 물리 실패가 아니라 **기존 입력 테스트 Ability가 실사용 점프 자리를 차지한 상태**다.
+
+**완료 판정 교정:** 이전 R8 검사는 Character.Jump 직접 호출에 의한 상승/낙하/착지와 AnimBP 전달을 검증했으며 SpaceBar→입력태그→Ability를 검증하지 않았다. 해당 한정 성공은 유지하지만 실제 입력 점프는 사용자 재현과 구성 확인으로 실패/미완료다. 사용자에게 점프 화면 확인을 넘기기 전에 이 입력 경로까지 검사했어야 하며, 후속 검사는 직접 Jump 호출을 사용하지 않는다.
+
+**원본 근거:** `Source/LyraGame/AbilitySystem/Abilities/LyraGameplayAbility_Jump.h/.cpp`와 `/Game/Characters/Heroes/Abilities/GA_Hero_Jump`의 실제 부모/그래프를 확인했다. native는 CanJump 및 Super::CanActivateAbility, LocalPredicted/InstancedPerActor, locally controlled일 때 UnCrouch→Jump, 입력 해제/종료의 StopJumping을 제공한다. BP는 CharacterJumpStart/Stop, StartAbilityState/WaitInputRelease와 UIExtension 등록/해제·W_JumpTouchButton 참조를 가진다. 원본 AbilitySet_ShooterHero의 Jump 부여는 Level1/InputTag.Jump다. 대상 native Jump 클래스/원본 GA는 아직 없고 `InputTag.Jump`, `Ability.Type.Action.Jump`는 이미 등록돼 있다.
+
+**다음 변경안(미적용):**
+
+1. 원본 Jump native2파일을 기존 DCGameplayAbility/Character 타입 및 getter에 최소 이름 대응하여 추가하고 정확한 ClassRedirect1개를 등록한다. 점프 동작/정책은 원본을 유지한다.
+2. GA_Hero_Jump와 W_JumpTouchButton 참조 및 필요한 의존성을 보존해 이식한다. 터치 UI가 R7/R13 미검증이라는 이유로 WidgetClass/등록 그래프를 제거하지 않는다. 위젯 세부 의존성의 재사용/이식 목록은 아직 미확정이며 실제 참조를 확인해 범위를 제한한다.
+3. 통합 전용 AbilitySet을 AS_DC_FoundationTest 기반으로 생성하고 **FoundationTest의 Jump 부여 항목만 원본 Jump로 교체**한다. **같은 세트의 GA_Hero_Death는 반드시 보존**한다. 통합 DA_DC_RiflePawn에서 그 세트 참조만 교체하며 나머지4세트/공용 FoundationTest/다른 테스트 맵은 유지한다.
+4. 사용자 C++ 빌드 후 이식·재로드 검사를 진행하고 IA_Jump 입력→ASC→원본 Jump→이동/AnimBP 경로의 누름/해제·공중 재입력·웅크림 시작·사망/입력차단·반복을 검사한다. 물리 SpaceBar는 사용자 확인으로 구분한다.
+
+단순 SpaceBar→Character.Jump 직접 연결은 더 작은 대안이지만 원본의 CanActivate/Ability 수명·해제·UIExtension 흐름을 우회하므로 원본 재사용 목표에는 위 묶음을 권고한다. 원본을 이식할 수 없다는 제약은 발견되지 않았고 아직 준비되지 않은 의존성과 미검증만 있다. 승인 전에는 위 변경을 실행하지 않는다. R8은 이 실제 입력 결함과 기존 화면/전체 Rig 등의 미검증을 남긴 진행 중이다.
+
+### 2026-10-10 Jump 코드 작업 승인·적용 — 사망 경로 보존 / 사용자 빌드 대기
+
+사용자가 원본 Jump의 **코드 작업부터** 승인했으며 사망 Ability 유지와 사용자 빌드 담당을 재확인했다. 이번 변경은 다음3파일과 상태 문서다.
+
+- `Source/DreamCatcher/AbilitySystem/Abilities/DCLyraGameplayAbility_Jump.h`
+- `Source/DreamCatcher/AbilitySystem/Abilities/DCLyraGameplayAbility_Jump.cpp`
+- `Config/DefaultEngine.ini`: `/Script/LyraGame.LyraGameplayAbility_Jump`→`/Script/DreamCatcher.DCLyraGameplayAbility_Jump` ClassRedirect1행
+
+원본 `LyraGameplayAbility_Jump.h/.cpp`에서 이름/include·부모 UDCGameplayAbility·캐릭터 ADreamCatcherCharacter·기존 GetDCCharacterFromActorInfo getter만 대응했다. Abstract 클래스, InstancedPerActor/LocalPredicted, Avatar/CanJump/Super 활성 조건, 로컬 제어와 bPressedJump 가드, UnCrouch→Jump, EndAbility의 StopJumping 후 Super 호출을 보존한다. BP에 제공하는 CharacterJumpStart/Stop 함수명/Category는 바꾸지 않았다. 원본 GA_Hero_Jump가 맡는 ActivateAbility/WaitInputRelease 그래프를 C++에서 임의 재작성하지 않았다.
+
+**정적 검사:** 위 대응 후 원본2파일과 텍스트가 일치한다(줄끝/최종 개행 차이 제외). Redirect가 정확히1개 추가됐고 해당 행을 제거한 Config의 정규화 해시는 변경 전과 같다. whitespace 검사도 통과했다. 기존 사망 native2파일, GA_Hero_Death, AS_DC_FoundationTest, GA_DC_FoundationTest, BP_DC_RiflePawn/DA_DC_RiflePawn/DA_DC_RifleInput, Build.cs, 게임DLL, Git index의 보호11파일 SHA256은 불변이다. 에셋 생성·저장·에디터 실행·UHT/C++ 빌드·패키징은 하지 않았다.
+
+**현 상태:** native 코드 준비 완료/사용자 Development Editor·Win64 빌드 대기. 컴파일과 클래스/Redirect 실제 로드는 미검증이다. **원본 GA_Hero_Jump 에셋과 부여 연결은 아직 적용하지 않았으므로 현재 SpaceBar는 여전히 FoundationTest로 연결되어 있다.** 이번 코드를 빌드하는 것만으로 점프 입력 수정 완료라고 보고하지 않는다.
+
+빌드 확인 뒤 원본 GA/터치 위젯 참조의 실제 의존성을 확인하고 후속 에셋 변경 범위를 승인받아 연결한다. 통합 전용 AbilitySet에서 Jump의 디버그 항목만 교체하며 **기존 GA_Hero_Death 및 다른 부여값/나머지 세트는 반드시 유지**한다. 공용 테스트 AbilitySet을 통째로 제거하지 않는다. 이후 입력 Action→ASC→원본 Jump의 누름/해제·공중·웅크림·사망/차단 회귀와 사용자 물리 SpaceBar 확인을 수행한다. R8 전체는 진행 중이며 이번 코드 우선 승인을 에셋 수정의 포괄 권한으로 해석하지 않는다.
+
+### 2026-10-10 Jump 빌드·native 조회 확인 — 후속 에셋 묶음 제안
+
+사용자 UBT 로그는 **23:06:53 시작·24.41초 Succeeded**이며 Jump CPP/생성 모듈 컴파일·링크를 포함한다. `UnrealEditor-DreamCatcher.dll`은 **23:07:16/4,400,640 bytes**로 갱신됐다. Codex는 빌드·패키징·stage/commit을 하지 않았고 사용자 staged 변경을 보존했다.
+
+`Saved/Diagnostics/R8/jump_build_target_B/report.json`과 `R8-JumpBuildTarget_B.log` **23:13:10**에서 새 native 클래스/CharacterJumpStart·Stop, InstancedPerActor/LocalPredicted/OnInputTriggered/Independent 정책, 기존 FoundationTest/GA_Hero_Death 부여를 확인했다. 저장0/명시적Compile0/ensure0/보호파일 불변·종료0이다. target_A의 raw Python load_class(old /Script path) 검사는 실패했으며, 기존 C++ native 등록 검사가 먼저 FSoftObjectPath::FixupCoreRedirects를 수행하는 점과 구분했다. B는 정확한 Redirect 설정1행과 새 클래스 로드까지만 확인했다. **원본 GA_Hero_Jump의 실제 import에서 Redirect가 적용되는지는 후속 에셋 검증이며 아직 완료가 아니다.** 코드·Config를 변경해 검사를 우회하지 않았다.
+
+**원본 의존성 근거:** `jump_build_source/report.json`/`R8-JumpBuildSource.log` **23:10:29**에서 GA_Hero_Jump와 W_JumpTouchButton의 참조45개(Engine/Script 제외)를 수집했다. W_JumpTouchButton은 Input.Touch 가시성 조건, 원본 IA_Jump AssociatedAction, MI_UI_TouchCard_Jump ButtonBrush 및 W_ActionTouchButton_MobileOnly를 사용한다. 터치 버튼을 제거하지 않는다. 이41개 기존 후보 경로는 파일 존재 확인이지 전체 재사용 확정이 아니다.
+
+**후속 승인 요청 범위:**
+
+| 구분 | 제안 경로/변경 |
+|---|---|
+| 신규 원본4개 | `/Game/LyraMigration/Jump/GA_Hero_Jump`, `W_JumpTouchButton`, `MI_UI_TouchCard_Jump`, `T_UI_Icon_MobileOnly_Jump` |
+| 기존 참조41개 | ADS의 W_ActionTouchButton/MobileOnly 및 소재, QuickBar/공용 소재·곡선·텍스처·스타일, 실제 SpaceBar의 `/Game/Input/Actions/IA_Jump` 등을 비교 후 재사용. 기존 에셋 저장/덮어쓰기 없음 |
+| 신규 통합 AbilitySet | `/Game/DreamCatcher/GAS/Test/R5/Integration/AS_DC_RifleJumpAndDeath`: AS_DC_FoundationTest를 기반으로 Jump 항목만 원본 GA(Level1/InputTag.Jump)로 교체. **GA_Hero_Death 및 다른 부여값 유지** |
+| 기존 데이터1개 | `DA_DC_RiflePawn.AbilitySets`의 AS_DC_FoundationTest 참조1곳만 새 통합 세트로 교체. 나머지4세트 유지 |
+
+원본 대비 예정 차이는 native 모듈/타입 및 이식 경로 대응과 디버그 Jump 부여의 원본 교체뿐이다. 이동값·키/IMC·사망·카메라·재장전·공용 FoundationTest·디자이너 맵은 바꾸지 않는다. 기존41개 후보의 설정/참조가 원본과 맞지 않으면 새 복사나 수정 범위를 확대하지 않고 근거·대안·차이를 먼저 제시한다. 45개 전부를 중복 복사하는 대안은 범위가 커지므로 우선 재사용을 권고한다. 더 작은 대안인 직접 Jump 바인딩은 원본 Ability/UI 수명을 우회하므로 채택하지 않는다.
+
+승인 후 순서는 기존 후보 비교 → 원본4개 준비/이식 및 native parent/노드·핀·위젯 설정 확인 → 신규 세트·PawnData1참조 연결 → 별도 재로드/Compile → **IA_Jump→ASC→Jump Ability**의 누름/해제·공중 재입력·웅크림·사망/입력차단·반복과 기존 발사/재장전/슬롯 회귀다. Character.Jump 직접 호출로 입력 성공을 대신하지 않는다. 실제 SpaceBar·터치 기기/최종 HUD는 별도 확인한다. 현재 제안 범위에서 추가 C++ 수정/재빌드는 필요하지 않을 것으로 보지만, 에셋 로드/Compile에서 새 코드 의존성이 확인되면 미검증 상태로 보고하고 재승인한다.
+
+**현재 상태:** 사용자 코드 빌드 및 새 native 조회 완료, 에셋 연결 묶음 승인 대기. 이번에는 진단/문서만 변경했고 실제 SpaceBar는 여전히 FoundationTest 경로다. 전체 R8은 미완료이며 R7 잔여 HUD/R13 통합 결정을 유지한다.
+
+### 2026-10-11 승인된 Jump 에셋 작업의 사전 검사 — 입력 Action 불일치로 저장 전 중단
+
+사용자는 원본4개 이식·기존41개 재사용 비교·통합 AbilitySet 및 PawnData 연결을 승인했다. 기존 후보에 불일치가 있으면 범위를 확대하기 전에 제안한다는 조건에 따라, 아래 입력 Action 차이를 발견한 뒤 **에셋 생성/저장/활성 연결 전에 중단**했다. 이번에는 읽기 전용 자료와 상태 문서만 기록했다. 게임 코드·Config·에셋·Git index 수정, 빌드·패키징은 없다.
+
+**사전 비교 근거:** `Saved/Diagnostics/R8/jump_reuse_source_A/report.json`, `jump_reuse_target_A/report.json`, `jump_reuse_comparison.json`에41개 후보의 그래프/프로퍼티/소재 export를 보존했다. `R8-JumpReuseTarget_A.log` **00:22:13 KST**, `R8-JumpReuseSource_A.log` **00:22:23** 조회 완료/저장0/명시적Compile0/ensure0/보호파일 불변이다. W_ActionTouchButton의 구조체 표시명 차이는 기존 LyraInteractionDurationMessage→DCInteractionDurationMessage 대응이다. 텍스처 Oodle SDK 메타데이터·GUID/순서 차이 등은 별도로 남으며 모든 후보의 전체 시각/바이너리 동등성을 확정하지 않는다.
+
+| Jump Action | 트리거 | PlayerMappableKeySettings |
+|---|---|---|
+| 원본 `/Game/Input/Actions/IA_Jump` | 없음 | Name/DisplayName=Jump |
+| 현재 SpaceBar의 `/Game/Input/Actions/IA_Jump` | Pressed + Released | None |
+| 기존 이식 `/Game/LyraMigration/BaseInput/Actions/IA_Jump` | 없음 | Name/DisplayName=Jump |
+
+현재 사용 중인 Action의 차이는 실제 설정으로 확인됐다. 원본형 `DCInputComponent::BindAbilityActions`는 Triggered→Pressed와 Completed→Released로 연결하므로, Pressed/Released 트리거를 모두 가진 기존 테스트 Action의 유지/해제 타이밍은 원본과 같다고 가정할 수 없다. 새 GA 연결 후 동작 오류까지 재현한 것은 아니며 검증된 설정 차이와 예상 영향을 구분한다.
+
+`jump_existing_action/report.json` 및 `R8-JumpExistingAction.log` **00:25:09**에서 기존 BaseInput/IA_Jump를 읽었다. 원본과 export는 경로 및 같은 Jump 표시문구의 현지화 namespace/key 차이를 제외하면 일치한다. 이를 새로 복사하거나 수정하지 않고 재사용할 수 있는 연결안을 권고한다. 원본의 PlayerMappable 설정과 트리거 의미를 보존하며 실제 키/해제 동작은 후속 검증한다.
+
+**추가 승인 요청 — 기존 승인 묶음에 아래3개만 추가:**
+
+1. `/Game/DreamCatcher/GAS/Test/R5/Integration/IMC_DC_RifleBase` 신규: 공용 `/Game/Input/IMC_Player`를 통합용으로 복제하고 **SpaceBar의 Jump Action 객체 참조만** `/Game/LyraMigration/BaseInput/Actions/IA_Jump`로 바꾼다. 나머지 매핑/수식/트리거/옵션은 보존한다.
+2. 기존 `DA_DC_RifleInput`의 InputTag.Jump 항목에서 Action 참조만 같은 BaseInput/IA_Jump로 교체한다. 다른 native/ability 입력은 보존한다.
+3. 기존 `BP_DC_RiflePawn.Hero.DefaultInputMappings`에서 IMC_Player 참조1곳만 새 통합 IMC로 바꾼다. 우선순위/등록옵션/다른 컨텍스트·그래프·이동값은 유지한다.
+
+앞서 승인한 새 W_JumpTouchButton의 AssociatedAction도 같은 원본 이식 Action을 사용해야 한다. 그래야 터치와 SpaceBar가 실제로 부여한 InputTag.Jump 경로를 공유한다. 기존 승인된 GA/위젯/소재/아이콘4개+통합 AbilitySet1개와 PawnData1곳 교체는 그대로이며, 새 제안 전체는 **신규6개/기존3개(PawnData/Input/Pawn)**다. 이 추가 입력 범위는 아직 미승인/미적용이다.
+
+**대안·영향:** 공용 IA_Jump의 트리거 제거/설정 변경은 수정 파일 수가 작지만 다른 맵·디버그 입력을 바꿀 수 있다. 권고안은 공용 IMC_Player/IA_Jump를 그대로 두고 통합 Pawn만 원본 Action으로 연결한다. 키는 SpaceBar를 유지하고 원본의 누름/유지/해제 의미로 바뀐다. 기존 사망 Ability와 기타 부여값, 발사·재장전·카메라·이동 규칙은 유지한다. C++ 추가 수정/재빌드는 제안하지 않는다. 승인 후에는 사전 비교의 나머지 차이를 구분하고 신규 이식/연결/재로드/실제 입력 경로 검증을 이어간다. 불일치가 더 나오면 다시 확대하지 말고 알린다. 현재 실제 Jump와 전체 R8은 미완료다.
+
+### 2026-10-11 Jump 에셋·입력 연결 적용 — 서 있는 점프 통과 / 웅크림 점프 실패
+
+사용자가 통합 전용 IMC 생성 및 InputConfig/Pawn 참조 변경까지 승인했다. 원본 GA의 HUD.Slot.RightSideTouchInputs가 대상에서 빈 태그로 import되는 것을 `jump_tag_check.json`/`R8-JumpTagCheck.log` **01:05:27 KST**에 확인한 후, 사용자가 원본 태그1개 추가를 별도로 승인했다. DefaultGameplayTags.ini의 그1행만 추가했으며 Input.Touch 등 기존 유효 태그와 사망 Ability를 바꾸지 않았다. C++/빌드/패키징/Git index는 변경/실행하지 않았다.
+
+**에셋 이식:** `Scripts/Editor/r8_jump_assets.py`는 정확한 원본4개를 `/Game/LyraMigration/Jump/`에 준비/이식한다. `jump_assets_Prepare_A` **01:07:28 저장4**, `Migrate_A` **01:09:42 이식4**, `Target_A` **01:10:34 저장4**, `Verify_A` **01:12:21 별도 재로드/Compile/저장0**의 receipt와 로그를 `Saved/Diagnostics/R8`, `Saved/Logs/R8Jump-*.log`에 보존했다. Target_A에서만 원본 package명을 기존 이식 경로로 대응하는 프로세스별 alias를 사용했고 persistent PackageRedirect를 추가하지 않았다. 마지막 Verify_A는 그 옵션 없이 원본 대응 그래프/위젯 트리/기본값/참조를 확인했다. **실제 원본 GA BP의 native 부모가 DCLyraGameplayAbility_Jump로 import**됐으므로 앞선 raw load_class 실패와 달리 이 실제 BP 경로는 검증됐다. 새 Touch 버튼의 RightSideTouchInputs/AssociatedAction/Brush/Input.Touch 가시성 규칙을 보존했다. 재사용 소재 표현식8개는 경로 대응 후 반영 필드가 같고 곡선/주요 설정도 유지했다. 압축/SDK 메타데이터가 다른 기존 텍스처의 픽셀 완전 동일성은 별도 미검증이며 기존 파일을 수정하지 않았다.
+
+**통합 연결:** `Scripts/Editor/r8_jump_integration.py`의 `jump_integration_Apply_B` **01:15:19 저장5**, `jump_integration_Verify_A` **01:17:01 별도 재로드/저장0**이 성공했다.
+
+- 신규 `AS_DC_RifleJumpAndDeath`는 원본 GA_Hero_Jump(Level1/InputTag.Jump)와 **기존 GA_Hero_Death**를 부여한다. 다른 부여값과 PawnData의 나머지4세트는 보존했다.
+- 신규 `IMC_DC_RifleBase`는 기존 IMC_Player에서 SpaceBar의 Action만 BaseInput/IA_Jump로 바꾼 사본이다. 다른 키·modifier·trigger·옵션은 보존했다.
+- 기존 DA_DC_RifleInput의 Jump Action, BP_DC_RiflePawn의 Hero 기본 IMC, DA_DC_RiflePawn의 FoundationTest 세트 참조만 교체했다. 원본 공용 IMC_Player/IA_Jump/AS_DC_FoundationTest 및 다른 맵은 그대로다.
+- Pawn의 그래프와 나머지 입력/설정 비교를 통과했고 이동값6개·메시/캡슐/카메라를 재변경하지 않았다. Apply_A는 struct의 EditDefaultsOnly 필드를 직접 set하려다 저장0 중단됐다. 새 struct import 후 컨테이너 배열을 대입하는 기존 방식으로 교정한 B가 성공본이다.
+
+**입력 PIE:** `Saved/Diagnostics/R8/pie_Jump_B.json` **01:21:52**50구간/442관찰 완료. Character.Jump 직접 호출을 제거하고 실제 IA_Jump→ASC→원본GA로 검사했다. 서 있는 점프, release 후 다음 점프 가능, 공중 재입력에서 추가 점프 없음, 누른 채 착지 후 자동 반복 없음, 사망 시 점프 차단은 통과했다. 기존 이동/조준/발사/수동·자동 재장전 후R/해제·재장착·슬롯 교체/사망 정리도 한정 관찰 조건을 통과했다. **웅크림 점프만 수직속도0·IsCrouched=true·CanJump=false로 실패**했다. `Saved/Automation/R8JumpInput_B/index.json` **01:22:32 성공0/실패1**은 이 실패를 포함한다. 프로세스 종료0이나 관찰 complete=true를 테스트 전체 성공으로 해석하지 않는다. `evaluation_Jump_B.json` 한정 조건26통과/1실패와 보호996경로 불변을 기록했다.
+
+Jump_A는 검사에서 보호 속성 bIsActive를 읽으려다 중단됐고 B는 공개 상태/속도/해제 후 재활성화 동작으로 교정했다. 취소 발사 도중 탄창이 이번에는26→24/예비23으로 관찰돼 과거 고정27→25 기대값과 달랐지만, 지연 충전 없이2발 소비/예비탄 보존·태그/Montage 정리는 정상이었다. 해당 조건을 실제 시작 탄약 기준으로 교정했으며 게임 규칙 변경은 없다. 물리키/터치/독립 입력차단 태그 사례/시각·전체Rig/사운드/네트워크/패키징은 아직 미검증이다.
+
+**웅크림 점프 원본 근거·제약:** 원본 `Source/LyraGame/Character/LyraCharacter.cpp:461`의 CanJumpInternal_Implementation은 `JumpIsAllowedInternal()`을 반환하며 crouch 검사만 생략한다. 엔진 `Engine/Source/Runtime/Engine/Private/Character.cpp:313` 기본 구현은 `!IsCrouched() && JumpIsAllowedInternal()`이다. 현재 DreamCatcherCharacter에는 해당 override가 없어 기본 구현을 쓰므로 원본 Jump GA의 CanActivateAbility가 거부되고, CharacterJumpStart의 UnCrouch→Jump에 도달하지 못한다. 이 부분은 실제 PIE 재현과 소스 분기로 확인했다.
+
+**다음 변경안(미승인/미적용):** `Source/DreamCatcher/DreamCatcherCharacter.h/.cpp`2파일에 원본 CanJumpInternal_Implementation override1개를 이식한다. 점프 횟수·이동 모드 등 JumpIsAllowedInternal의 조건은 유지하고 crouch 금지만 제거한다. 공용 Character와 파생 Pawn의 CanJump 판정에 영향을 주므로 이번 에셋 승인에 끼워 넣지 않는다. 대안인 GA의 CanActivate 우회나 Blueprint에서 먼저 UnCrouch를 강제하는 방식은 원본 구조/실패 판정을 바꾸므로 권고하지 않는다. 승인 후 사용자 C++ 빌드→동일 입력 경로의 crouch/standing/air/death/input-block 및 기존 전투 회귀를 확인한다. 현재 코드는 추가 수정하지 않았다. **에셋/기본 Jump 연결 완료와 전체 Jump/R8 완료는 구분**하며, R7 잔여 HUD/R13 통합도 그대로 남긴다.
+
+### 2026-10-11 웅크림 Jump 수정 승인·코드 적용 — 사용자 빌드 대기
+
+사용자가 원본 Character의 누락된 CanJumpInternal_Implementation 복원을 승인했다. 변경한 게임 코드는 `Source/DreamCatcher/DreamCatcherCharacter.h/.cpp`2개뿐이다. 헤더에 엔진 const virtual 시그니처와 일치하는 override를 선언하고 CPP에 원본 LyraCharacter의 `return JumpIsAllowedInternal();` 본문/주석을 그대로 이식했다. 클래스 이름 대응 외 함수 차이는 없다.
+
+이 변경은 crouch 상태를 무조건 실패시키던 기본 판정만 제거한다. JumpIsAllowedInternal의 점프 횟수·이동 모드 등 조건과 원본 GA의 CanActivate/UnCrouch→Jump/StopJumping은 그대로이며, 사망/입력 코드·AbilitySet·IMC·PawnData·Blueprint·Config를 추가 수정하지 않았다. 공용 Character 및 파생 Pawn에 적용된다는 승인 범위는 유지한다.
+
+원본 함수 대조와 diff/whitespace 정적 검사를 통과했다. 변경 전 보호14파일 중 허용한 Character2개 외12개(사망 native/에셋, 통합 Jump/Death 세트·PawnData·Input·Pawn·IMC, Config2개, 게임DLL, Git index)의 SHA256이 불변이다. 사용자 staged 변경을 보존했고 에디터/PIE·UHT/C++ 빌드·패키징은 실행하지 않았다.
+
+**현재 상태:** 코드 적용 완료/사용자 Development Editor·Win64 빌드 대기. 새 함수의 컴파일과 웅크림 점프 실행은 아직 미검증이다. 이전 Jump_B 실패를 이번 정적 검사만으로 성공으로 바꾸지 않는다. 사용자 빌드 후 동일한 실제 IA_Jump→ASC→GA 경로에서 서기/웅크림·해제 후 재점프·공중 재입력·사망/입력차단 및 기존 전투를 검증한다. 직접 Character.Jump 호출로 대신하지 않는다. 공용 Character의 legacy 파생/입력 경로 영향과 사용자 물리 SpaceBar/화면 확인도 구분한다. 전체 R8과 R7 잔여 HUD/R13은 여전히 미완료 범위를 유지한다.
+
+### 2026-10-11 웅크림 Jump 수정 빌드·실제 입력 회귀 통과 — 수동 확인 대기
+
+사용자 UBT 로그 **01:44:06 시작·94.48초 Succeeded**, DreamCatcherCharacter/Jump CPP 컴파일과 게임DLL **01:45:40/4,401,664 bytes** 갱신을 확인했다. Codex는 빌드·패키징을 실행하지 않았다. 이번 작업은 기존 진단 절차에 계획했던 입력차단/해제 사례를 넣어 실행하고 상태를 기록한 것이며 게임 코드·Config·에셋 추가 변경은 없다.
+
+`Saved/Diagnostics/R8/pie_Jump_CrouchFix_B.json` **01:56:35**55구간/464관찰에서 **IA_Jump→ASC→원본 Jump Ability**의8조건을 모두 통과했다: 서 있는 점프, release 후 재점프, 공중 재입력에서 추가 점프 없음, 누른 채 착지 후 자동 반복 없음, 웅크림 점프, Gameplay.AbilityInputBlocked 동안 차단, 태그 제거 후 재점프, 사망 중 차단. 기존 Character.Jump 직접 호출을 사용하지 않았다. 웅크림 점프는 IsCrouched=false/수직속도 약451, 차단 중0, 제거 후 약426을 관찰했다. 입력 차단 태그는 이 임시 PIE에서만 추가/제거하고 기존 카운트0을 확인한 뒤 균형 있게 처리했다.
+
+`Saved/Automation/R8JumpCrouchFix_B/index.json` **01:57:19 성공1/실패·보고서경고0**, `Saved/Logs/R8-JumpCrouchFix_B.log` Error/Fatal/ensure0 및 종료0이다. `evaluation_Jump_CrouchFix_B.json`은 기존 이동/조준/발사/수동·자동 재장전 후R/장착·해제 Layer/슬롯 교체/사망 정리 및 파일 보호를 포함한 한정29조건 모두 통과했다. 사용자 빌드 후 현 상태를 기준으로 보호996경로 불변이다. 검사 수 증가를 새 기능 구현량으로 보고하지 않는다.
+
+첫 A 실행은 입력차단 검사에서 재사용 GameplayAbility helper의 중첩 scope 경로를 잘못 조회해 KeyError로 중단됐다. 게임/에셋 실패가 아니며 진단 참조만 교정해 B를 재실행했다. 이전 Jump_B의 웅크림 실패와 이번 수정 후 성공은 별도 기록으로 보존한다.
+
+**사용자 응답/다음 절차:** 최신 빌드의 물리 SpaceBar·Left Ctrl 웅크림 후 SpaceBar·착지 후 재점프 및 자세/손·총 정렬/발 미끄러짐 확인에 사용자가 **“아직 확인하지 않았습니다”**라고 답했다. 이 수동 검증은 미완료다. 다음은 L_DC_RifleIntegration에서 위3동작을 짧게 플레이하고 결과를 알려받는 것이다. 에셋 설정이나 재빌드를 추가 요구하지 않는다.
+
+**완료 경계:** 실제 입력 점프 연결과 확인된 웅크림 실패의 코드 수정·사용자 빌드·단일 로컬PIE 회귀 범위는 완료했다. 전체 R8의 사용자 화면·원본 FootPlant Rig/전체 포즈·메시/캡슐 표시 구조 차이·다른 legacy 파생 Pawn 영향 및 장치/복제/패키징은 별도 미검증이다. Cue비활성/무음·입력 주입 검사를 실제 화면/물리키·사운드·모든 맵 완료로 확대하지 않는다. R7 잔여 HUD는 R13과 묶는 상태이고, 새로운 코드·에셋 변경이나 R9 활성 구현을 이 상태 확인 요청에서 임의 시작하지 않는다.
+
+### 2026-10-11 사용자 Jump 마감 확인 / R9-1 원본 Dash 조사·변경안
+
+사용자가 최신 빌드에서 **서서 점프·웅크림 후 점프·착지 후 재점프 모두 정상이며 자세 튐·발 미끄러짐·손/총 어긋남이 없다**고 확인했다. 해당 Jump 수정 묶음은 자동검사와 물리키/해당 화면 확인까지 완료다. R8 통합 플레이어의 검증된 이동/공중/라이플 Layer/재장전 경로와 구분 없이 다시 검사 항목을 늘리지 않는다. 전체 FootPlant Rig/포즈·원본 메시/캡슐 표시 구조·다른 legacy 파생 Pawn·모든 장치/복제/패키징은 여전히 별도 미검증으로 **R8에 남기며 전체 R8 완료로 표시하지 않는다**. 다음 구현 후보는 R9-1 원본 Dash이고 이번에는 변경안 조사만 했다.
+
+**원본 증거:** `Saved/Diagnostics/R9/source_A/report.json` **02:03:22 KST**, `source_B/report.json` **02:08:34**, `R9-DashRead_A/B.log` 종료0/저장0/명시적Compile0/ensure0/보호파일 불변. B에서는 원본 GA/GE/Cue/위젯·부모·입력·부여 데이터11개를 읽었다. Game/ShooterCore 참조224개와 외부 Engine/Script/Niagara 참조를 분리했다. 동일 상대경로의 대상 파일171개는 존재 후보일 뿐 재사용 확정도 신규 복사 수 산정도 아니다. 기존 native contract 도구의 고정22개 범위 밖이라는 거부는 기록하고 도구를 확장하지 않았다. 이번 native 전체 계약 검증을 통과했다고 보고하지 않으며 실제 그래프/핀·CDO/export 및 소스 확인을 근거로 삼는다.
+
+**원본 Dash 확인값/흐름:**
+
+| 항목 | 원본 근거 |
+|---|---|
+| 부모/정책 | GA_AbilityWithWidget, OnInputTriggered/Independent, InstancedPerActor/LocalPredicted |
+| Root Motion | Strength1850, 적용0.25초, additive=true, gravity=false, 종료속도 Clamp1000 |
+| Ability 지속 | 0.55초(이동 적용 시간과 다름) |
+| 쿨다운 | GE_HeroDash_Cooldown의 HasDuration/1.5초 |
+| 애니메이션 | AM_MM_Dash_Forward/Backward/Left/Right4개 선택, facing/이동 방향 yaw의45/135도 경계 및 forward bias 분기 |
+| 방향 | 마지막 이동 입력·카메라 forward·AI/nav 분기. 직접 정의한8방향/무입력 전방 규칙을 재도입하지 않음 |
+| 입력 | IA_Ability_Dash의 Pressed trigger, InputTag.Ability.Dash; LeftShift 및 Gamepad_LeftThumbstick(매핑의 추가 Pressed trigger) |
+| UI | W_DashCooldown→HUD.Slot.Reticle, W_DashTouchButton→HUD.Slot.ExtraEquipment, Ability.Dash.Duration.Message |
+
+무입력·공중·벽·취소 상황은 원본/대상 PIE를 아직 실행하지 않아 실제 결과를 확정하지 않는다. 확인한 GA/GE에는 방어/무적 부여를 찾지 못했지만 전체 무적/피해 차단 실험은 R9-2로 분리한다. R9-1에서 임의 방어 규칙이나 궁극기를 추가하지 않는다.
+
+**이식 제약과 최소 대응안:** GA의 Get Direction 그래프는 `/Script/LyraGame.LyraCharacter.CameraComponent` 및 `LyraCameraComponent`를 직접 참조한다. 대상 Character의 실제 활성 카메라는 `ModeCamera`(DCCameraComponent)이고 해당2이름 대응은 미등록이다. 기존 DCCameraComponent::GetCameraView는 최종 CameraMode 위치/회전을 컴포넌트에 반영하므로 원본 GetForwardVector 의미를 유지할 후보이며, 정확한 Class/Property Redirect를 우선 제안한다. 전체 카메라 교체나 ActorForward로 단순 대체하는 대안은 원본 방향 계산을 바꿀 수 있어 권고하지 않는다. 실제 BP 로드/Compile·멤버 접근성은 후속 미검증으로 남기며 새 코드가 필요하면 먼저 설명한다.
+
+`target_tags.json`/`R9-TagCheck.log` **02:11:26**에서 다음 원본6개가 현재 빈 태그로 읽힘을 확인했다: Ability.Dash.Duration.Message, GameplayCue.Character.Dash, GameplayCue.Character.Dash.Cooldown, InputTag.Ability.Dash, HUD.Slot.Reticle, HUD.Slot.ExtraEquipment. Ability.Type.Action.Dash/Event.Movement.Dash는 이미 유효하다. 원본 태그/위젯 참조를 삭제하거나 비슷한 기존 태그로 대체하지 않는다.
+
+**승인 요청 작업 묶음 — R9-1 원본 Dash 이식·통합 연결(미적용):**
+
+1. `Config/DefaultEngine.ini`: LyraCameraComponent→DCCameraComponent ClassRedirect1개와 LyraCharacter.CameraComponent→DreamCatcherCharacter.ModeCamera PropertyRedirect1개를 추가하고 실제 BP 참조를 확인한다. `DefaultGameplayTags.ini`에는 위 원본6개만 등록한다. `DefaultGame.ini`에는 새 Dash Cue 경로1개만 추가하여 기존 Rifle/Death Cue 스캔을 유지한다.
+2. `/Game/LyraMigration/Dash/` 아래에 원본 GA_Hero_Dash/GE_HeroDash_Cooldown/GCNL_Dash/W_DashCooldown/W_DashTouchButton 및 필요한 몽타주/VFX/사운드 의존성을 이식한다. 기존 GA_AbilityWithWidget·매크로·UI/공용 자료는 비교 후 재사용하며 기존 파일을 덮어쓰지 않는다. 원본 참조224개 전체를 자동 신규 복사하거나 이 수를 진척으로 보고하지 않는다. 새 파일은 명시된 Dash 폴더에 제한하고 재사용 불일치/미지원 타입은 확대 전 보고한다.
+3. 통합 전용 `/Game/DreamCatcher/GAS/Test/R5/Integration/AS_DC_RifleDash`를 추가하고 DA_DC_RiflePawn에 연결한다. 기존 Jump/Death/다른 세트는 보존한다. 통합 DA_DC_RifleInput 및 IMC_DC_RifleBase의 테스트 Dodge/LeftShift 경로를 기존 원본 이식 IA_Ability_Dash와 InputTag.Ability.Dash로 교체하고 원본 게임패드 키/트리거를 보존한다. 공용 IMC_Player/IA_Dodge/다른 맵과 legacy 구현 삭제는 범위 밖이다. 기존 자체 대시가 중복 실행되지 않는지 확인한다.
+4. 새 프로세스 재로드/Compile·입력→Ability→RootMotion/몽타주/Cue·쿨다운, 무입력/방향/지상/공중/벽/취소, 조준·사격·재장전·점프·사망 상호작용과 기존 회귀를 검사한다. 실제 연출/조작감은 사용자 확인이다. 현재는 신규 C++ 필요성이 확인되지 않았으므로 빌드를 먼저 요구하지 않되, 추가 native 의존성/오류가 확인되면 미검증으로 보고하고 별도 승인/사용자 빌드로 처리한다.
+
+**HUD 경계:** 현재 정식 R7 HUD/Experience가 미완료여서 원본 Dash의 HUD.Slot.Reticle/ExtraEquipment 표시를 등록만으로 완료할 수 없다. GA의 위젯 참조/등록·해제와 원본 위젯을 보존하며 최종 표시/포커스·터치 기기는 기존 R7/R13 연결 시 검증한다. 지금 화면에 보이도록 직접 AddToPlayerScreen 임시 UI를 넣거나 해당 위젯을 삭제하는 변경은 포함하지 않는다. Dash 게임플레이 검증과 Dash UI 최종 표시 완료를 구분한다.
+
+이번에는 문서·읽기 전용 진단만 변경했고 게임 코드/Config/에셋 저장·빌드/패키징은 실행하지 않았다. R9-1은 원본 조사/변경안 제시 상태이며 실제 이식 승인 대기, R9-2/R9-3은 미착수다.
+
+### 2026-10-11 승인된 R9-1 Dash 실제 이식·통합 연결
+
+사용자 승인에 따라 위 R9-1 묶음을 적용했다. **C++ 수정·빌드·패키징은 없으며**, 기존 Jump/Death 및 공용 입력·디자이너 맵은 유지했다. 범용 감사기 확장 없이 `Scripts/Editor/r9_dash_assets.py`, `r9_dash_integration.py`와 기존 UE 내부 API/검사를 재사용했다.
+
+**실제 변경:**
+
+- `DefaultEngine.ini`의 승인된 Camera 클래스/프로퍼티 대응2개, `DefaultGameplayTags.ini`의 원본6태그, `DefaultGame.ini`의 `/Game/LyraMigration/Dash` Cue 스캔1개.
+- 새 Dash 폴더24개: GA/GE/Cue, 쿨다운·터치 위젯2개, UI 머티리얼5개/텍스처1개, Niagara1개/머티리얼1개, MetaSound1개/음원2개, Montage4개/AnimationSequence4개. 경로별 실제 manifest는 `Saved/Diagnostics/R9/assets_Verify_A/report.json`의 mapping이다.
+- 통합 폴더의 신규 `AS_DC_RifleDash`, 기존 `DA_DC_RiflePawn`·`DA_DC_RifleInput`·`IMC_DC_RifleBase`3개 수정. 기존5개 세트 뒤에 Dash를 추가하고 LeftShift/Dodge 한 항목을 원본 Action/태그로 교체했다. 원본 Gamepad_LeftThumbstick + Pressed trigger도 보존했다. 다른 키/세트 및 Jump/Death는 변경하지 않았다.
+
+**원본 보존·제약:** 기존 의존성200개는 조회/비교 후 재사용하고 저장하지 않았다. 위젯의 이미 이식된 native 타입명, 프로세스별 미연결 delegate 주소, MetaSound 복제 식별자 차이는 기록해 구분했다. Texture Oodle 버전, SKM_Manny_Invis의 SourceModels 캐시, CR_Mannequin_Procedural의 저장된 RequiredPlugins 차이는 확인했지만 전체 픽셀/메시/리그 동등성까지 검증한 것은 아니다. 기존 R8 미검증 범위는 유지한다.
+
+처음 제안한 LyraCharacter.CameraComponent PropertyRedirect만으로는 BP 컴파일이 실패했다. 엔진 `MemberReference.cpp`는 이미 변환된 소유 클래스 이름으로 멤버 Redirect를 조회한다. 저장 없는 `CameraInspect_A`에서 DreamCatcherCharacter.CameraComponent→ModeCamera 추가 대응이 컴파일을 해결함을 확인했다. **새 에셋 저장 프로세스에서만 이 정확한 대응을 적용해 GA의 핀을 ModeCamera로 저장**했으며 영구 Config 추가 확대/새 C++ getter/ActorForward 대체는 하지 않았다. 최종 재로드는 임시 대응 옵션 없이 통과했다. 기존 ModeCamera의 최종 CameraMode 회전을 읽으므로 원본 방향 계산 그래프/수치 변경은 없다. 별도 native 계약 감사기 전체 검증과 모든 카메라 상황의 동등성은 주장하지 않는다.
+
+새 GCNL_Dash는 대상 부모 기본값 때문에 `replicate_using_registered_sub_object_list`가 false로 읽혔으므로 원본 CDO true를 명시 보존했다. 이 한 에셋 외 전역 네트워크 설정/기존 Cue는 바꾸지 않았다. 실제 복제 검증은 별도다.
+
+**저장·검사 근거 (KST):**
+
+| 결과 | 근거·범위 |
+|---|---|
+| 신규24개 원본 준비 | `assets_Prepare_B`02:55:44 저장/비교는 통과했으나 종료 중 AnimSequence 압축 assertion/종료3. 이 결과만으로 성공 처리하지 않음 |
+| 별도 원본 재로드 통과 | `assets_SourceVerify_A`02:57:18, 저장0·원본/복사본 보호·종료0. 저장된24개 비교 통과 |
+| 정확한24개 UE 마이그레이션 | `assets_Migrate_A`02:56:14, 기존 파일 덮어쓰기/의존성 일괄 복사 없음·종료0 |
+| 대상 참조 대응·저장 | `assets_Target_C`03:01:09, 새24개 저장/비교·종료0 |
+| 옵션 없는 재로드 통과 | `assets_Verify_A`03:01:52, 임시 Package/Property 대응 없음·BP Compile/데이터/그래프 비교·Error/Fatal/ensure0·저장0·종료0 |
+| 통합4에셋 저장·별도 검증 | `integration_Apply_B`03:04:14 및 `integration_IntegrationVerify_A`03:05:15, 다른 입력/세트·보호파일 유지·종료0 |
+
+PIE와 화면/소리/물리키 확인은 아래 후속 결과로 구분한다. **R9-1 전체 완료 판정은 아직 아니며**, R7/R13의 최종 Dash HUD, 게임패드 실기기, 원본 프로젝트와 나란히 실행한 비교, 복제/패키징은 미검증이다. R9-2 방어 효과와 R9-3 궁극기는 미착수다. 기존 자체 Dodge의 다른 사용 경로를 무단 삭제하지 않았다.
+
+**후속 PIE 결과 / 현재 재개 지점:**
+
+- **03:16:35 최종 `assets_Verify_B`:** 새24개 각각의 프로젝트 하드/소프트 package 참조가 원본→대상 대응표와 일치했다(누락/추가0). 임시 Redirect 옵션 없는 재로드·Compile·데이터/그래프 비교·저장0·보호파일 불변·정상종료0이다. 기존 ShooterCore 경로를 영구 PackageRedirect로 감추는 대안은 사용하지 않았다.
+- `Saved/Diagnostics/R9/pie_Dash_B.json` **03:13:28 KST** 관찰 종료, `evaluation_Dash_B.json` 한정52조건 실패0(106구간/789관찰). 실제 InputAction→ASC→GA를 사용하며 직접 Dodge/Launch/RootMotion 호출은 없다. 무입력 전방, 이동 중 전후좌우/각 Montage, 쿨다운 중 재입력 거부·이후 허용·누른 채 반복 없음, 웅크림 해제/공중 Dash, 조준·사격·재장전 중 실행을 확인했다. 무입력 속도1850 및 이동 중 최대2450은 관찰값이며 새 게임플레이 수치 변경이 아니다.
+- 임시 PIE 벽은 Actor로만 생성해 맵에 저장하지 않았다. 벽 앞x190·캡슐 반경42에서 플레이어 최대x146.98로 멈췄다. 입력 차단/해제, Dash 중 사망 시 태그·이동 정리와 사망 후 재실행 차단을 확인했다. 기존 Jump·웅크림·조준·사격·수동/자동 재장전 후R·장비 교체/Layer 회귀도 한정 조건에서 통과했다.
+- `Saved/Automation/R9Dash_B/index.json` **03:14:26 성공1/실패·보고서경고0**, `Saved/Logs/R9Dash-PIE_B.log` Error/Fatal/ensure0·종료0. 보호2073경로 불변, 에셋 저장0. **B는 Cue비활성/무음/합성 InputAction의 단일 로컬PIE**이며 물리키·렌더링·소리·멀티플레이/패키징 완료가 아니다.
+- 앞선 A는 Cue의 실제 Pawn 대상 실행과 방향 Montage를 관찰했지만, `-nosound`에서 기존 Rifle WeaponAudioFunctions의 빈 TapIDs 경고1470건이 있었고 동시 Git 조회 구간의 `.git/index` 바이트 변경으로 자동검사 실패1이다. 게임/Config/에셋 파일 변경은 검출되지 않았다. A의 complete 관찰 receipt를 자동검사 성공으로 취급하지 않는다. B는 새 보호 스냅샷과 동시 Git 조회 없이 게임플레이 검사를 분리했으며 원본 Cue의 실제 화면/소리 정상 판정은 남겨뒀다.
+- **현재 사용자 확인 대기:** 에디터 재시작 후 L_DC_RifleIntegration의 LeftShift를 무입력/전후좌우 이동·웅크림/점프·조준/사격/재장전 중 사용하고 쿨다운·방향/몽타주·이펙트·소리·카메라 및 사망 정리를 확인한다. C++ 변경이 없어 이번 재빌드 요구는 없다. R9-1은 이식/통합/위 게임플레이 검증까지 완료, 물리키/연출 확인은 미완료다. R7/R13 최종 Dash HUD/터치·게임패드·복제 등은 별도 경계다. 정상 확인 후 R9-2 방어 효과의 원본 근거와 필요한 프로젝트 확장안을 먼저 제시하며 무적/성공 피드백/궁극기를 임의 추가하지 않는다.
+
+### 2026-10-11 무입력 Dash 진단 — 앞선 검증 범위 정정
+
+사용자가 무입력 Dash 미작동을 보고했다. 앞선 자동검사는 매번 ControlRotation을0으로 초기화했으므로 **월드 Yaw0의 무입력 성공만 확인**한 것이다. 이를 모든 바라보는 방향의 무입력 정상 동작으로 일반화하지 않는다. R9-1의 사용자 수용/연출 확인은 여전히 미완료다.
+
+`Saved/Diagnostics/R9/NoInputSource_A.json` 및 `NoInputTarget_A.json`에서 원본/이식본의 `SelectDirectionalMontage`를 같은8각도·MovementDirection0으로 실행했고, 패키지 경로 외 반환값이 같았다. 원본 함수는0벡터를 Rotation From X Vector로 바꿔0도 방향처럼 비교한다. Facing Yaw0/30/44에서는 Forward Montage와 BiasForward=true를 반환해 카메라 방향이 선택되지만46/90/135/180/-90에서는 false를 반환한다. EventGraph는 false일 때 LastMovementInput0을 선택하고 NearlyZero→CancelAbility로 Commit 전에 종료한다. **원본 함수에도 존재하는 경계 동작**이며 원본 프로젝트 전체 PIE를 실행한 결과로 확대하지 않는다.
+
+대상 실제 입력 PIE의 `pie_NoInput_B.json`은 실제 Pawn Yaw와 LastMovementInput0을 함께 기록했다.0/30/44는 Dash 활성·속도1850·쿨다운1,46/90/135/180/-90는 미활성·속도0·쿨다운0으로 동일하게 재현했다. `Saved/Automation/R9NoInput_B/index.json` **03:28:14 성공1/실패·경고0**, 프로세스 종료0/보호파일 불변이다. 이 성공은 진단의 완료이지 기능 정상 판정이 아니다. 첫 NoInput_A는 Rotator 위치 인수로 의도한 Yaw가 적용되지 않았으므로 각도 비교 근거에서 제외했다.
+
+**미적용 최소 변경안:** 대상 `GA_Hero_Dash.SelectDirectionalMontage`에 MovementDirection NearlyZero 분기를 추가해 이 경우 Forward Montage/BiasForward=true를 반환한다. 기존 EventGraph의 카메라 방향 벡터를 그대로 사용하고, 이동 입력이 있는 원본 방향 선택·Strength1850·0.25/0.55초·쿨다운1.5초 및 Cue는 바꾸지 않는다. 원본의 각도 의존 무입력 취소를 없애는 동작 차이가 있으므로 **승인 전 적용하지 않는다**. 원본 그대로 유지하는 대안도 있으며, 카메라 계산이나 자체8방향 Dash를 재작성하지 않는다.
+
+별도로 사용자 실제 PIE 로그03:19~03:20에서 새 Dash MetaSound preset의 graph registry lookup 오류가 확인됐다. 음원 등록/참조 원인과 정확한 보존 수정안은 별도 조사 필요다. 이전 무음 검사를 오디오 정상으로 취급하지 않으며, 이번에는 게임 코드·Config·에셋·사운드·DebugExecBindings 변경이나 빌드/패키징을 하지 않았다.
+
+### 2026-10-11 승인된 무입력 보정 적용 / Dash 음원 원인·변경안
+
+사용자는 **무입력일 때만 카메라 전방 Dash, 나머지 원본 유지**를 승인했다. 음원은 원인 확인 후 변경안을 먼저 제시하라는 요청이므로 아직 저장/수정하지 않았다.
+
+**적용 범위:** 대상 `/Game/LyraMigration/Dash/GA_Hero_Dash`의 `SelectDirectionalMontage`에 NearlyZero(기존 허용오차0.0001)·Branch2노드를 추가했다. 이동벡터가NearlyZero면 기존 Forward Montage/BiasForward=true 분기에 진입해 기존 EventGraph의 카메라 벡터를 선택한다. 입력이 있으면 기존 방향 선택을 그대로 실행한다. 원본 Lyra 파일, 다른 그래프/능력 설정, 카메라의 기존 Z보정, Strength1850·0.25/0.55초·쿨다운1.5, 음원/Cue/Config/C++는 변경하지 않았다. 일회성 절차는 `Scripts/Editor/r9_dash_noinput_fix.py`이다. C++ 빌드/패키징은 실행하지 않았다.
+
+- `idle_fix_IdleApply_A/report.json` **03:36:28 저장1**, `idle_fix_IdleVerify_A/report.json` **03:38:34** 별도 재로드/Compile/저장0/정상종료0. 기존 노드/값/타입/다른 그래프 보존과 정확한 연결 변경만 비교했다. 무입력8각도는 모두Forward/true, 이동 입력 있는64조합은 수정 전후 반환값이 같았다.
+- `pie_IdleFixed_B.json` **03:41:49**, `evaluation_IdleFixed_B.json`: 실제 InputAction→ASC→GA의8각도 무입력 실행·속도1850, 수평 카메라/캐릭터가 정렬된 조건의 이동방향 일치, 보호2073경로 불변. `Saved/Automation/R9IdleFixed_B/index.json` **03:42:08 성공1/오류·경고0·프로세스0**. 첫 IdleFixed_A의 실행 문자열 파싱 실패는 성공 근거에서 제외했다. 합성 입력/Cue비활성/무음·단일 로컬PIE이므로 물리키/화면·소리/복제 확인은 별도다.
+
+**음원 원인 증거:**
+
+1. 원본과 대상 부모 에셋 경로는 `/Game/Audio/MetaSounds/sfx_RandomStereo_nl_meta`로 같으며 Builder의 부모 조회도 성공했다. 그러나 내부 Class ID는 원본 `C7725AA14BADE5EB7F9F54894DB8BE03`, 대상 `5A9AD0844AAAEB75E9111BAC4F8BFFC3`로 다르다.
+2. `Saved/Diagnostics/R9/AudioTarget_B/sfx_DashStereo_nl_meta_Preset.t3d:38`에는 대상 preset의 `ReferencedAssetClassKeys`가 여전히 원본 C772…로 저장되어 있다. 보호 속성 직접 조회는 거부됐고, 이를 우회하지 않고 일반 UE text export를 읽었다.
+3. 사용자 실제 `Saved/Logs/DreamCatcher.log:2655`부터 원본 키 미등록, 대상 부모 키 AutoUpdate/참조 캐시 실패, preset runtime graph 생성 실패가 이어진다. 따라서 파일 경로가 맞아도 내부 클래스 참조가 대상 부모와 불일치하는 문제다. 앞선 그래프 기본값/경로 비교에서 이 의존성 식별자 일치 검증을 빠뜨렸다.
+4. `AudioSource_A/B`, `AudioTarget_A/B`는 모두 저장0·파일 불변이다. 입력값은 경로 치환 외 같았다: 원본 Dash SoundWave2개, Min1/Max4/Gain0.3. 부모의 나머지 graph 값은 기존 비교에서 root Class ID 외 일치한 범위이며 실제 청감 동등성은 미검증이다.
+
+**승인 요청 음원 변경안 — 아직 미적용:**
+
+- **변경 대상1개:** `/Game/LyraMigration/Dash/sfx_DashStereo_nl_meta_Preset`. UE MetaSound Editor/Builder를 통해 실제 대상 부모와 preset 연결 및 내부 참조/등록 캐시를 다시 구성한다. 엔진 `UMetaSoundBuilderBase::ConvertToPreset`의 부모 실행용 등록→Template Parent→ConfigureDocument 경로를 확인했지만 실제 복구 성공은 승인 후 검사할 사항이다.
+- **보존:** 이식된 Lyra_Dash_01/02, Min1/Max4/Gain0.3, Stereo·감쇠·SoundClass 등 원본 SoundWave/MetaSound 설정. 공용 부모/다른 preset/GCNL_Dash/C++/Config/사격 오디오 간격은 변경하지 않는다. 원본 대비 의도한 재생 규칙/수치 차이는 없고, 대상 프로젝트의 올바른 부모 클래스 ID에 연결하는 수정이다.
+- **대안:** 원본 부모까지 별도 이름으로 추가 이식할 수 있으나 공용 자료 중복과 참조 관리가 늘어난다. 파형으로 단순 대체하면 원본 random/pitch/gain graph를 잃으므로 선택하지 않는다. GUID 문자열 직접 치환이나 전체 오디오 덮어쓰기도 하지 않는다.
+- **검증:** 메모리상 원본 입력/설정 보존 비교→일치할 때 preset1개 저장→별도 프로세스 재로드/참조 키 확인→오디오 장치를 활성화한 PIE에서 Dash 실행/registry 오류 확인→사용자 실제 소리 확인. 앞선 `-nosound`/Cue비활성 검사를 음원 성공으로 재사용하지 않는다.
+
+현재는 **무입력 보정 적용·한정 검증 완료, 음원 변경안 승인 대기**다. R9-2/3 및 최종 R7/R13 HUD는 이번 작업에 포함하지 않았다.
+
+### 2026-10-11 승인된 Dash preset 복구 / 오디오 활성 검사 결과
+
+사용자가 위 음원 변경안을 승인했다. **변경 에셋은 `/Game/LyraMigration/Dash/sfx_DashStereo_nl_meta_Preset`1개**다. 현재 부모에 UE MetaSound Builder의 ConvertToPreset을 적용하고 Sounds/Min/Max/Gain4개 원본 override를 보존했다. 이식된 SoundWave2개·Min1/Max4/Gain0.3, 자체 MetaSound Class ID/부모 경로, Stereo·감쇠·SoundClass 등 다른 Sound 설정은 비교에서 동일했다. OnPlay는 inherited 상태를 유지한다. 원본 대비 의도한 재생 규칙/수치 차이는 없으며 내부 부모 클래스 참조만 대상 프로젝트에 맞춘 복구다.
+
+**캐시 처리와 검증 구분:**
+
+- 첫 `AudioApply_A` 및 `AudioFinish_A`는 새 부모 문서를 반영했지만 serialized ReferencedAssetClassKeys에 옛 C772…와 새5A9…가 함께 남아 검사 실패했다. 실패 receipt를 완료로 취급하지 않았다. 둘 다 같은 preset1개만 저장했고 보호 파일은 유지했다.
+- 별도 비표시 Editor에서 이 preset만 열어 표준 MetaSound 에디터 재등록 경로로 참조 집합을 재생성했다. **`audio_fix_AudioEditorFinish_B/report.json` 03:55:25** 저장1/검사 성공/종료0. `after_save.t3d:253`의 참조 키는 `External_None.5A9AD0844AAAEB75E9111BAC4F8BFFC3_1.0` 하나다. 첫 EditorFinish_A는 이전 receipt 대비 노드ID 차이를 검출해 저장 전에 중단된 진단 이력이다.
+- **`audio_fix_AudioVerify_A/report.json` 03:56:48** 별도 재로드·입력/설정/문서/참조 키 비교 성공, 저장0·보호파일 불변·종료0. GUID 직접 치환, 보호 속성 직접쓰기, 공용 부모 수정, 전체 오디오 덮어쓰기, 새 게임 초기화용 사전 등록 코드는 사용하지 않았다. 자동화는 `Scripts/Editor/r9_dash_audio_fix.py`이다.
+
+**실제 오디오 활성 PIE:**
+
+`Saved/Logs/R9Dash-AudioPIE_A.log`는 -nosound와 GameplayCue 비활성 없이 WASAPIMixer 및 PIE AudioDevice를 초기화했다. 저장본을 새 프로세스에서 사용하며 진단 중 부모를 수동으로 미리 등록하지 않았다. `pie_DashAudio_A.json` **03:58:15**에 실제 InputAction→ASC→GA→GCNL_Dash→수정 MetaSound preset을3회 실행한 관찰을 남겼다. 각각 AudioComponent Playing이 확인됐고(서로 다른3개/33표본), 마지막에는 재생이 종료됐다. 무입력 Dash3회·보호파일 불변·에셋 저장0이다.
+
+`Saved/Automation/R9DashAudio_A/index.json` **03:58:30 성공1/실패·경고0**, 로그 Error/Fatal/ensure0 및 이전 MetaSound registry 오류0, 프로세스 종료0. 이는 오디오 장치가 켜진 실행 경로 검증이며 **사용자가 실제로 들은 소리의 품질/크기/타이밍이나 전체 연출 확인은 아니다**.
+
+게임 C++/Config/공용 부모·GCNL_Dash·무입력 보정 GA·기존 발사 오디오는 이번에 변경하지 않았다. C++ 빌드·패키징도 실행하지 않았다. 다음은 새 에디터 L_DC_RifleIntegration에서 정지/방향 전환 후 LeftShift, 이동 중 원본 Dash 및 효과음의 자연스러운 단발 재생/종료를 사용자에게 확인받는다. C++ 재빌드 요구는 없다. **R9-1 구현 및 해당 자동검사 완료/사용자 조작·연출 수용 확인 대기**, R9-2/3와 최종 R7/R13 Dash HUD·장치/복제/패키징은 별도 미완료다.
+
+### 2026-10-11 R9-1 사용자 수용 확인 / R9-2 방어 첫 변경안
+
+사용자가 **무입력·이동 중 Dash와 효과음 모두 정상**이라고 확인했다. 직전 `audio_fix_AudioVerify_A`, `evaluation_IdleFixed_B`, `R9DashAudio_A`의 성공 기록과 현재 GA/Cue/음원/쿨다운/AbilitySet/PawnData/InputConfig/IMC8에셋의 해시 일치를 확인했다. **R9-1 PC 통합 Dash·승인된 무입력 보정·효과음 복구 범위는 사용자 확인까지 완료**다. 전체 HUD(R7/R13), 미확인 장치/복제/패키징 및 R9-2/3 완료와 구분한다.
+
+이번 요청은 다음 변경안 제시이므로 게임 코드/Config/에셋을 추가 수정하거나 빌드/패키징하지 않았다. 아래는 **미적용 제안**이다.
+
+#### 원본 근거와 필요한 프로젝트 확장
+
+- 조사한 원본 GA_Hero_Dash/GE_HeroDash_Cooldown/부모·Cue에는 피해 면역 태그 부여가 없고, 쿨다운 GE의 application immunity query도 비어 있다. 대상 기존 `pie_Dash_B.json`에는 Event.Movement.Dash 활성 중 치명 시험 피해 후 사망한 관찰이 있다. 원본 전체 프로젝트에서 모든 피해 유형을 PIE 검증한 것과는 구분한다.
+- 원본 `LyraHealthSet.cpp:82`와 이식된 `DCHealthSet.cpp:81`은 이미 `Gameplay.DamageImmunity`가 있으면 일반 양수 Damage를0으로 만들고 처리를 거부한다. SelfDestruct 예외도 있다. 따라서 피해 계산을 다시 만들거나 모든 GameplayEffect를 막는 새 immunity query로 교체하지 않고 이 경로를 재사용한다.
+- Lyra 원본은 방어 창/회피 성공 귀속을 제공하지 않으므로 이를 DreamCatcher 추가 규칙으로 구성해야 한다. 원본 Dash의 이동·몽타주·힘·쿨다운과 승인된 무입력 보정은 유지한다.
+
+#### 제안 작업 묶음 — 방어 판정·수명·성공 이벤트
+
+1. **초기 방어 구간 제안:** Commit 성공이 확인된 권한 경로부터 `RootMotionDuration` 동안(현재0.25초). 피해 면역 전용 `GE_DC_DashDefense`가 기존 Gameplay.DamageImmunity를 부여하고 자동 만료한다. 값은 기존 RootMotionDuration에서 전달해 별도 숨은 상수를 두지 않는다. 원본의 AbilityDuration0.55초 전체를 방어하는 대안은 더 넓은 방어 판정을 만들므로 별도 선택사항이며 현재 채택하지 않는다.
+2. **전용 AbilityTask:** `DCAbilityTask_DashDefenseWindow`가 해당 GE handle·타이머·피해차단 구독을 소유한다. 만료, 정상종료, 취소, 사망, ASC/Avatar 해제에서 자기 것만 정리한다. 다른 무적 효과가 겹쳐도 태그를0으로 강제 초기화하지 않는다. GE 만료와 Task 종료를 모두 안전장치로 사용한다. 단순 Event.Movement.Dash 태그만 감시해 Commit 전부터 방어하지 않는다. 원본 서버 SendInfo의 Commit 결과 미사용은 기존 이동 경로를 임의 수정하는 대신 **새 방어 시작에만 성공 결과를 전달**하여 제한한다.
+3. **실제 차단 기반 성공:** HealthSet의 기존 면역 차단 결정 지점에 알림 hook을 추가한다. 양수 Damage가 해당 방어 창 때문에 차단된 경우에만 기존 `GameplayEvent.Dodge.Success`를 내고, 첫 묶음은 Dash1회당 최초1회만 알리는 안이다. 0피해·치유·SelfDestruct·다른 무적/치트 원인의 차단을 회피 성공으로 오인하지 않는다. 공격자·대상·차단 피해량·EffectContext를 확인 가능하게 전달한다. 일반 피해 공식과 SelfDestruct 예외는 유지한다.
+4. **시작/종료/성공 hook:** Blueprint delegate와 검증 로그를 제공한다. 이것을 전용 시각·사운드 성공 피드백 완성으로 보고하지 않는다. 아직 정하지 않은 성공 전용 연출/보상·궁극기 충전은 임의로 추가하지 않고 **R9-2 후속 미완료**로 남긴다.
+
+**예상 파일·에셋 범위:**
+
+- 신규 `Source/DreamCatcher/AbilitySystem/Tasks/DCAbilityTask_DashDefenseWindow.h/.cpp`
+- 기존 `Source/DreamCatcher/AbilitySystem/Attributes/DCHealthSet.h/.cpp`의 차단 알림 hook
+- 신규 `Source/DreamCatcher/Tests/DCDashDefenseAutomationTests.cpp`(기존 테스트 기반의 해당 기능 검사만)
+- 신규 `/Game/DreamCatcher/GAS/Effects/GE_DC_DashDefense`
+- 기존 `/Game/LyraMigration/Dash/GA_Hero_Dash`의 방어 Task 연결만 추가
+
+현재 Config 변경은 계획하지 않는다. 공용 피해 공식·원본 카메라/이동/사격·Dash 음원/Cue·legacy 전체 제거·R9-3 궁극기는 범위 밖이다. 전체 GE 적용을 차단하는 대안은 Damage 외 동반 효과까지 막을 수 있어 기존 HealthSet 방식보다 동작 차이가 크므로 권고하지 않는다.
+
+**승인 후 검증:** 기존 방어 없음 기준→방어 전/0.25초 내/종료 후 양수 Damage 적용, 쿨다운 실패 시 면역 미부여, 성공 알림 중복 방지, 0피해·치유·SelfDestruct 예외, 다른 무적과 중첩/해제, 취소·사망·Avatar 교체의 handle/태그 정리를 검사한다. 실제 전투 피해 경로와 원본 Dash 회귀도 포함한다. 코드는 Codex가 작성하되 **C++ 빌드는 사용자가 수행**하고, 이후 GE/BP 자동화와 PIE 검사를 묶는다. 미검증 원본 전체 PIE/장치/네트워크 범위는 별도로 유지한다.
+
+### 2026-10-11 R9-2 첫 묶음 승인 / 방어 Task 코드 준비
+
+사용자 승인 후 C++ 코드를 작성했다. **C++/UHT 빌드·패키징과 Unreal 검사 실행은 하지 않았다.** 신규 GE 생성 및 Dash Blueprint 연결은 사용자 빌드 후 진행할 범위로 남겨두었다. 따라서 현재 플레이에서 방어가 활성화된 상태도, R9-2 검증 완료 상태도 아니다.
+
+**작성한 코드:**
+
+- `Source/DreamCatcher/AbilitySystem/Tasks/DCAbilityTask_DashDefenseWindow.h/.cpp` 신규. Blueprint factory는 OwningAbility, 실제 bCommitSucceeded, DefenseEffect class, Duration을 받는다. Duration은 후속 연결에서 기존 RootMotionDuration(현재0.25초) 값을 사용한다. 활성 Ability·서버 권한·현재 owner/avatar·생존/유효 상태를 확인하고, 실패 Commit/비권한/비양수·비유한 시간을 거부한다.
+- GE는 HasDuration, non-periodic/non-stacking, GrantedTags가 Gameplay.DamageImmunity1개이며 Modifier/Execution 없는 정의만 허용한다. Spec duration은 전달값으로 잠그고, 같은 Ability에서 겹치는 중복 window 적용은 거부한다. 태그를 직접0으로 초기화하지 않고 자기 GE handle만 제거한다.
+- `DCHealthSet.h/.cpp`는 기존 DamageImmunity 판정→Damage0 처리 직후 동기 `OnDamageBlocked` 알림을 추가했다. 피해 공식·SelfDestruct 예외·원본 사망 처리 위치를 바꾸지 않았다. Task는 열린 방어창·자기 effect 유효성·단독 면역 카운트1·치트 없음·양수 유한 피해를 확인한 뒤 기존 GameplayEvent.Dodge.Success와 OnDamageAvoided를 최초1회 보낸다. 다른 무적의 인과관계가 섞인 경우에는 보수적으로 성공을 알리지 않는다. payload는 공격자/현재Avatar/차단 피해량/EffectContext/캡처 태그이며, 재진입 전에 성공 플래그를 설정한다.
+- OnOpened/OnClosed/OnDamageAvoided는 동일 FGameplayEventData delegate signature를 사용한다. 소유 Ability의 종료 알림, Health0, Avatar EndPlay, GE 제거, 타이머 만료에서 자기 구독/효과를 정리한다. 정상 해제 외에 ASC의 직접 actor-info 교체/삭제는 Task Tick으로 다음 프레임까지 검출한다. GE duration 자체도 안전장치다. 완료된 Ability로 delegate를 강제 전송하지 않는다. 별도 클라이언트 성공 연출 RPC나 보상 효과는 구현하지 않았다.
+- `Tests/DCDashDefenseAutomationTests.cpp` 및 `DCDashDefenseTestTypes.h` 신규. 검사 전용 숨김 native Ability/GE fixture를 사용하며 production CDO/에셋을 수정하지 않는다. `DreamCatcher.R9.DashDefense`4개 검사 작성: 실제 Instant GE Damage/Healing의 전·중·후 결과, 재진입/중복 성공, 다른 무적/치트와 중첩, 다른 GE handle 보존, Commit/시간/권한 거부, SelfDestruct·Health0, 외부 GE 제거 및 Avatar 교체/해제. 별도 프로세스 `-DCR9DefenseIsolatedAutomation`을 요구한다. **작성만 했고 아직 실행하지 않았다.**
+
+**검증 상태:** 로컬 UE5.8 Task/GE/delegate API와 종료 순서를 대조하고 텍스트/diff 검사를 수행했다. C++ 컴파일 가능/테스트 통과를 주장하지 않는다. 기존 Config·Dash/음원/Cue 에셋·게임DLL 보호 해시는 유지됐으며 Build.cs나 GameplayTag 등록은 변경하지 않았다.
+
+**재개 순서:** 사용자 Development Editor/Win64 빌드 → `DreamCatcher.R9.DashDefense` 독립검사/기존 회귀 → `/Game/DreamCatcher/GAS/Effects/GE_DC_DashDefense` 생성과 대상 GA_Hero_Dash의 두 Commit 경로에 실제 성공값/RootMotionDuration으로 Task 연결 → 실제 전투 Damage·종료/취소/사망 검증. 연결 전에는 방어 면역이 자동으로 생기지 않는다. 전용 성공 시각/사운드 연출은 R9-2의 미완료 항목, R9-3·R7/R13 HUD·장치/복제/패키징도 기존 미완료로 유지한다.
+
+### 2026-10-11 R9-2 방어 GE·Dash 연결 / 사용자 빌드 및 실제 PIE 자동검증 통과
+
+**빌드/검사 근거:** 사용자 Development Editor/Win64 빌드는 UBT 13:35:40 KST 시작/51.31초 성공, 게임 DLL13:36:31(4,491,264 bytes)로 확인했다. Codex는 빌드·패키징을 실행하지 않았으며 게임 C++/Config 추가 변경도 없다. `R9DefenseCode_A/index.json`13:41:41 방어4건 통과 후, 최종 `Saved/Automation/R9DefenseRegression_A/index.json`13:54:45에서 방어4＋기존 무기3＋Equipment/QuickBar1 총8건 성공/실패·보고서경고0/종료0이다. 임시 native 월드 검사와 아래 실제 PIE는 별개다. 회귀 시작 로그의 기존 B_LyraGameInstance 원본 Script import 경고까지 해소됐다는 뜻은 아니다.
+
+**승인된 실제 변경:**
+
+- 신규 `/Game/DreamCatcher/GAS/Effects/GE_DC_DashDefense`: 원본 GameplayEffect 직계 BP, HasDuration0.25, Period0/StackingNone, Modifier/Execution 없음, TargetTags 컴포넌트1개가 Gameplay.DamageImmunity만 부여한다. 테스트 전용 native GE를 production 부모로 사용하지 않는다. Task는 기존 RootMotionDuration으로 spec duration을 잠근다.
+- 기존 `/Game/LyraMigration/Dash/GA_Hero_Dash`: `K2Node_IfThenElse_4`의 로컬 Commit 성공 출력과 `K2Node_CallFunction_17`의 서버 Commit 뒤에 각각 실제 `K2Node_LatentAbilityCall` 방어 Task를 연결했다. 두 노드 모두 해당 Commit 반환값과 RootMotionDuration getter를 받는다. 서버의 원래 Commit 실패 후 이동 진행 여부는 변경하지 않으며 새 방어만 성공값으로 제한한다. OnOpened/OnClosed/OnDamageAvoided 연출 핀은 아직 미연결이다.
+- `Scripts/Editor/r9_dash_defense_setup.py`: 허용된 두 에셋만 생성/설정/Compile/저장한다. `Saved/Diagnostics/R9/defense_Apply_C/report.json`13:49:57 저장2개 및 `defense_Verify_A/report.json`13:50:46 새 프로세스 재로드/Compile/저장0 통과. 원본 부모/기본값/기존 노드와 허용 연결 외 그래프, 방향 선택72조건이 일치한다. 보호2483경로(없는 동반 경로 포함) 불변. 이동·몽타주·카메라·쿨다운·음원/Cue·승인된 무입력 보정을 유지했다.
+
+**실제 통합 PIE:** `Scripts/Editor/r9_dash_defense_probe.py`는 기존 L_DC_RifleIntegration의 IA_Dash를 주입하고 기존 SetByCaller Damage GE 경로를 사용한다. 에셋을 저장하거나 직접 RootMotion/Dodge로 우회하지 않는다. `Saved/Diagnostics/R9/pie_DefensePIE_B.json`과 `Saved/Automation/R9DefensePIE_B/index.json`13:54:07의 성공1/실패·보고서경고0/종료0을 확인했다.
+
+| 조건 | 관측 결과 |
+|---|---|
+| 방어 전25피해 | Health100→75 |
+| 방어 중20피해＋15피해 | Health75유지/면역카운트1/활성 방어 Task1 |
+| 창 만료 후10피해 | Health75→65/면역0/활성 Task0; Dash 활성 태그가 남은 상태에서도 창은 먼저 종료 |
+| 쿨다운 중 재입력 및 피해 | 새 방어 없음/면역0/Health65→55 |
+| Dash 취소 직후5피해 | 면역 즉시0/Health55→50 |
+| 다음 방어 창 중 SelfDestruct | Health50→0/사망 시작/면역0/활성 Task0 |
+| 사망 후 Dash 재입력 | 면역0 유지 |
+
+PIE 로그의 창 시작/종료 각3회, 최초 양수 차단 성공 로그1회 및 Error/ensure/Fatal0을 확인했다. 원본8초 Death 종료/장비 해제도 후속 로그에서 확인했다. 일반 GameplayEvent의 payload/최초1회/재진입·다른 무적 중첩은 native 독립검사에서 검증했다. 이것을 원격 RPC/복제 검증으로 확대하지 않는다.
+
+**진단 실패와 남은 경계:** Python 타입 노출/액션 목록 탐색과 저장 전 부모 조회·주석 노드 처리에서 멈춘 진단은 모두 저장0이며 최종 교정본만 저장했다. 첫 PIE_A는 콘솔의 `__file__` 미정의로 probe가 실행되지 않았으므로 성공 근거가 아니다. PIE_B는 교정 후 통과했다. PIE는 RenderOffscreen/Cue 비활성/무음 조건이며 기존 AutoReload Script import/PoseAsset/드라이버 시작 경고는 남아 있다. 물리키/화면/음향·다중 장치·원격 SendInfo RPC/복제·패키징은 별도다.
+
+**최신 사용자 답변/다음:** 새 연결 뒤 방향·몽타주·효과음은 아직 확인하지 않았다고 답했다. 재빌드 없이 에디터를 새로 열어 LeftShift 동작을 짧게 확인받는다. 피해 타이밍 수동 재현은 요구하지 않는다. R9-2 첫 묶음은 **구현·자동검증 완료/사용자 수용 확인 대기**이며, 성공 전용 시각/음향 피드백은 여전히 미완료다. 다음 변경안은 기존 Dash Cue를 그대로 보존하면서 성공 전용 피드백 후보와 연결 범위를 먼저 제시한다. 원본에는 해당 성공 판정/전용 연출이 없으므로 프로젝트 추가 기능임을 밝히며, 별도 승인 없이 보상·궁극기 충전·기존 연출 재사용/변조를 추가하지 않는다. R9-3와 R7/R13 잔여 HUD도 미완료로 유지한다.
+
+### 2026-10-11 사용자 범위 결정 — 회피 성공 전용 시각·음향 피드백 제외
+
+사용자가 현재 필요 없는 기능이라며 해당 연출을 스킵하고 다음 단계로 진행하도록 요청했다. **전용 성공 연출은 사용자 요청에 의한 현재 범위 제외**로 관리한다. 완료/검증 통과로 표기하지 않으며, 앞선 제작 예정/미완료 이력보다 이 결정을 우선한다. 재승인 없이 성공 VFX/SFX를 만들거나 기존 Dash Cue를 성공 시 재생하도록 연결하지 않는다.
+
+- 유지: 기존 Dash 시작 연출/효과음, RootMotionDuration0.25초 방어, 실제 피해 차단 기반 성공 판정, GameplayEvent.Dodge.Success 및 시작/종료/성공 hook.
+- 제외: 회피 성공을 위한 별도 시각·음향 피드백 제작/연결.
+- 별도: 방어 연결 후 사용자 방향·몽타주·음향 확인은 아직 미검증이다. 전용 성공 연출 제외를 이 확인의 성공으로 해석하지 않는다. 보상/궁극기 충전은 추가하지 않는다.
+
+**다음 R9-3 읽기 전용 확인:**
+
+- `DCResourceSet.h/.cpp`: UltimateCharge 기본0/MaxUltimateCharge100, 범위 제한과 소유자 복제. `DCPlayerState.cpp`에서 ResourceSet을 생성한다.
+- `DCCombatComponent::TryUltimate`: legacy 자체 게이지 최대치 검사→조준 해제→0으로 소모→OnUltimateRequested. Character는 BP_OnUltimateRequested로 전달한다. 새 GAS 궁극기의 실제 효과나 충전 획득 루프 완성 증거가 아니며 해당 Blueprint 구현은 아직 미검증이다.
+- 원본 기반 DCGameplayAbility의 CheckCost/ApplyCost는 Super와 AdditionalCosts를 사용한다. 원본 LyraAbilityCost_PlayerTagStack은 정수 태그 스택 비용이므로 기존 float ResourceSet에 무조건 치환하지 않는다. 확정 기획에 맞춰 재사용 가능한 Ability/GE/비용을 선택해야 한다. 로컬 Lyra Source/LyraGame 텍스트와 ShooterCore 파일 이름의 Ultimate 검색으로는 동일 완성 궁극기를 확인하지 못했으며, 전체 원본 BP 그래프의 기능 부재를 증명한 것은 아니다.
+- **효과·게이지 획득/수치·소모·쿨다운은 기획 확인 대기**다. 기존100을 최종 밸런스 수치로 확정하거나 피해·처치·회피 성공 충전을 임의로 추가하지 않는다. 사용자에게 위 기획을 확인하고 정확한 변경안을 먼저 제시한다. 미정이면 R9-3만 설계 대기로 유지하고 R10 조사/변경안 선행을 제안한다.
+
+이번 변경은 AGENTS.md와 본 명세의 상태/범위 갱신뿐이다. 새 게임 코드·Config·에셋 변경이나 빌드·패키징은 없다.
+
+### 2026-10-11 R9-3 규칙 확정 — 캐릭터별 쿨다운형 고유 기술
+
+사용자가 궁극기의 의도를 **캐릭터마다 다른 효과를 사용하고 일정 시간 쿨다운을 기다리는 고유 기술**로 설명했다. 게이지 획득/소모는 없다. VEILED EXPERTS의 시그니처/레인보우 식스 시즈의 특수 기술은 성격을 설명하는 비유이며 특정 게임의 사용 횟수·재충전·라운드 규칙을 추가하라는 뜻은 아니다.
+
+**확정 및 기존 기록과의 관계:**
+
+- UltimateCharge100 도달, 피해/처치/회피 성공 충전, 게이지 소모는 새 기술의 조건이 아니다. ResourceSet을 반드시 연동해야 한다는 과거 계획보다 이 결정을 우선한다.
+- 실제 기술 효과와 쿨다운 시간은 캐릭터별 설정이다. 아직 특정 효과/시간을 제공받지 않았으며 임의 밸런스 수치를 확정하지 않는다.
+- 기존 ResourceSet/legacy Combat 게이지/HUD 및 Ultimate 이름의 태그·입력 에셋은 현재 참조를 보존한다. 새 경로 전환·참조 검증 및 삭제 승인은 별도이며 이번 설명은 일괄 삭제/개명 승인이 아니다.
+
+**원본 근거·대안·제약:** 로컬 UE5.8 `GameplayAbility.cpp`의 CommitAbility→CommitCheck/CommitExecute 및 CheckCooldown/GetCooldownTags/ApplyCooldown은 쿨다운 GE를 지원한다. 이식된 `DCGameplayAbility`는 엔진 비용 처리와 Lyra AdditionalCosts를 사용한다. Cost GE=None/AdditionalCosts 비움으로 무자원 비용의 기술을 구성하고 기존 AbilitySet/InputTag 부여 및 HasDuration GE를 재사용하는 것이 우선안이다. CombatComponent 별도 타이머로 다시 구현하는 대안은 GAS 밖에 사용 가능 상태가 하나 더 생기므로 권고하지 않는다. 기술별 효과까지 원본에 완성돼 있다는 근거는 없으며, 효과 규칙을 받은 뒤 재사용할 Task/Montage/Effect/Cue를 대조한다.
+
+**첫 작업 묶음 후보 — 아직 적용/승인 전:**
+
+1. 기존 Q/IA_Ultimate/InputTag.Ultimate 연결을 보존하고 캐릭터별 GA 및 쿨다운 GE/AbilitySet으로 부여한다. 가칭 신규 기술 에셋 경로는 `/Game/DreamCatcher/GAS/Abilities/Signature/`, 통합 확인 범위는 기존 R5/Integration 테스트 플레이어로 제한한다. 캐릭터 선택 시스템·전체 HUD·디자이너 맵은 자동 포함하지 않는다.
+2. 사용 성립 시 Commit으로 쿨다운을 시작하고 실패 시 쿨다운을 적용하지 않는 기본안을 제시한다. 지속형/대상 지정형 기술은 사용이 성립하는 시점과 중단 정책을 개별 확정한다. 별도 게이지 비용은 만들지 않는다.
+3. 캐릭터별 실제 효과/쿨다운 값을 에셋에서 조정한다. `Ability.Type.Action` 계열과 기존 사망/입력 차단 규칙의 연결을 확인하며 사격·조준·재장전 취소 정책은 임의로 통일하지 않는다.
+4. 최초 사용, 쿨다운 중 재입력 거부, 만료 후 재사용, 게이지0에서도 실행, 실패/취소/사망 정리를 검증한다. 캐릭터 효과 없이 공통 쿨다운만 검사하면 **기반 검사 완료**일 뿐 R9-3 전체 완료가 아니다. R7/R13 최종 UI는 충전량이 아닌 사용 가능/남은 쿨다운을 기준으로 연결한다.
+
+**남은 결정:** 첫 캐릭터의 효과/쿨다운 시간, 시전·타깃 조건, 취소 환불, 사망·캐릭터 교체 시 쿨다운 유지 여부. 이미 확정된 '획득/소모 없음'을 다시 미정으로 돌리지 않는다. 이번에는 두 문서와 읽기 전용 조사만 수행했고 게임 코드·Config·에셋·빌드·패키징 변경은 없다.
+
+### 2026-10-11 R9-3 공통 기반 구현·자동검증 / Q 1회 입력 계약 승인
+
+사용자가 실제 캐릭터 효과/시간은 미정으로 두고 기반까지만 먼저 구현하도록 승인했다. **기존 Lyra/GAS 기반 재사용으로 새 C++·Config 수정 없이** 아래 에셋을 만들고 통합 테스트에 연결했다. C++ 빌드·패키징은 실행하지 않았고 게임 DLL도 유지했다. 원본에 동일 고유 기술이 있다는 의미가 아니며, 프로젝트 공통 설정과 검증용 자식을 추가한 것이다.
+
+| 에셋 | 역할 |
+|---|---|
+| `/Game/DreamCatcher/GAS/Abilities/Signature/GA_DC_SignatureBase` | DCGameplayAbility 직계 추상 부모. Cost GE 없음/AdditionalCosts 비움, 원본 OnInputTriggered·Independent·InstancedPerActor·LocalPredicted 유지. Ability.Type.Action＋기존 Ability.Action.Ultimate 분류, Status.Death/Gameplay.AbilityInputBlocked 차단. 실제 효과·쿨다운 값/GE는 미지정 |
+| `/Game/DreamCatcher/GAS/Test/R9/Signature/GA_DC_SignatureSmoke` | 위 부모의 **검증용** 자식. Commit 성공→TestCommitCount 증가/TEST Print→WaitDelay0.35초→End, 실패→End. 공격·강화·VFX/SFX 없음 |
+| `/Game/DreamCatcher/GAS/Test/R9/Signature/GE_DC_SignatureCooldownSmoke` | **검증용2초** HasDuration, Cooldown.Ultimate 태그1개, 비주기/비중첩, Modifier/Execution/Cue 없음 |
+| `/Game/DreamCatcher/GAS/Test/R9/Signature/AS_DC_SignatureSmoke` | 검증용 자식1개를 기존 InputTag.Ultimate로 부여 |
+
+기존 R5/Integration의 DA_DC_RiflePawn은 기존6개 AbilitySet을 보존하고 위 테스트 Set1개만 추가했다. 기존 게이지·legacy 코드·Death·Dash·공용 입력·디자이너 맵은 수정하지 않았다. 미래 캐릭터 자식은 **사용이 성립하는 지점에서 CommitAbility 호출, 자신의 쿨다운 GE 지정, 실제 효과와 End/Cancel 처리**가 필요하다. 추상 부모 설정만으로 실제 캐릭터 기술이 완성되지는 않는다.
+
+**저장/재로드:** `Scripts/Editor/r9_signature_foundation.py`, `Saved/Diagnostics/R9/signature_Apply_D/report.json`15:55:47 KST 저장5개, `signature_Verify_A/report.json`15:57:40 별도 프로세스 재로드/Compile/저장0 통과. 기존526경로 보호 해시 유지. 앞선 Apply_A/B/C의 수학 노드 타입 확정·태그 컨테이너 비교 실패는 저장 전에 중단했으며 게임 동작 실패나 완료본으로 취급하지 않는다.
+
+**Q 입력 추가 승인 및 실제 변경:** 최초 PIE_A는 기본 쿨다운/무소모·전투 검사를 통과했지만 기존 IA_Ultimate에 Pressed 트리거가 없어 Q 유지2.6초 중 쿨다운 만료 후 자동 재실행을 관측했다. 이 근거와 공용 액션 보존 대안을 설명했고 사용자가 **한 번 누를 때 한 번만 실행**을 선택했다. `Scripts/Editor/r9_signature_input.py`로 통합 전용 IMC_DC_RifleBase의 Q 행에 InputTriggerPressed1개(threshold0.5)를 추가했다. `signature_InputApply_A`16:03:01 저장1개, `signature_InputVerify_A`16:04:38 재로드/저장0 통과. Q 키·공용 IA_Ultimate·다른 키/모디파이어/트리거는 유지했다. 최종 수정 범위는 **신규4에셋＋기존 테스트 PawnData/IMC2개**다.
+
+**최종 검증:** `Scripts/Editor/r9_signature_probe.py`, `Saved/Diagnostics/R9/pie_SignaturePIE_C.json`, `Saved/Automation/R9SignaturePIE_C/index.json`16:08:04 성공1/실패·보고서경고0/종료0.
+
+- 모든 표본에서 기존 UltimateCharge0 유지, 비용 없이 첫 실행.
+- 쿨다운 중 재입력 거부, 만료 후 다시 눌러 재실행. Q 유지2.6초는 CommitCount2→3으로1회만 실행하고 자동 반복하지 않는다.
+- 취소 시 활성 Ability/Task 종료, Dash/입력차단 상태에서 실행 거부, 사망 즉시 실행 종료/사망 후 재입력 거부.
+- Commit 후 취소/사망 직후 쿨다운은 엔진 기본대로 남아 있다가 만료. 이는 관측한 기반 동작이며 **캐릭터별 최종 환불·리스폰/교체 정책은 아직 미확정**이다.
+- 기존 라이플 사격/재장전30→27→30, 보호 파일 변경0, Error/ensure/Fatal0.
+
+**검증 한계/진단 이력:** PIE_B의 Action 주입은 IMC 트리거를 실행하지 않아 길게 누르기 검사가 실패했다(보고서 실패1). 에셋을 재변경하지 않고, PIE_C는 실제 Q 매핑의 Pressed 설정을 유지되는 runtime trigger에 복사해 엔진의 InjectInputVectorForAction Triggers 인수로 전달했다. 따라서 **Action＋매핑 트리거 검증이지 물리 Q키/키 매핑 처리 전체를 직접 구동한 검사는 아니다.** RenderOffscreen/Cue비활성/무음이며 기존 import/PoseAsset/드라이버 시작 경고는 남아 있다. 실제 고유 기술 효과/연출·장치/복제·패키징은 미검증이다.
+
+**인계:** 재빌드 없이 새 에디터 L_DC_RifleIntegration에서 Q→TEST 로그,2초내 재입력 거부,길게 누르면1회,놓고 다시 누르면 재실행을 짧게 확인한다. 현재는 **R9-3 공통 기반 구현·자동검증 완료/물리키 확인 대기**, 캐릭터별 실제 효과/시간은 설계 대기다. 전체 R9 완료로 올리지 않는다. 다음 후보는 R10의 적 GAS·공격 텔레그래프 조사/변경안이며 이번 승인으로 직접 구현 범위를 확대하지 않았다.
+
+최종 입력 승인까지 포함한 `signature_Verify_B/report.json`16:09:14의 새 프로세스 Compile/전체4에셋·PawnData/매핑 비교도 통과했다(저장0/보호 파일 변경0/종료0). 재검사 시 `r9_signature_foundation.py -DCR9Signature=verify -DCR9Run=<새이름> -DCR9Applied=Apply_D -DCR9InputApplied=InputApply_A`로 두 승인 시점의 기록을 함께 대조한다.
+
+### 2026-10-11 R9-3 기반 사용자 확인 완료 / R10 첫 변경안
+
+사용자가 Q를 길게 눌러도1회 실행되고 쿨다운 후 재사용도 정상이라고 확인했다. 기존 자동검사와 핵심7파일(신규4에셋·통합 PawnData/IMC·DLL)의 해시 불변을 대조했다. **공통 쿨다운 기반의 해당 사용자 확인까지 완료**이며 실제 캐릭터 기술은 설계 대기로 남긴다. 새 빌드/반복 기반 검사를 요구하지 않는다. R9-2의 별도 사용자 확인은 이번 Q 확인으로 완료 처리하지 않는다.
+
+**R10 실제 확인 근거 — 저장된 현재 작업 공간 기준:**
+
+- `AI/DCEnemyCharacter.cpp`: UDCHealthComponent의 legacy 체력, 0.25초 이동 갱신, 공격 사거리 진입 후 즉시 Visibility Trace/ApplyDamage, OnEnemyDeath→DestroyDelay 제거. 새 라이플의 GAS 피해를 받는 ASC 인터페이스가 없다. 기존 플레이어의 legacy ApplyDamage 수신 bridge는 반대 방향인 라이플→비GAS 적 피해를 보장하지 않는다.
+- `/Game/Blueprint/AI/BP_EnemyCharacter`: 부모 DCEnemyCharacter, 저장 기본값 HP100/이속350/사거리1400/공격간격1.25/피해8/정리2초. native mesh CDO는 SKM_Quinn_Simple/AnimClass 미지정이며 Event BP_OnDamaged의 Print만 연결돼 있다. 맵 인스턴스 override·외부 연출·디자이너 미커밋 변경은 미확인이다.
+- `DCEnemySpawner`의 EnemyClass와 사망 delegate는 ADCEnemyCharacter 타입이다. `DCEncounterController`/`DCStageDirector`는 SpawnerCleared→EncounterCompleted로 이어진다. 이 수신 계약을 깨거나 HP0·DeathFinished·Destroy에서 적을 중복 집계하지 않아야 한다.
+- 원본 `Player/LyraPlayerBotController.cpp`는 bWantsPlayerState=true, `LyraPlayerState.cpp`가 ASC/HealthSet/CombatSet을 생성한다. `GameModes/LyraBotCreationComponent.cpp`는 GenericPlayerInitialization/RestartPlayer로 봇을 만든다. 실제 Bot BP는 ExperienceReady/BT/Perception, `BTS_Shoot`는 Inventory/Equipment/탄약 확인 후 InputTag.Weapon.Fire 이벤트를 사용한다. 조회한 서비스 자체에는 프로젝트용 선딜/후딜 텔레그래프 완성 흐름이 없다. 전체 원본 BP/게임에 모든 예고 기능이 없음을 증명한 것은 아니다.
+
+읽기 전용 스크립트는 `Saved/Diagnostics/R10/inspect_existing.py`, 결과는 `target_A/report.json`16:30:00 KST와 `source_A/report.json`16:31:26이다. 각각3 BP의 그래프/CDO를 조회했고 에셋 저장0/검사 대상 uasset 불변/로그 Error·ensure·Fatal0/종료0이다. 게임 코드·Config·에셋 수정, 빌드·패키징, 브랜치 병합은 하지 않았다.
+
+**원본과의 차이·구체적 제약·대안(변경 전 설명):**
+
+1. **원본 전체 봇 구조 보존 대안:** PlayerState 소유 ASC＋원본 Controller/GameMode 초기화/재시작＋BT/Equipment/Inventory 경로를 함께 연결한다. 원본과 가깝지만 현재 스포너가 직접 Actor를 생성/제거하는 경로와 교체해야 할 범위가 다르다. 기술적 이식 불가로 분류하지 않는다.
+2. **권장안 — 단일 수명 NPC의 Pawn 소유 ASC:** 이미 이식한 원본 ASC/Attribute/HealthComponent/Death Ability/팀·피해 규칙을 재사용하고, 소유·초기화·제거 연결만 프로젝트 NPC에 맞춘다. Actor-owned ASC+원본 Death는 기존 통합 표적에서 사용한 기반이지만 새 AI 적의 성공을 의미하지 않는다. NPC 제거 시 자원/효과도 함께 끝나므로 원본 PlayerState 지속 수명과 다르다.
+3. **처치 메시지 제약:** 원본 HealthComponent는 Elimination Message.Target에 PlayerState 조회값을 넣는다. PlayerState 없는 NPC는 null일 수 있으므로 이를 인카운터 완료 근거로 쓰지 않고 별도 적 사망 알림을1회 집계한다. 기존 처치 UI는 실제 회귀 확인하고 문제 시 최소 대응안을 별도로 제시한다. 원본 메시지/Helper를 이번 제안만으로 전역 수정하지 않는다.
+4. **예고 공격은 프로젝트 확장:** 기존 즉시 명중을 선딜이 있는 공격으로 바꾸면 피해 시점이 달라진다. 예고 시작의 조준점 고정/선딜 중 추적 종료 시점과 시간을 명시해야 하며 아직 확정하지 않는다. 원본 Task/Trace/GE/Cue 재사용과 새 시간·타깃 규칙을 구분한다.
+
+**첫 승인 요청 묶음: R10-1 피격·사망·스포너 집계**
+
+- 신규 `Source/DreamCatcher/AI/DCGASEnemyCharacter.h/.cpp` 별도 계층. IAbilitySystemInterface/팀 인터페이스, 자체 소유의 기존 UDCASC/HealthSet/CombatSet, 원본 기반 LyraHealthComponent/Death Ability/AbilitySet 초기화와 정리. 기존 ADCEnemyCharacter/legacy HealthComponent를 먼저 삭제하거나 이중 체력 저장소로 함께 실행하지 않는다.
+- `Source/DreamCatcher/AI/DCEnemySpawner.h/.cpp` 최소 호환 변경. 기존 EnemyClass/기존 적 delegate를 유지하며 선택적 GAS 적 클래스와 수신 경로를 추가한다. 살아 있는 개체별1회 집계/해제를 보장하고 외부 OnSpawnerCleared와 Encounter 계약은 유지한다. 새 경로를 선택하지 않은 기존 스포너는 자동으로 새 적으로 바뀌지 않는다.
+- `/Game/DreamCatcher/GAS/Test/R10/` 아래 새 적·스포너·Death 설정·AbilitySet 및 분리 테스트 맵을 준비한다. 기존 저장 메시/설정은 재사용하고 필요한 BP 연결만 새 사본에서 수정한다. 원본 Death의 상태 전이는 재사용하되 적 전용 사본은 플레이어 카메라를 전환하지 않고 기존 정리2초를 보존하는 안이다. 실제 부모/필드/스켈레톤 호환은 사용자 빌드 후 저장 전에 확인한다.
+- 관련 native 검사와 실제 라이플→새 적 HP감소/원본 사망 시작·종료/다음 스폰·클리어/중복 사망 알림/반복 PIE 종료 정리를 한 묶음으로 검증한다. 팀0 플레이어·팀1 적은 테스트 값이며 원본 팀 계산을 우회하지 않는다. 같은 팀/적대 팀, 기존 라이플·Dash 방어·Q/사망 흐름도 회귀 확인한다.
+- 이 첫 묶음은 **공격을 수행하는 완성 NPC나 R10 전체 완료가 아니다.** 이후 R10-2에서 원본 재사용 가능 발사 의존성을 대조해 공격 Ability와 의도→선딜→명중→후딜·사망/취소/타깃 상실/엄폐 정리를 연결한다. R10-3에서 실제 예고 연출을 연결한다. 별도 범용 도구/BT 프레임워크/전체 봇·무기 이식은 자동 포함하지 않는다.
+
+**승인/검증 경계:** 아직 위 게임 코드·에셋 변경은 미적용이다. 승인 시 첫 코드 묶음→사용자 C++ 빌드→제한된 새 에셋 자동화/PIE→사용자 화면 확인으로 진행한다. 기존 공용 BP/디자이너 맵·StageDirector·전역 GameMode·legacy 삭제는 범위 밖이다. 원격 main/미커밋 충돌, 실제 레벨/NavMesh·공격 애니메이션·텔레그래프 자산/시간, 다중 장치/복제·패키징은 별도 미검증으로 남긴다.
+
+### 2026-10-11 R10-1 승인된 코드 작성 / 추가 팀 판정 보완 승인
+
+**후속 C2248 교정:** `DCEnemyGASAutomationTests.cpp:178`에서 PlayerState의 숨겨진 GetActorLocation을 호출해 사용자 C++ 빌드가 실패했다. 발사 Pawn이 없고 거리 감쇠를 검사하지 않는 해당 fixture는 Context.AddOrigin(FVector::ZeroVector)로 명시한다. 기존 PlayerState instigator/팀 판정·피해 기대값과 NPC source 검사의 위치 조회는 유지한다. production 피해 계산/적 소스·Config·에셋 변경은 없으며 Codex 빌드/실행 없이 사용자 재빌드와 검사5건 실행을 기다린다.
+
+**후속 UHT 교정:** 사용자 빌드는 `DCGASEnemyCharacter.h:84`의 `HandleHealthChanged` 매개변수 `Instigator`와 AActor 멤버의 이름 충돌로 중단됐다. 헤더의 이름만 `DamageInstigator`로 변경했다. CPP 정의는 해당 매개변수를 사용하지 않아 무명 AActor*를 유지하며 타입/순서·delegate 연결·동작은 같다. Codex 빌드는 실행하지 않았으며 교정 후 컴파일과 아래 검사5건은 여전히 미검증이다.
+
+사용자가 R10-1 구현을 승인했다. **이번에는 코드와 문서만 작성했으며 C++/UHT 빌드·패키징·Unreal 실행·새 에셋 저장은 하지 않았다.** 아직 native 기본 클래스를 완성 NPC로 배치하거나 기존 적/맵이 전환됐다고 보고하지 않는다.
+
+**변경7파일:**
+
+- 신규 `AI/DCGASEnemyCharacter.h/.cpp`: ACharacter 기반 별도 계층에 IAbilitySystemInterface/팀 인터페이스와 기존 ASC/HealthSet/CombatSet/LyraHealthComponent를 연결한다. NPC가 owner/avatar를 겸하며 단일 수명을 가진다. PostInitializeComponents에서1회 초기화해 BP BeginPlay보다 먼저 준비한다. 필수 concrete 원본 파생 DeathAbilityClass를 별도 부여하고 선택적 AbilitySets의 handle을 추적한다. 중복 Health/Combat set 또는 Death ability는 초기화 실패다. legacy 체력 저장소나 자동 추적/공격은 추가하지 않았다.
+- DeathStarted는 이동/충돌 정지와 서버 OnEnemyDeath1회, DeathFinished는 다음 tick 제거다. 정리 시간은 후속 적 전용 Death BP의 Duration에서2초로 설정할 계획이며 actor 쪽에 중복 지연을 만들지 않는다. EndPlay는 health 구독/능력·effect grant/timer/ActorInfo를 정리한다. 기존 무기 Trace 채널과 최소 복제 연결은 추가했지만 실제 모델 충돌·네트워크 검증은 아직이다.
+- 수정 `AI/DCEnemySpawner.h/.cpp`: 기존 EnemyClass/외부 완료 delegate는 유지하고 GASEnemyClass가 지정될 때만 새 경로를 우선한다. 살아 있는 Actor 집합에서 처음 소비한 사망만 집계한다. deferred spawn으로 생성/BeginPlay 전에 수신부를 연결하고 생성 중 즉시 사망의 완료는 다음 tick으로 지연한다. 이는 기존 Encounter가 여러 스포너를 등록 중인 스택에 조기 완료로 재진입하지 않도록 하기 위함이며 Encounter/StageDirector 코드는 수정하지 않았다. 새 GAS 구성 실패/처치 알림 없는 강제 제거는 오류·중단 상태이지 성공 클리어가 아니다. 기존 EnemyClass도 없는 경우의 기존 경고/완료 정책은 그대로다. EndPlay에서 타이머/구독을 제거하며 살아 있는 다른 Actor를 일괄 삭제하지 않는다.
+- 수정 `Teams/DCTeamSubsystem.cpp`: 아래 추가 승인한 null 비교만 보완했다.
+- 신규 `Tests/DCEnemyGASTestTypes.h`/`DCEnemyGASAutomationTests.cpp`: 전용 native fixture와 임시 월드의 검사5건을 작성했다. fixture의0.05초 Death/추가 Marker ability/effect는 테스트 전용이며 production 에셋에 부여하지 않는다.
+
+**추가 제약 확인 → 사용자 승인 → 최소 수정:** 원본 `LyraTeamSubsystem.cpp:349`와 이식본은 자기 피해 허용 시 `FindPlayerStateFromActor(A) == FindPlayerStateFromActor(B)`를 비교했다. PlayerState 없는 서로 다른 NPC는 null==null로 자기 자신으로 오인된다. NPC 모두에 원본처럼 PlayerState를 도입하는 대안은 승인한 NPC 소유 구조보다 범위가 커짐을 설명했고, 사용자가 null 비교 보완과 회귀 검사를 승인했다. 실제 동일 Actor도 non-null인지, 동일 PlayerState도 non-null인지 확인하도록 변경했다. 정상 동일 Actor/공유하는 유효 PlayerState의 자기 피해 허용 및 이후 동일/적대 팀 분기·DamageExecution 공식은 유지했다. 원본 자체 파일은 수정하지 않는다.
+
+**작성한 검사 — 아직 실행/통과 아님:** `DreamCatcher.R10.Enemy` 아래 다음5건이며 별도 프로세스 `-DCR10EnemyIsolatedAutomation`을 요구한다.
+
+1. `OriginalDamageAndDeath`: PlayerState source→NPC의 원본 Execution, 같은 팀 거부/적대 팀 피해, 면역, HP0→원본 Death→제거, 별도 AbilitySet grant/effect 및 ActorInfo 정리.
+2. `TeamIdentityWithoutPlayerState`: PS 없는 NPC 둘의 같은 팀 거부/적대 팀 피해, 실제 자기 피해/자기 피해 비허용 옵션, null source 거부, 유효한 동일 PlayerState 예외 보존.
+3. `SpawnerAndEncounter`: 첫 적 사망→다음 스폰→마지막 적 사망→인카운터1회 완료, 지연/중복 알림 무시.
+4. `ImmediateDeathAndInvalidSetup`: BeginPlay 사망도 수신, 다른 스포너가 남은 인카운터 조기 완료 방지, Death 설정 누락을 실패로 판정하고 잘못 생성한 새 Actor만 정리.
+5. `LegacyAndTeardown`: 기존 EnemyClass 분기/사망 유지, 스포너 EndPlay 후 재스폰·완료 없음, 적의 강제 Destroy를 허위 처치로 집계하지 않음.
+
+**검증/보존 상태:** 로컬 엔진 API와 헤더/선언, diff/공백 검사를 수행했다. 작업 전 보호459파일 중 추가 승인된 TeamSubsystem1개를 제외한 **458파일 해시 불변**이다. 이는 나머지 Source·Config·uproject·기존 공용/테스트 에셋·게임DLL 보호 결과이지 빌드나 런타임 성공이 아니다. 기존 EnemyCharacter/HealthComponent/Encounter/StageDirector와 플레이어 경로는 변경하지 않았다. 실제 생성·피해·사망·처치 UI·충돌·복제 결과는 새 빌드 후 확인한다.
+
+**재개:** 사용자 Development Editor/Win64 빌드 → 신규5건/기존 관련 회귀 검사 → 승인된 `/Game/DreamCatcher/GAS/Test/R10/`의 적 전용 Death BP·적/스포너·필요 AbilitySet/테스트 맵 생성/Compile/재로드 → 실제 라이플 피격·팀·사망/집계·플레이어/Dash/Q 회귀. 새 NPC는 DeathAbilityClass가 필수이며 별도 적 BP 설정 전 native 기본 클래스를 배치하면 초기화 오류로 비활성화되는 것이 의도된 보호 동작이다. 테스트 클래스는 production BP 부모/AbilitySet에 사용하지 않는다. R10-2 공격·R10-3 텔레그래프 연출과 R11 실맵 통합은 아직 미구현이다.
+
+### 2026-10-11 R10-1 사용자 빌드 확인 / native 검사 실패 원인·다음 교정안
+
+사용자 UBT는 **17:28:01 KST 시작·8.60초·Succeeded**, DLL은 **17:28:09 / 4,647,424 bytes**다. UHT 이름 충돌과 C2248 교정 후 컴파일·링크가 완료됐다. Codex는 빌드/패키징을 실행하지 않았다.
+
+- `Saved/Automation/R10EnemyNative_A/index.json` **17:29:31: 성공3/실패2/보고서경고0/notRun0**. 팀 identity, 즉시 사망·잘못된 설정, legacy·teardown은 통과했다. OriginalDamageAndDeath는 피해·면역·DeathStarted·중복 사망 방지까지 통과했지만 지연 제거 및 후속 ASC 정리4항목에 실패했다. SpawnerAndEncounter는 첫 사망1회 집계 후 다음 스폰 확인에서 실패해 후속 클리어 검증까지 도달하지 않았다. 종료0과 검사 성공을 구분한다.
+- 엔진 `TimerManager.cpp:712~725,1377~1388`에서 첫 Tick 전 등록한 일반 타이머는 Pending이고 첫 Tick **끝**에 활성화한다. `AbilityTask_WaitDelay.cpp`도 이 SetTimer를 사용한다. 현재 테스트는 Death0.05초 예약→첫0.06초 Tick(예약 활성화)→0.02초 Tick으로 만료 전에 검사한다. 스폰0.01초 예약도 첫0.02초 Tick 직후 검사하므로 같은 문제가 있다. 이는 테스트 시간 진행과 실패의 소스상 근거이며, 실제 PIE 정상이나 교정 재실행 성공을 뜻하지 않는다.
+- **교정안 승인·코드 적용:** 사용자 승인 후 `Source/DreamCatcher/Tests/DCEnemyGASAutomationTests.cpp`의 OriginalDamageAndDeath와 SpawnerAndEncounter에 Pending 활성화용 `TickTestWorld(.001f)`를 각각1회 추가했다. 기존 지연 경과/다음 tick/모든 assertion을 유지한다. 원본 Death/WaitDelay와 게임 적·스포너·팀 코드, 실제 시간값, Config/에셋은 변경하지 않았다. 허용 조건 완화나 검사 생략은 없다. 정적 대조/공백 검사만 수행했고 Codex 빌드/Unreal 실행은 하지 않았다. **교정 후 컴파일·실행 미검증/사용자 Development Editor·Win64 재빌드 대기**이며 위3성공/2실패와 아래9성공은 교정 전 DLL 결과다. 재빌드 후 동일5건을 재실행한다.
+- `Saved/Automation/R10EnemyRegression_A/index.json` **17:30:30: 성공9/실패·보고서경고0/notRun0**. Equipment/QuickBar1, TeamColor1, Weapon3, DashDefense4가 통과했고 로그 Error/ensure/Fatal0이다. 실제 라이플 PIE/새 NPC 메시·처치 UI/복제 검증과 구분한다.
+- 위 검증 당시 Source/Config/uproject/게임DLL **419파일 해시 불변**, 새 에셋 생성·저장0이며 상태 문서만 갱신했다. 후속 승인으로 위 테스트 CPP1파일의 시간 진행만 교정했다. **R10-1 전체는 미완료**이며 사용자 재빌드/native 재검사 후 기승인 R10 적/Death/스포너/분리 테스트 맵 생성·재로드·라이플 PIE를 진행한다. R10-2/3 공격·텔레그래프와 R11 실맵 통합은 미착수 상태다.
+
+### 2026-10-11 R10-1 native5·신규 적 에셋/PIE·사용자 화면 검증 완료
+
+**후속 사용자 수용:** 사용자가 새 맵의 적3마리 피격·사망 후 약2초 제거·다음 적 등장·플레이어 카메라 유지가 모두 정상이라고 확인했다. Verify_A에 기록된 신규4에셋＋DLL의5파일이 그대로임을 재대조했다. **R10-1은 승인한 테스트 연결 범위에서 완료**다. 아래 자동검증을 다시 실행한 것은 아니며 이번 후속 턴은 상태 문서 갱신과 R10-2 변경안 조사만 수행했다. 코드/Config/에셋·빌드/패키징/Editor 실행은 없다.
+
+**빌드/독립 검사:** 사용자 UBT17:34:10 KST 시작·8.20초 성공, DLL17:34:17/4,647,424 bytes. `R10EnemyNative_B/index.json`17:35:06 성공5/실패·보고서경고0/notRun0, 로그 Error/ensure/Fatal0이다. 이전3성공/2실패는 폐기하거나 덮어쓰지 않고 교정 전 이력으로 보존한다. Codex 빌드/패키징은 없다.
+
+**승인된 새 에셋4개 — `/Game/DreamCatcher/GAS/Test/R10/`:**
+
+| 에셋 | 부모/설정과 의도 |
+|---|---|
+| GA_DC_EnemyDeath | 기존 `/Game/Characters/Heroes/Abilities/GA_Hero_Death`의 자식. 원본 이벤트 그래프·Cue·태그·Start/Finish를 상속하고 Camera Mode=None/Duration=2만 적 전용 설정한다. 기존 플레이어 Death는 수정하지 않는다. |
+| BP_DC_GASEnemy | DCGASEnemyCharacter, HP100/Team1/DeathAbilityClass 연결. 기존 BP_EnemyCharacter의 Quinn Simple 메시·Z-85/Yaw-90·캡슐34/88·AnimClass=None·속도350 재사용. 능력/Attribute 중복을 만드는 별도 빈 AbilitySet은 만들지 않는다. |
+| BP_DC_GASEnemySpawner | DCEnemySpawner의 별도 자식. GAS 클래스 선택,3마리/동시1/간격1초. 기존 BP_EnemySpawner/EnemyClass 경로는 그대로다. |
+| L_DC_EnemyIntegration | 새 평면 테스트 맵, 기존 RifleGameMode 재사용. 전방(650,0,88)의 새 스포너1개를 기존 native DCEncounterController가 자동 시작. 기존 RifleIntegration/디자이너 맵은 미수정. |
+
+`Scripts/Editor/r10_enemy_setup.py`는 정확한 새4경로만 생성/저장하며 기존 출력이 있으면 apply를 거부한다. 별도 verify는 저장하지 않는다. Inspect_A/B의 속성명 조회 실패는 저장0, Apply_A는4개 저장 후 Vector.equals의 Python 인수 오류로 최종 검증 실패다. 비교식을 교정해 **Verify_A 새 프로세스 재로드/Compile/값·원본 부모 그래프·맵 참조 확인 complete=true/저장0**을 얻었다. 부분 실행을 숨기거나 재복사하지 않았다. Source/Config/기존 AI·Stage/통합·R9·Death 에셋/uproject/DLL 및 새4에셋을 포함한 Verify 기준 **449파일 해시 불변**이다.
+
+**실제 라이플 PIE:** `Scripts/Editor/r10_enemy_probe.py`, 최종 `Saved/Diagnostics/R10/pie_PIE_B.json` complete=true/보호파일 변경0/저장0. `Saved/Automation/R10EnemyPIE_B/index.json` **17:47:22 성공1/실패·보고서경고0/notRun0**이며 로그 Error/ensure/Fatal/빈 TapIDs0이다.
+
+- 실제 InputAction→기존 라이플 GA→Trace/GE 경로 사용. 같은 팀은 탄약30→26에도 적HP100을 유지했고, 팀1 복원 후 적3마리가 순차 사망했다. 같은 팀 검사는 PIE 인스턴스 TeamId만0→1로 바꾸며 기본값/복제를 검증했다고 주장하지 않는다.
+- 각 적 DeathStarted/OnEnemyDeath1회, 충돌 비활성, **2.003/2.000/2.014초 후 DeathFinished**, 이어 다음 tick Destroy를 확인했다. 스포너 Spawned3/Alive0/Cleared1, EncounterCompleted1이며 추가 사망 집계가 없었다.
+- 적 사망으로 플레이어 사망 태그나 ViewTarget이 바뀌지 않았고, 기존 Reticle/Ammo Host1개 및 무기 데이터 연결을 유지했다. R재장전30발, Dash 면역 중20피해 차단/만료, Q 유지2.6초1회·해제 후 재입력, 플레이어 사망 회귀를 통과했다. Q는 기존 입력 경로와 Pressed 트리거 주입이지 물리키 확인이 아니다.
+- PIE_A의 gameplay 관찰 assertion도 통과했으나 **-nosound에서 기존 WeaponAudioFunctions/TapIDs 관련 검사 경고1410건**이 있었다. B는 오디오 장치/Cue 활성 조건으로 재실행해 해당 경고를 분리했다. startup의 기존 PoseAsset/import/드라이버 경고를 해결하거나 새 음질/화면 수용을 검증한 것은 아니다. 동일 맵의 독립 프로세스2회 실행/종료를 확인했다. 기존 native 회귀9건은17:30 결과이며 이번 새 DLL에서 재실행한 것으로 바꾸지 않는다.
+
+**상태/남은 범위:** R10-1의 코드·에셋·자동 기능 검증과 위 사용자 새 맵 화면 확인이 완료됐다. 현재 적에는 기존처럼 AnimClass가 없으며 공격·추적 AI·새 몽타주는 이 묶음에 추가하지 않았다. 원본 HealthComponent의 EliminationMessage.Target=null 가능성은 유지했고 현재 무기 Host 회귀만 확인했다. 전용 처치 목록 UI·R13 HUD·복제/패키징·실제 맵 연결·legacy 제거까지 완료로 확대하지 않는다.
+
+**다음 R10-2 변경안 준비 — 아직 미승인·미구현:** 원본 `LyraGameplayAbility_FromEquipment::GetAssociatedEquipment`는 Spec.SourceObject의 장비 인스턴스를 요구하고, RangedWeapon::CanActivateAbility는 WeaponInstance 없음을 거부한다. 현재 새 NPC는 장비/AnimClass가 없으며 기존 적의 공격은 Visibility Trace＋ApplyDamage8/사거리1400/간격1.25였다. 전체 원본 Bot/Inventory/Equipment/애니메이션을 연결하는 대안은 가능하지만 별도 범위다. 원본 GameplayAbility/WaitDelay/DamageExecution을 재사용하면서 NPC 공격 연결·예고 시간/조준 규칙만 프로젝트 확장하는 대안과 비교해 승인받는다. 어떤 방법이든 예고 전 즉시 피해 금지, 선딜 중 사망/취소/타깃 상실/장애물 처리, 후딜과 Task 정리를 검증한다. 시간·추적/고정 시점·Cue/애니메이션 후보는 아직 최종 확정하지 않았다.
+
+### 2026-10-11 R10-2 첫 변경안 — 제안 이력(아래 후속 코드 승인·작성)
+
+**원본 근거와 제약:** 로컬 Lyra `Equipment/LyraGameplayAbility_FromEquipment.cpp`의 GetAssociatedEquipment는 Spec.SourceObject를 LyraEquipmentInstance로 변환하고, `Weapons/LyraGameplayAbility_RangedWeapon.cpp:79~99`는 무기 인스턴스가 없으면 활성화를 거부한다. 원본 봇의 PlayerState/GameMode/BT/Inventory/Equipment 연결을 함께 도입하는 대안은 가능하지만 현재 Pawn-owned ASC/무장 없는 NPC보다 변경 범위가 크다. 원본 발사 GA를 이식 불가로 판단하거나 빈 장비로 검사만 우회하지 않는다.
+
+**권장 첫 묶음:** 원본 기반 DCGameplayAbility·엔진 WaitDelay·DCLyraDamageExecution·Health/Death의 취소/팀/면역 계약을 재사용하는 **적 전용 단발 예고 공격**이다. 현재 `DCEnemyCharacter::TryFireAtTarget`의 즉시 Visibility Trace/ApplyDamage 방식과 구분되며, 전체 원본 라이플의 탄약·퍼짐·장비·몽타주 경로를 복제한 구현으로 보고하지 않는다. 기존 라이플과 플레이어 무기 경로는 그대로 유지한다.
+
+- **제안 동작:** 적이 유효한 플레이어를 사거리 내에서 발견하면 공격 의도를 만들고 **그때 조준점을 고정**한다. **선딜0.5초 → 실제 Trace1회 → 후딜0.75초** 후 다음 공격을 허용한다. 피해8/사거리1400은 기존 저장 적 설정을 기준으로 하고,0.5/0.75는 기존1.25초 간격을 참고한 조정 가능한 테스트 초기값이지 Lyra 원본값이나 확정 밸런스가 아니다.
+- 선딜 중 적 사망/취소/타깃 파괴·사망/시야 가림이면 예약 공격을 취소한다. 명중 시에도 가림을 다시 검사하고 실제 Trace가 대상에 닿을 때만 GE를 적용한다. 타깃이 고정 사선에서 벗어나면 빗나가며, 기존처럼 Trace 무충돌을 명중으로 간주해 피해를 강제하지 않는다. 후딜/취소/EndPlay에 대기 Task·타깃 참조·예고 종료 통지를 정리한다. 원본 Death의 CancelAbilities/Exclusive_Blocking 경로는 수정하지 않는다.
+- **제안 코드 범위:** `AI/DCGASEnemyCharacter.h/.cpp`의 선택적 공격 연결(기본 비활성), 새 `AbilitySystem/Abilities/DCGameplayAbility_EnemyRangedAttack.h/.cpp`, 관련 임시 월드 검사. 범용 AI/Task 프레임워크나 대형 BT는 만들지 않는다.
+- **제안 에셋 범위:** R10 전용 GA/GE/AbilitySet, 기존 적BP를 유지하는 새 공격용 자식BP, 별도 `L_DC_EnemyAttackIntegration` 맵과 해당 생성/PIE 자동화. 기존 R10-1의4에셋은 회귀 경로로 유지한다. 공용 무기/Config·태그/디자이너 맵·legacy 적을 변경하지 않는다. 신규 태그/의존성 변경이 실제 필요하면 별도 근거와 승인을 요청한다.
+- **검증:** 예고 전 피해0, 명중 시 피해8·빗나감/가림 시0, 선딜 사망/취소/타깃 상실 후 뒤늦은 피해 없음, 연속 실행 중 중복 피해/Task 잔류 없음, Dash 면역과 R10-1 사망·스포너 회귀. 정지 상태 공격부터 검증하며 추적 이동/NavMesh·실제 VFX/SFX/Montage는 별도 변경안/미완료 범위로 남긴다. Blueprint의 예고 시작/발사/종료 훅은 후속 R10-3 연결을 위한 계약이지 연출 완성판이 아니다.
+
+위 제안 당시에는 구현하지 않았다. 이후 사용자가 R10-1의3마리 흐름을 재확인하고 **다음 단계 진행을 승인하여 아래 코드 묶음만 작성**했다. 코드 묶음→사용자 빌드→새 에셋/PIE→사용자 화면 확인 순서는 유지한다.
+
+### 2026-10-11 R10-2 코드6파일 작성 / 사용자 빌드 대기
+
+**신규4/기존2파일:**
+
+- 신규 `Source/DreamCatcher/AbilitySystem/Abilities/DCGameplayAbility_EnemyRangedAttack.h/.cpp`.
+- 수정 `Source/DreamCatcher/AI/DCGASEnemyCharacter.h/.cpp`.
+- 신규 `Source/DreamCatcher/Tests/DCEnemyAttackTestTypes.h`, `DCEnemyAttackAutomationTests.cpp`.
+
+**구현한 동작(실행 검증 전):**
+
+- 서버 전용 InstancedPerActor Ability가 원본 기반 DCGameplayAbility의 Cost/Commit/사망 차단을 사용한다. 기존 Ability.Type.Action 태그를 사용하며 신규 Config/태그를 추가하지 않았다. 시작 시 타깃과 발사 원점/조준점을 고정하고 엔진 WaitDelay로 **선딜0.5초→Visibility Trace1회→후딜0.75초**를 진행한다. Muzzle 소켓이 있으면 사용하고, 없으면 기존 적과 같은 Actor+Z60, 타깃 Actor+Z50을 기준으로 한다. 현재 범위는 정지 NPC이므로 발사 원점도 고정한다.
+- 기본 피해8/사거리1400은 조정 가능한 값이다. 피해 GE는 Instant/직접 Modifier 없음/DCLyraDamageExecution1개/Source BaseDamage snapshot에 Additive SetByCaller.Damage1개를 요구한다. 기본 NPC CombatSet.BaseDamage0에8을 더하고 원본 Execution/팀/Health 면역·Death 경로를 재사용한다. 향후 BaseDamage를 변경하면 원본 합산 규칙에 따라 최종 피해도 달라진다. 라이플의 원본 Equipment/탄약/퍼짐·발사 BP를 재구현한 것으로 보고하지 않는다.
+- 시작/선딜에서 타깃 생존·유효 ASC/Health·서로 다른 팀·사거리/시야를 확인한다. 도중 상태는0.05초 타이머와 Death/EndPlay delegate, 발사 직전 검사로 확인한다. 고정 사선에서 벗어나면 실제 Trace가 빗나가며 피해를 강제하지 않는다. 선딜 사망/취소/입력차단/타깃 소실·가림은 지연 공격을 종료한다. 명중으로 타깃이 죽더라도 후딜을 유지한다.
+- 종료 시 두 WaitDelay의 delegate 및 **그 Task 객체에 속한 타이머만** 정리한다(엔진 Task는 내부 dummy handle을 사용). 원본 WaitDelay 소스나 다른 객체 타이머는 수정/제거하지 않는다. 예고 콜백의 재진입 취소·재활성화로 이전 실행이 발사되지 않도록 활성 실행 번호/Phase를 재확인한다. BP_OnAttackIntent/Shot/Ended 훅과 Phase/LockedAimPoint 조회만 제공하고 연출 에셋은 아직 연결하지 않았다.
+- NPC는 선택적 RangedAttackAbilityClass를 지정하고 해당 능력을 기존 AbilitySets에서 정확히1개 부여받는다. 기본false인 bAutoRangedAttack을 켠 새 자식만 PlayerPawn0을0.25초마다 확인해 요청하며, 직접 TryStartRangedAttack도 서버에서만 동작한다. 추가 Ability 중복 부여는 하지 않는다. 후딜 종료부터 재요청까지 최대 한 확인 간격이 더해질 수 있으므로 실제 시작 간격이 항상1.25초라고 주장하지 않는다. Death/EndPlay는 요청 타이머·임시 타깃을 정리한다. 추적 이동/BT/내비게이션은 이번 코드에 없다.
+
+**작성한 검사6건 — 통과 결과 아님:** `DreamCatcher.R10.Attack`, 별도 프로세스 `-DCR10EnemyIsolatedAutomation`.
+
+1. WindupHitRecovery: 선딜 피해0, 명중8, 단발/중복 활성화 거부, 후딜·재사용·타깃 치명타 후 후딜 유지.
+2. LockedAimAndCover: 고정 조준에서 이동 회피, 시작 전/도중 엄폐, 엄폐 해제 후 늦은 피해 없음, 범위 이탈 취소.
+3. CancelAndTargetLoss: 외부 취소·Intent 콜백 재진입 취소, 타깃 사망/Destroy, 예고 종료1회씩.
+4. SourceDeathAndTeardown: 원본 Death에 의한 공격 취소, 공격자 Destroy 후 피해/Task 실행 없음.
+5. TeamImmunityAndValidation: null/자기/동료/사거리 밖 거부, 면역 중 피해0/해제 후8, 입력차단 중단/GE 누락 거부.
+6. OptInAutoRequest: 명시적으로 활성화한 NPC만 PlayerPawn0에 자동 단발 요청하고 사망 후 재요청하지 않음.
+
+**보존/검증:** 기존 보호440파일(Source 중 승인 NPC2개 제외/Config/기존 AI·Stage/R10-1·R5통합 에셋/uproject/DLL)의 SHA256 불변, 신규 Source4개뿐이다. 로컬 UE5.8 API/헤더·타입/등록·공백 범위만 정적으로 점검했다. **Codex C++/UHT 빌드·패키징·Unreal 실행은 하지 않았으며 컴파일과 새6건 실행은 미검증**이다. 원본 공통 GAS/Death/DamageExecution·플레이어 무기 코드/기존 테스트·에셋4개를 변경하지 않았다.
+
+**재개:** 사용자 Development Editor/Win64 빌드→기존 R10.Enemy5＋신규 Attack6 및 관련 회귀→승인한 R10 전용 GA/GE/AbilitySet·공격 자식BP/별도 맵 생성/재로드·실제 플레이어 피격/회피/취소 PIE→사용자 화면 확인. **기존 R10-1 테스트 적은 빌드 후에도 공격하지 않는다.** 별도 공격 에셋 연결은 아직 수행하지 않았다. R10-3 시각/음향·Montage 연출, 추적 이동/실맵, 복제/패키징 완료는 아니다.
+
+### 2026-10-11 R10-2 사용자 빌드 확인 / 취소 테스트 API 교정 승인·반영
+
+사용자 빌드는 **18:15:17 KST 시작·43.09초 Succeeded**, DLL은 **18:15:59/4,747,776 bytes**다. Codex는 빌드/패키징을 하지 않았다. 별도 프로세스 `Saved/Automation/R10AttackNative_A/index.json` **18:17:18 성공19/실패1/보고서경고0/notRun0**을 확인했다.
+
+- 기존 R10.Enemy5 전부, 기존 Equipment/TeamColor/Weapon/DashDefense9 전부 통과.
+- 신규 R10.Attack6 중 WindupHitRecovery/LockedAimAndCover/OptInAutoRequest/SourceDeathAndTeardown/TeamImmunityAndValidation5개 통과.
+- CancelAndTargetLoss는 첫 외부 취소 이후 HP100 기대값 대신92, 누적 Shot0 기대값 대신1로4개 assertion이 실패했다. 실제 공격의 사망/엄폐/재진입·타깃 소실 취소를 모두 실패라고 확대하거나 전체 성공으로 보고하지 않는다.
+
+**원인 근거:** 로컬 UE5.8 `AbilitySystemComponent.h:1051~1055`의 CancelAbility는 CDO 인수를 요구한다. CPP1304~1312는 `Spec.Ability == Ability`로 찾고, Handle API1316~1326은 `Spec.Handle == AbilityHandle`로 찾은 뒤 실제 인스턴스 CancelAbility를 호출한다. 테스트는 CDO가 아닌 실행 인스턴스 F.Ability를 넘겨 취소 요청이 해당 Spec에 도달하지 않았다. 그 첫 미취소 공격1회가 뒤의 Shot0 검사3개에도 누적됐다.
+
+**추가 사용자 승인 후 변경:** `Source/DreamCatcher/Tests/DCEnemyAttackAutomationTests.cpp`1파일만 교정했다. 실행 인스턴스에서 GetCurrentAbilitySpecHandle을 얻어 유효성을 검사하고 `CancelAbilityHandle(AttackHandle)`을 호출한다. 곧바로 IsActive=false 검사를 추가하고 기존 HP/Shot/Ends·타깃 사망/제거 검사 조건은 유지했다. 게임 공격 Ability/NPC/원본 엔진/공통 GAS/Config/기존 에셋은 변경하지 않았다.
+
+**현재:** 사용자 재빌드 대기. 정적 선언/API·공백 검사만 수행했으며 교정 후 C++/UHT 및20건 재실행은 미검증이다. 새 R10-2 공격 에셋과 맵은 아직 생성하지 않았다. R10-1은 사용자 수용 완료를 유지하고 R10-2 전체는 미완료다. 다음은 사용자 Development Editor/Win64 재빌드→동일20건 재검사→통과 시 승인된 공격 GA/GE/AbilitySet·새 자식/분리 맵/실제 PIE다.
+
+### 2026-10-11 R10-2 native20·공격 에셋5개 검증 / 실플레이 충돌 프로필 누락 확인
+
+**빌드/독립 검사:** 사용자 UBT18:20:43 KST 시작·7.67초 Succeeded, DLL18:20:50/4,748,288 bytes. `R10AttackNative_B/index.json`18:21:50 **성공20/실패·보고서경고0/notRun0**, 로그 Error/ensure/Fatal0. 기존 취소 API 교정이 통과했고 R10.Enemy5＋Attack6＋기존 회귀9를 새 DLL로 확인했다. 빌드/패키징은 Codex가 실행하지 않았다.
+
+**새 에셋5개 — `/Game/DreamCatcher/GAS/Test/R10/Attack/`:**
+
+- GA_DC_EnemyRangedAttack: 새 native 공격 부모의 구체 BP. 선딜0.5/후딜0.75/피해8/거리1400과 GE 연결, 테스트용 Intent/Shot/End 카운터·Print만 추가했다. 별도 ActivateAbility 그래프나 R10-3 VFX/SFX/Montage는 없다.
+- GE_DC_EnemyRangedDamage: 기존 `/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller`의 자식. 기존 Execution/CalculationModifier/Cue/Instant 설정을 유지한다.
+- AS_DC_EnemyRangedAttack: 공격 GA1개/레벨1/입력태그 없음. Attribute/Effect 중복 grant 없음.
+- BP_DC_GASEnemyRanged: 기존 R10-1 BP_DC_GASEnemy 자식. 원본 메시·캡슐·Death·HP/팀 설정은 상속하고 위 AbilitySet/선택 공격 클래스/자동 요청true만 연결했다.
+- L_DC_EnemyAttackIntegration: 기존 RifleGameMode 사용, 전방 정지 공격 적 **1마리**를 스포너/Encounter로 생성한다. 수용된 기존 R10-1 3마리 맵은 변경하지 않았다.
+
+`Scripts/Editor/r10_attack_setup.py` Apply_A는 구조체 EditDefaultsOnly setter 오류로 저장0이다. 기존 UE import 방식을 적용한 **Apply_B18:26:01 저장5개/complete**, **Verify_A18:28:15 별도 프로세스 재로드/Compile/설정·상속·맵 검증 complete/저장0**을 얻었다. source/config·기존 게임/테스트 에셋과 새5에셋 등 Verify 기준 **507파일 SHA256 불변**이다.
+
+**실제 PIE 실패:** `Scripts/Editor/r10_attack_probe.py`, `Saved/Diagnostics/R10/attack_pie_AttackPIE_A.json`은 complete=false다. 실제 적이 선딜→Shot으로 진행하지만 플레이어HP100이 감소하지 않아 중단했다. 후속 이동 회피/엄폐/취소/Dash/라이플 처치는 아직 전체 PIE 통과하지 않았으며 native 검사 성공과 구분한다.
+
+**원인 재현:** `attack_pie_Trace_C.json` diagnostic_complete=true/reason=trace_confirmed/임시 프로필 복원/저장0/보호파일 변경0. 실제 플레이어 Capsule은 Pawn/QueryAndPhysics, Mesh는 CharacterMesh/QueryOnly이며 Visibility·Weapon·Weapon_Capsule 응답이 Ignore였다. 같은 Visibility 사선은 원래 miss였다. PIE 인스턴스의 Capsule/Mesh Visibility만 임시 Block으로 바꾸자 실제 적 공격이 **정확히8피해**를 주었고 동일 사선 조회는 플레이어 CharacterMesh0(lowerarm_l)에 맞았다. 원래 프로필은 종료 전에 복원했다. 이는 원인 비교 성공이지 전체 공격 시나리오 성공이 아니므로 complete=false를 유지한다. Trace_A의 miss=None 처리 및 Trace_B의 BreakHitResult Python 출력 실패는 진단 API 교정 이력으로 남긴다.
+
+**원본 근거·대안·차이 — 다음 변경안, 아직 미승인:**
+
+1. 원본 `LyraCharacter.cpp` 생성자는 Capsule/Mesh에 LyraPawnCapsule/LyraPawnMesh를 지정하고 원본 DefaultEngine.ini에 두 프로필이 있다. 대상 Config의 동일 이름은 미등록이고 실제 통합 플레이어는 generic Pawn/CharacterMesh를 사용한다. 따라서 선행 플레이어 충돌 연결 누락이 확인됐으며 공격 코드가 구현 불가능한 상황이 아니다.
+2. 임시로 Visibility 한 채널만 Block하는 대안은8피해를 확인했지만 원본의 무기/카메라/물리 채널 계약을 복원하지는 않는다. **권장: 원본 프로필2개를 그대로 등록하고 통합 플레이어의 해당 컴포넌트에 연결**한다. 허공에 쏘아도 피해를 강제하는 fallback이나 검사 조건 완화는 하지 않는다.
+3. 정확한 변경 범위는 **`Config/DefaultEngine.ini`의 CollisionProfile 섹션에2개 항목 추가**, **`/Game/DreamCatcher/GAS/Test/R5/Integration/BP_DC_RiflePawn`의 CollisionCylinder/CharacterMesh0 프로필 지정**이다. 일반 Pawn/CharacterMesh 프로필 자체를 수정하지 않으며 기존 메인 플레이어BP·디자이너 맵·NPC 공격 C++/시간/피해는 유지한다. 자동화가 필요하면 해당2프로필/1에셋의 설정·비교만 하는 제한된 스크립트를 사용한다. DefaultEngine.ini의 무관한 민감정보를 로그/보고서에 출력하지 않는다.
+4. 동작 차이: Capsule의 QueryAndPhysics가 원본 QueryOnly로 바뀌고 원본 무기/카메라/물리 채널 응답이 적용된다. **크기·메시·애니메이션·이동 수치까지 원본값으로 일괄 변경하지 않는다.** 같은 통합 플레이어를 사용하는 R5/R8/R9/R10 맵에 영향이 있으므로 이동/점프/웅크림/카메라/발사·재장전/Dash·피격/사망 회귀가 필요하다. 원본 프로필만 연결했다고 전체 원본 캐릭터 복제/물리 동등성까지 검증했다고 보고하지 않는다.
+5. 승인 후에는 에디터 동시 저장을 피하고 Config 추가→제한된 UE 컴포넌트 설정/Compile/저장→새 프로세스 재로드/프로필 응답 비교→전체 공격 PIE/플레이어 회귀→사용자 화면 확인 순서다. C++ 변경/재빌드는 필요하지 않은 범위다. **현재는 Config/플레이어 BP를 변경하지 않았다.**
+
+**현재 상태:** R10-1은 기존 사용자 수용 범위 완료를 유지, R10-2는 native·에셋 준비를 통과했지만 실제 플레이어 피해가 막혀 미완료다. 다음은 위 충돌 프로필2파일 변경안 승인이다. R10-3/추적 이동/실맵/복제/패키징은 여전히 미완료다.
+
+### 2026-10-11 원본 플레이어 충돌 프로필 적용 / R10-2 사용자 수용 완료
+
+**추가 승인/실제 변경:** 위 프로필 보완을 사용자가 승인했다. `Config/DefaultEngine.ini`의 CollisionProfile 섹션에 원본 LyraPawnCapsule/LyraPawnMesh2개 정의를 그대로 추가했고, `/Game/DreamCatcher/GAS/Test/R5/Integration/BP_DC_RiflePawn`의 CollisionCylinder/CharacterMesh0 프로필만 각각 연결했다. 두 정의의 원본 문자열 일치와, 추가2줄을 제외한 기존 Config 내용의 해시 일치를 확인했다. 무관한 민감정보는 로그/문서에 출력하지 않았다.
+
+**제한된 저장/검사:** `Scripts/Editor/r10_player_collision.py`는 대상 BP1개만 저장하고 다른 컴포넌트/기본값/그래프를 대조한다. Apply_A는 Compile에 따른 Health delegate 메모리 주소 재할당 때문에 저장0으로 중단했다. 실제 바인딩 객체/함수 이름은 동일했으며 주소만 비교에서 분리한 **Apply_B18:53:41 저장1개/complete**, **Verify_A18:55:31 별도 프로세스 재로드/Compile·응답 비교 complete/저장0**을 얻었다. 두 컴포넌트의 BodyInstance도 CollisionProfileName/CollisionResponses/CollisionEnabled를 제외하면 동일했다. Capsule/Mesh 모두QueryOnly, Visibility Block/Camera Ignore, Capsule의 Weapon Ignore·WeaponCapsule Block·WeaponMulti Overlap, Mesh의 Weapon Block·WeaponCapsule Ignore·WeaponMulti Overlap과 원본 물리 채널 응답을 확인했다. 크기·메시·AnimClass·이동 수치·일반 Pawn/CharacterMesh 프로필은 유지했다.
+
+**최종 R10 공격 PIE:** `Saved/Diagnostics/R10/attack_pie_AttackPIE_B.json` complete=true/저장0/보호파일 변경0, `Saved/Automation/R10AttackPIE_B/index.json` **18:58:49 KST 성공1/실패·보고서경고0/notRun0**. 저장된 프로필로 실행했고 임시 Visibility 보정 플래그는 사용하지 않았다.
+
+- 선딜0.500152초 동안 무피해, 실제 발사 시 플레이어HP100→92. 후딜0.750864초 및 단발 확인.
+- 옆으로 이동한 타깃을 고정 사선이 놓침, 도중 엄폐와 외부 취소 후 뒤늦은 피해 없음.
+- 실제 원본 Dash 입력/방어 Task의 OnDamageAvoided에서 **적의8피해 차단1회**를 확인했다. 단순히 이동으로 빗나간 것을 면역 성공으로 대신하지 않았다.
+- 마지막 처치 검사는 PIE에서 GE로 적HP를12로 준비한 뒤 실제 라이플 입력으로 선딜 중 처치했다. 준비용 GE와 실제 라이플 최종 명중을 구분한다. 적 공격은 중단되고 사망/스포너/인카운터각1회,2.008885초 후 DeathFinished→다음 tick 제거, 플레이어 HP/무기 Host 유지가 통과했다.
+
+**기존 플레이어 회귀:** 신규 `Scripts/Editor/r10_collision_regression_probe.py`는 기존 R8 Jump/전투 검사 시퀀스를 재사용한다. `Saved/Diagnostics/R10/collision_pie_Jump_CrouchFix_Collision_A.json` **55단계/473표본, 충돌·이동·카메라·전투12조건＋Jump8조건 모두true**, 저장0/보호파일 변경0이다. 생존 중 두 프로필 유지,4방향 이동/정지, 서기·웅크림 점프/착지 후 재점프/공중 중복 및 입력차단·사망 차단, 카메라 FOV80→70→80/ViewTarget 유지, 사격·수동 및 자동 재장전·자동 이후R/장비 전환/사망 중단을 확인했다. `R10CollisionRegression_A/index.json` **19:01:49 성공1/실패·보고서경고0**. 이 회귀는 Cue비활성/무음·합성 EnhancedInput이며 실제 음질/화면을 대신하지 않는다.
+
+**독립 검사:** `R10CollisionNative_A/index.json` **19:01:38 성공20/실패·보고서경고0/notRun0**, R10.Enemy5＋Attack6＋기존9이다. 최종 Unreal 로그 Error/ensure/Fatal0이며 별도 콘솔의 IDE 연결 종료 메시지와 기존 startup PoseAsset/import 경고는 구분한다.
+
+**사용자 확인:** 사용자가 새 공격 맵에서 이동·점프·웅크림·조준 카메라·대시 및 라이플 처치 후 제거가 **모두 정상**이라고 확인했다. 따라서 **R10-2는 승인한 정지 적 단발 예고 공격 기반 범위에서 완료**다. 현재 맵에는 공격 적1마리이며 예고는 TEST 로그만 있다. R10-3 실제 예고 VFX/SFX/Montage, 추적/실맵 연결·복제/패키징·기존 경로 삭제를 완료로 확대하지 않는다.
+
+**보존/다음:** Codex는 C++ 빌드·패키징을 실행하지 않았다. 게임 코드 수정 없이 승인된 Config1/BP1 및 제한된 스크립트2개·문서를 작업했다. 보호502파일 중501개는 불변이고, 작업 중 `Source/DreamCatcher/AbilitySystem/Attributes/DCHealthSet.h` 주석에 외부 w1자 입력이 발견됐다. 이1자만 메모리상 제외한 SHA256이 작업 전과 같아 실행 코드 불변을 확인했다. 실제 파일은 사용자 변경으로 보존했다. 다음은 R10-3 연출 변경안이며 추가 코드/에셋은 승인 전 구현하지 않는다.
+
+### 2026-10-11 R10-3 원본 조사 / 첫 시각·음향 묶음 변경안 이력
+
+> 후속 사용자 결정으로 일반 적의 예고 경고선 묶음은 생성 전에 중단했다. 아래 원본 조사 근거는 유지하되, 적용 방향과 완료 판정은 다음의 일반 적/강공격 분리 결정을 따른다.
+
+**수행 범위:** 조사·제안/상태 문서만이다. 게임 C++/Config/에셋 생성·수정·Compile/저장 및 빌드/패키징은 하지 않았다. 제한된 `Saved/Diagnostics/R10/presentation_read.py`가 기존 그래프/속성 조회·텍스트 export를 재사용했다. `presentation_target_A`19:15:12 후보13개, `presentation_source_A`19:16:47 원본10개, `presentation_source_Weapon_A`19:31:09 B_Weapon/B_Rifle2개, `presentation_target_Effect_A`19:33:49 B_WeaponFire1개 모두complete/저장0/조회 파일 불변이다. 원본 Lyra의 Template Quinn_Simple 경로는 missing으로 명시했다. source/target 에셋의 바이트/렌더 동등성이나 효과·음향·애니메이션 런타임 성공으로 해석하지 않는다.
+
+**확인된 원본 근거:**
+
+- `/Game/Effects/Particles/Weapons/NS_WeaponFire_Tracer`는 User.MuzzlePosition/ImpactPositions/Trigger를 사용한다. `/Game/Effects/Particles/Weapons/NS_WeaponFire_MuzzleFlash_Rifle`도 원본/대상에 있다.
+- 원본 `/Game/Weapons/B_Weapon`은 공통 `/Game/Effects/Blueprints/B_WeaponFire`를 만들고 Fire를 호출한다. 대상 공통 Actor의 그래프는 ImpactPositions/Direction/Trigger를 Niagara에 전달하고 retriggerable3초 뒤 제거한다. 기존 전체 Cue를 재구현하기 전에 이 공통 Actor의 재사용을 우선 검증한다. 대상 Actor의 조회까지 완료했으나 원본/대상 전체 그래프 비교·정확한 필드 주입/실제 Fire 호출·정리 성공은 적용 전 미검증 항목이다.
+- 원본 `TriggerFireAudio`는 SkeletalMeshComponent의 hand_r에 AudioComponent를 생성/재사용하고 **Fire trigger**를 보낸다. `MSS_Weapons_Rifle2_Fire`는 이 방식의 원본 음원 후보이며 일반 원샷 PlaySound와 동등하다고 가정하지 않는다. 기이식 MSS_DC_Rifle_Fire는 과거 승인으로 ShotInterval0.15→0.12만 보완한 별도 사본이다. 이번 느린 NPC에는 원본0.15를 우선 검증하고 기존 두 음원 모두 수정하지 않는 안이다.
+- 전체 GCN_Weapon_Rifle_Fire는 Lyra Get Weapon→B_Weapon.Fire/TriggerFireAudio, EarlyReflections/WhizBy/SendWeaponFire 등으로 연결된다. 현재 R10 NPC에 그 무기/장비 조회 경로가 없으므로 Cue 전체를 그대로 호출해 완료 처리하지 않는다. 원본 장비·봇까지 연결하는 대안은 가능하며 이식 불가가 아니다.
+
+**애니메이션을 즉시 연결할 수 없는 현재 준비 상태:**
+
+- 현재 적 Quinn_Simple: `/Game/Characters/Mannequins/Meshes/SK_Mannequin`, 원본 Rifle Idle/Fire 및 Hero Quinn: `/Game/Characters/Heroes/Mannequin/Meshes/SK_Mannequin`. 서로 다른 Skeleton이며 조회된 CompatibleSkeletons 배열은 모두 비어 있다. 현재 적 AnimClass도None이다. 단순히 파일명이 유사하다는 이유로 호환이라고 처리하지 않는다.
+- 원본 MM_Rifle_Fire는 **Mesh-space additive**, AM_MM_Rifle_Fire는 약0.533초, **FullBodyAdditivePreAim** Slot과 **AN_PlayWeaponMontage** Notify/SaveAttack/ResetCombo를 가진다. 기반 포즈·Slot·무기 Notify 수신부가 필요하다. DCAnimInstance의 NativeUpdateAnimation도 DreamCatcherCharacter인 경우에만 GroundDistance를 갱신하므로 현재 NPC에 전체 AnimBP를 대입한 상태는 검증하지 않았다.
+- 원본 보존 대안은 별도 표현 자식에서 원본 Hero Quinn·AnimBP/무기 계층을 준비하는 것이고, 기존 Template Quinn 유지 시에는 명시적 리타겟/호환성 검증이 대안이다. 원본 Skeleton에 임의 호환 등록하거나 원본 Notify를 제거하지 않는다. 이 부분은 **이식 불가가 아닌 준비/실제 재생 미검증**으로 남겨 별도 몸체·무기·애니메이션 묶음에서 확인한다.
+
+**권장 첫 작업 묶음 — 아직 미승인:**
+
+| 시점 | 표현/보존 규칙 |
+|---|---|
+| Intent | 잠긴 시작점/조준 방향과 실제 사거리의 빨간 경고선을0.5초 유지. 색/폭은 조정 가능, 타깃을 새로 추적하거나 피해 판정을 대신하지 않는다. |
+| Shot | 경고선을 제거하고 기존 공통 발사 Actor/원본 Niagara 후보로 탄도·발사 원점 섬광을 실행, 원본 MetaSound에 Fire1회 전달. 실제 총/총구 배치와 몸 애니메이션은 이 첫 묶음의 완료 항목이 아니다. |
+| End/Cancel/Death | 취소된 선딜에서는 발사 효과·소리를 새로 내지 않는다. 예고와 이미 발사된 효과의 수명을 구분하며 소유 Actor/컴포넌트만 정리한다. 다른 무기/전역 오디오를 멈추지 않는다. |
+
+고정 경고선은 프로젝트 신규 표현 제안이다. 확인한 원본 M_TracerCore_Base는 Niagara Sprite/Sprite_Capsule·MF_SpriteOpacity·MF_SpriteEmissive 기반이므로, 현재0.5초 고정선에 무수정 재사용 가능한지 미검증이다. 원본에 대응 자산이 전혀 없다고 단정하지 않는다. 새 단순 emissive 재질/비충돌 메시로 경고선을 만드는 안과 원본 Niagara를 별도 예고용으로 수정하는 대안이 있으며, 첫 안을 승인받아 기존 발사 자산을 보존하는 것을 제안한다. 전체 Cue의 주변음·카메라셰이크·진동·장비 몽타주까지 이식했다는 뜻이 아니다.
+
+**정확한 제안 범위:** 새 `/Game/DreamCatcher/GAS/Test/R10/Presentation/` 아래 `M_DC_EnemyAttackWarning`, `BP_DC_EnemyAttackPresentation`, `GA_DC_EnemyRangedAttack_FX`, `AS_DC_EnemyRangedAttack_FX`, `BP_DC_GASEnemyRanged_FX`, `L_DC_EnemyPresentation`의6개와 제한된 설정/검사 스크립트. 기존 Attack GA/맵과 원본 FX/오디오/공용 Skeleton은 보존한다. 기존 Native Intent/Shot/Ended 훅을 사용하고0.5/0.75/8/1400 및 공격 고정/취소 규칙은 변경하지 않는다. 새 C++/Config/GameplayTag 변경이 필요하면 먼저 근거와 추가 범위를 설명한다.
+
+**검증 계획/완료 경계:** 승인 후 필요한 공통 발사 Actor의 원본/대상 계약 대조→새 에셋 설정/Compile/저장·재로드→반복 공격/회피/엄폐/취소/사망에서 경고와 FX/오디오 수명 및 기존 피해 동작 확인→사용자 화면·음향 수용. 이번 제안의 실제 렌더·소리·컴파일/런타임 연결은 미검증이다. **첫 묶음만으로 R10-3 전체를 완료하지 않으며 몸체·무기·원본 애니메이션 연결을 미완료로 유지한다.** 추적/실맵/복제·패키징은 별도다. 사용자 승인 전 직접 적용하지 않는다.
+
+### 2026-10-11 최신 결정 — 일반 적 원본 사격과 강공격·보스 예고 분리
+
+**사용자 지시:** “일반 적은 원본처럼 사격하고, 강한 단발 공격이나 보스 패턴에만 예고를 넣는 방향으로 진행하자.” 이 결정은 앞선 일반 적 경고선 묶음 진행 요청과 모든 적에게 선딜을 적용하는 과거 설명보다 우선한다.
+
+- 일반 적에는 프로젝트용0.5초 선딜/조준 고정/빨간 경고선을 추가하지 않는다. 원본 라이플의 발사 간격·탄약 비용·재장전·퍼짐·피해·Cue 흐름을 재사용한다. 기존 예고 Ability의 WindupTime만0으로 만드는 것은 원본 발사 이식이 아니다.
+- 기존 R10-2 코드/Attack5에셋/테스트 맵 및 검증 결과는 **정지 적 예고 공격 프로토타입**으로 보존한다. R10-1 피격·사망·스포너 수용도 유지한다. 일반 적의 원본 장비/무기 연결은 아직 미완료다. 강공격/보스별 최종 시간·조준 규칙·예고 형태는 별도 기획/검증 대상이며 기존 테스트값을 확정하지 않는다.
+- 앞선 Presentation6에셋 묶음은 생성 전 읽기 전용 확인 단계에서 중단했다. 해당 폴더는 생성되지 않았다. 기존 코드/에셋을 지우거나 이름을 바꾸지 않고 원본 Lyra·플레이어 사격/재장전/조준도 수정하지 않는다.
+
+**일반 적 연결의 확인된 근거·제약:**
+
+- 원본 BTS_Shoot 조사본은 Equipment/Inventory에서 현재 무기·MagazineAmmo/SpareAmmo를 확인한 뒤 InputTag.Weapon.Fire 이벤트를 보낸다(`Saved/Diagnostics/R10/source_A/report.json`). 현재 이식된 DCLyraGameplayAbility_FromEquipment는 Spec.SourceObject의 Equipment와 그 Instigator의 InventoryItem을 읽는다.
+- DCLyraEquipmentManagerComponent는 소유 Actor의 ASC를 찾아 장비를 SourceObject로 AbilitySet을 부여한다. 원본 기반 RangedWeapon은 WeaponInstance를 요구하며 StartRangedWeaponTargeting에서 유효한 Controller를 요구한다. GetTargetingTransform에는 AIController의 ControlRotation/눈높이를 사용하는 경로가 이미 있다.
+- 현재 DCGASEnemyCharacter는 AAIController 자동 소유 설정은 있지만 원본 장비/아이템·몸체/AnimBP 연결은 준비되지 않았다. 따라서 컨트롤러나 무기 없이 발사 이벤트만 보내거나 빈 대체 장비를 만드는 우회는 하지 않는다. 기존 플레이어용 이식 에셋의 NPC 장착/해제 그래프·애니메이션 타입 제약은 실제 대조 후 변경안을 확정한다.
+- 전체 원본 봇/BT/PlayerState 수명까지 가져오는 대안과 기존 단일 수명 NPC에 필요한 연결만 추가하는 대안을 구분한다. 후자를 선택해도 원본 무기 동작을 새 Trace 코드로 재구현하지 않는다. 전체 봇/추적 AI·실맵/네트워크를 이번 방향 승인에 자동 포함하지 않는다.
+
+**다음 순서:** 일반 적의 원본 라이플 장착·발사·재장전 연결 변경안(정확한 코드/에셋 범위·차이·검증)을 먼저 제시하고 승인 후 구현한다. 예고 연출은 강공격/보스의 해당 패턴에서 진행한다. 이번에는 문서2개와 읽기 전용 소스 확인만 수행했으며 에셋 생성·게임 코드/Config 수정·빌드·패키징은 없다. 기존 R10-2 통과 결과를 일반 적 사격 완료로 올리지 않는다.
+
+### 2026-10-11 일반 적 원본 라이플 연결 변경안 이력 — 원본 AI 묶음 이식으로 대체
+
+> 아래 최소 Controller/자체 판단 타이머 안은 코드 작성 전에 후속 사용자 결정으로 대체됐다. 원본 Controller 및 BT/EQS 행동 묶음 재사용이 최신 목표다.
+
+**수행한 조사:** 현재 소스와 R8 source_C/target_C의 실제 그래프를 대조했다. B_WeaponInstance_Base·GA_Weapon_ReloadMagazine·ABP_Mannequin_Base의 대상 uasset SHA256은 당시 읽기 전용 조사본과 같다. 게임 코드·Config·에셋 수정, Editor 실행·빌드·패키징은 하지 않았다. 이전 예고 공격 검사 통과는 일반 적 원본 무기 연결의 실행 증거가 아니다.
+
+**원본 근거·제약·대안:**
+
+1. 원본 B_WeaponInstance_Base.OnUnequipped는 GetTypedPawn(Hero)→HealthComponent.IsDeadOrDying 후 애니메이션 Layer를 처리한다. 기이식본은 DreamCatcherCharacter를 요구한다. 현재 DCGASEnemyCharacter는 ACharacter 직계이므로 그대로 타입이 성립하지 않는다. DCAnimInstance.NativeUpdateAnimation의 GroundDistance 갱신도 DreamCatcherCharacter/DCCharacterMovement 기반이다.
+2. **권장:** 일반 적을 별도 DreamCatcherCharacter 파생 BP로 만들고, 원본 봇처럼 AIController＋PlayerState 소유 ASC＋PawnExtension/Hero 초기화를 연결한다. 기존 원본 무기·애니메이션 소비처를 수정하지 않는 목적이다. 이미 수용된 Pawn-owned ASC 적과 예고 프로토타입은 그대로 둔다.
+3. **대안:** 현재 단순 NPC를 유지하면서 NPC용 무기 해제 조회와 AnimInstance를 최소 보완할 수 있다. 기술적 불가능은 아니지만 무기/애니메이션의 별도 변형을 유지해야 한다. 전체 Lyra 봇 Controller/Perception/BT/GameMode 재시작까지 그대로 가져오는 방법도 가능하나 현재 단일 수명 인카운터와 연동 범위가 더 크다. 이번 묶음은 원본 무기 사격 연결이며 전체 봇 AI를 자동 포함하지 않는다.
+4. 원본 BTS_Shoot는 장비/Inventory 탄약 확인→InputTag.Weapon.Fire 이벤트이며 Interval0.5/RandomDeviation0.1이다. 이 판단 주기는 기존 프로젝트의 **조준점 고정 후0.5초 선딜**과 다른 개념이다. 발사 Ability는 실제 발사·비용·피해를 처리하고 AutoReload/ReloadMagazine은 원본 탄약/몽타주 Notify 경로를 사용한다. C++ RangedWeapon에는 AIController의 ControlRotation/눈높이 조준 경로가 이미 있다.
+5. 재사용 대상은 현재 검증된 이식 라이플이다. 이미 승인된 재장전 태그 정리·퍼짐 회복·오디오 보완까지 원본 출하본과 바이트 동일하다고 부르지 않으며 이번 NPC 작업에서 되돌리거나 플레이어 경로를 다시 바꾸지 않는다. GA_Weapon_ReloadMagazine에 PlayerState형 GetAmmoOwner 함수가 있지만 실제 호출 없이 타입만 있다는 이유로 별도 실패를 단정하지 않는다.
+
+**첫 구현 묶음의 제안 범위:**
+
+| 대상 | 변경 |
+|---|---|
+| 신규 `Source/DreamCatcher/AI/DCRifleEnemyController.h/.cpp` | AIController의 PlayerState 생성·팀/준비 연결, 기존 Inventory/QuickBar/WeaponState로 라이플 장착·해제, 유효 대상/시야 확인 후 원본 발사 이벤트 요청, 사망/UnPossess/EndPlay 정리. 단일 수명 NPC용 최소 어댑터이며 신규 Trace 피해 구현은 넣지 않는다. |
+| 기존 `Source/DreamCatcher/AI/DCEnemySpawner.h/.cpp` | 별도 RifleEnemyClass 선택 경로와 HealthComponent.DeathStarted1회 집계, 초기화 실패와 처치 구분. 기존 EnemyClass/GASEnemyClass·외부 SpawnerCleared 계약 유지. |
+| 신규 `Source/DreamCatcher/Tests/DCRifleEnemyAutomationTests.cpp` 및 필요한 테스트 타입 헤더 | 준비 순서/중복 장착 방지/해제·사망 정리/기존 스포너 회귀를 위한 제한 검사. 새 범용 도구는 만들지 않는다. |
+| 신규 `/Game/DreamCatcher/GAS/Test/R10/RifleEnemy/` 5에셋 | BP_DC_RifleEnemy, BP_DC_RifleEnemyController, DA_DC_RifleEnemyPawn, AS_DC_RifleEnemyBase, L_DC_RifleEnemyIntegration. 기존 원본 Manny/AnimBP/Layer·라이플 Item/Equipment/GA/Cue와 적 Death BP(Camera=None/Duration2) 재사용. |
+| 제한된 설정/PIE 스크립트·상태 문서 | 기존 에셋/검사 API 재사용, 허용한 새5에셋만 생성·저장/재로드, 실제 사격·재장전·정리 및 플레이어 회귀. |
+
+새 적 BP는 일반 Character 기반으로 구성해 기존 테스트 Pawn의 디버그 EventGraph를 복제하지 않는다. 원본 기반 Equipment/CharacterParts와 메시·AnimBP·충돌 값을 명시적으로 연결한다. 적 PawnData는 플레이어 Q/Dash/ADS/UI/입력을 임의 부여하지 않고 필요한 적 Death와 원본 무기 부여 경로만 사용한다. 원본 라이플을 새로 재구현하거나 무한탄약/임의 피해8/고정 퍼짐으로 대체하지 않는다.
+
+**프로젝트 차이:** 첫 맵은 정지 적1마리로 기존 Player0 대상 정책/획득거리1400을 명시적 테스트값으로 사용한다. 이는 원본 전체 BT의 대상 선택과 같다는 뜻이 아니며 무기 MaxDamageRange는 원본값을 유지한다. 선딜·조준 고정·경고선은 넣지 않는다. 발사 의사 결정은 원본 서비스 주기0.5±0.1을 기준으로 하되 무기의 발사 간격·탄약·재장전은 원본 Ability에 맡긴다. 단일 수명 NPC이므로 무한 봇 재생성 대신 스포너의 새 적 생성/집계를 따른다. PlayerState를 새로 소유하는 경로의 정리도 검사한다.
+
+**검증과 승인 경계:** 코드 승인→사용자 Development Editor/Win64 빌드→별도5에셋 생성/새 프로세스 재로드→PIE에서 한 번 장착/Equipment.SourceObject와 Item.Instigator, 반복 발사·탄약 감소, 탄창 소진 후 재장전 Notify/재사격, 엄폐/대상 소실·사망/적 사망/UnPossess 중단, 적·무기 Actor·타이머·ASC/PlayerState 정리와 스포너 집계1회를 검증한다. 플레이어 시점·무기·UI와 기존 passive/telegraph 맵은 회귀 범위다. 화면/발사음/몽타주 정렬은 사용자 확인, 복제·실맵/추적·패키징은 미검증으로 남긴다. 기이식 무기·AnimBP/플레이어 공용 소스/Config/예고 Ability/기존 에셋 변경은 이 제안에 포함하지 않는다. 추가 변경 필요 시 실제 근거·차이와 함께 승인을 받는다.
+
+### 2026-10-11 최신 결정 — Lyra AIController·전투 행동 묶음 재사용
+
+사용자는 “AI같은 경우는 플레이어와 같이 대시나 웅크리기 등을 사용하지 않아도 되니 Lyra AI를 그대로 가져오자”고 명시했다. 원본 LyraPlayerBotController 대신 새 Controller에 동등 기능을 재작성하거나, 원본 BTS/EQS를 자체 타이머/Player0 고정 선택으로 대체하지 않는다. 일반 적 원본 사격/강공격·보스 전용 예고 구분은 유지한다.
+
+**실제 원본 조사:** `presentation_source_AI_B/report.json`에서 `/ShooterCore/Bot`21에셋을 읽고 BT/BB/EQS와 BP 그래프·기본값을 export했다. 저장0/21개 조회/missing0/보호 파일 변경0이며 소스-B 로그의 Error/ensure/Fatal 검색0이다. 앞선 AI_A는 Registry 조회에서 모든 경로가 missing이어서 검증 성공으로 사용하지 않는다. AI_B는 해당 Bot 경로만 동기 스캔한 뒤 재조회했다. 두 실행 모두 게임 에셋을 저장하지 않았다. 실제 AI 실행/복제/이식 성공은 아직 미검증이다.
+
+**재사용할 주 AI 묶음:**
+
+- native `LyraPlayerBotController.h/.cpp`의 PlayerState·팀 관찰/태도·Perception 갱신·UnPossess ASC 정리·ServerRestartController를 보존한다. 모듈/이름/대상 타입 대응은 하되 새 AAIController에 같은 기능을 재작성하지 않는다.
+- `/ShooterCore/Bot/B_AI_Controller_LyraShooter`, `BT/BT_Lyra_Shooter_Bot`, `BT/BB_Lyra_Shooter_Bot`, `BT/BTDecorator_AllowedToFire`.
+- `Services/BTS_Shoot`, `BTS_ReloadWeapon`, `BTS_CheckAmmo`, `BTS_SetFocus`.
+- `EQS/EQS_AIPerceptionEnemy`, `EQS_FindTarget`, `EQS_FindWeapon`, `EQS_MoveAgainstEnnemy`, `EQS/Generator/EQS_GetAllEnemy`, `EQS/Context/EQS_Context_TargetEnemy`, `EQS_Context_WeaponCheck`.
+- 위 주 Controller의 Bot 하위 묶음은15에셋이다. Passive/성능 테스트/거점용 Query/EQS Tester는 주 트리와 별개다. 조사 폴더21개를 그대로 런타임 필수 개수로 보고하지 않는다.
+
+원본 BT는 감지한 적/적 탐색, 이동 위치 선택/MoveTo, 사격, 재장전, 탄약 소진 시 무기 탐색을 포함한다. 확인한 그래프·export에서 대시/웅크림/점프 요청은 발견하지 못했다. 별도 플레이어 행동을 AI에 추가하지 않되, 원본에 동일 기능이 없다는 전역 단정이나 공용 Ability 삭제로 확대하지 않는다. 이전 정지 적1마리/Player0·1400 거리/자체0.5±0.1 타이머 제안은 원본 AI 동등 동작의 기준이 아니다.
+
+**추가로 확인된 필수 의존성 및 제약:**
+
+1. Controller BP는 BeginPlay→WaitForExperienceReady→RunBehaviorTree다. 원본 `AsyncAction_ExperienceReady`와 `AsyncAction_ObserveTeam`가 대상에 없으며 이식해야 한다. 기존 ExperienceManagerComponent는 있지만 현재 통합 GameMode는 DefaultPawnData fallback을 사용하고 실제 Experience 선택·로드 호출은 연결되어 있지 않다. 즉시 OnReady를 보내는 가짜 완료나 Wait 노드 삭제는 하지 않는다.
+2. Controller의 ServerRestartController는 원본 GameMode.ControllerCanRestart→PlayerSpawningManager 선택적 정책→RestartPlayer를 호출한다. 대상 GameMode에는 ControllerCanRestart가 없다. 원본 PlayerSpawningManager/PlayerStart와 필요한 GameMode 계약을 함께 다루며 원본 재시작 기능을 제거하지 않는다. 이미 운영 중인 테스트/디자이너 GameMode를 일괄 전환하지 않고 별도 AI 테스트 경로에서 먼저 연결한다.
+3. BotCreationComponent는 Experience 완료 후 GenericPlayerInitialization/RestartPlayer를 사용하고, 에디터 BotCount 설정을 확인한다. 원본 봇 생성·재시작 API와 프로젝트 스포너의 유한 처치 집계/인카운터 종료는 같은 규칙이 아니므로 통합 시 정확한 차이를 먼저 제시한다.
+4. `BTDecorator_AllowedToFire`는 원본 `LyraDevelopmentStatics.CanPlayerBotsAttack`를 호출하며 에디터의 `LyraDeveloperSettings.bAllowPlayerBotsToAttack`를 따른다. 이 의존성을 항상true로 바꾸지 않는다. 필요한 원본 코드/설정만 별도 이식 범위에 명시한다.
+5. `EQS_Context_WeaponCheck`는 `/ShooterCore/Blueprint/B_WeaponSpawner`, `B_AbilitySpawner`와 `LyraWeaponSpawner`, `LyraPickupDefinition`, `LyraWeaponPickupDefinition`을 참조한다. 대상에는 원본 픽업 기반이 없어 실제 추가 의존성이다. 탄약 소진·무기 탐색 분기를 삭제하거나 무한탄약으로 우회하지 않는다. R13의 직접 필요한 픽업/Experience 부분을 선행하는 이유가 이것이며 전체 아웃게임/거점 게임 규칙을 함께 요구하는 것은 아니다.
+6. BB.TargetEnemy 및 감지 EQS는 원본 LyraCharacter를 대상으로 한다. 기존 이식 Character/PlayerState·원본 메시/AnimBP/장비 연결을 재사용하고 이를 현재 단순 ACharacter NPC에 억지로 맞추지 않는다. 원본/이식본 재사용과 기존 승인된 무기 보완의 차이는 계속 기록한다.
+
+**현재 산출물/재개:** 이번에는 기존 읽기 전용 조사 스크립트의 한정 경로 추가, 진단 결과와 두 상태 문서만 변경했다. 신규 Controller/게임 코드·Config·바이너리 에셋·맵 수정 및 빌드/패키징은 없다. 다음은 원본 native Controller/비동기 노드·봇 생성/스폰·픽업/개발설정 의존성, 별도 GameMode/Experience 연결, 원본15에셋과 직접 참조 픽업 에셋의 정확한 이식 묶음/검증안을 제시하고 승인받는 것이다. 기존5에셋 최소 Controller 안의 승인을 새로운 GameMode·Config·픽업 전체에 자동 확대하지 않는다. 사용자 빌드 이후 새 경로에서 원본 BT 감지/이동·추적/사격/재장전/탄약 소진/무기 탐색/사망·정리를 검증하고 기존 맵·플레이어 회귀 후 활성 경로를 교체한다.
+
+### 2026-10-11 승인 후 코드 작성 — 원본 AI 필수 native / 빌드 대기
+
+**사용자 승인:** Lyra AI 및 필수 GameMode·Experience·픽업/Config를 이식하되 기존 플레이어·테스트 맵을 유지한다. 향후 온라인 PVP로 확장할 계획은 있지만 이번 온라인 호스팅·리플레이는 후속 작업으로 남긴다. C++ 빌드·패키징은 사용자 담당이다. 이번에는 에디터 실행/에셋 저장 없이 아래 코드·Config를 작성했다.
+
+**원본 기반22파일:** 다음11쌍의 h/cpp를 원본에서 이식했다. 새 경로는 Source/DreamCatcher 아래이며 기존 동명 파일이 없는 별도 계층이다.
+
+| 대상 | 보존한 원본 역할 |
+|---|---|
+| Player/Lyra/DCLyraPlayerBotController | PlayerState/팀 관찰·태도, Perception 갱신, UnPossess ASC 정리, ServerRestartController |
+| Player/Lyra/DCLyraPlayerSpawningManagerComponent · DCLyraPlayerStart | 시작점 선택·점유, ControllerCanRestart/FinishRestartPlayer 연동 |
+| GameModes/Lyra/DCLyraBotCreationComponent | Experience 완료 후 봇 생성, 원본 이름/생성 수/URL·에디터 옵션, GenericPlayerInitialization/RestartPlayer |
+| GameModes/Lyra/DCLyraAsyncAction_ExperienceReady | GameState/실제 Experience 로드 대기, 이미 로드된 경우 다음 tick 통지 |
+| Teams/DCLyraAsyncAction_ObserveTeam | 초기 팀 통지·변경 구독·해제 |
+| Weapon/Lyra/DCLyraWeaponSpawner · Equipment/Lyra/DCLyraPickupDefinition | 서버 권한 픽업, BP GiveWeapon, 가용성 복제·쿨다운·FX, 원본 픽업 데이터2타입 |
+| Development/DCLyraDeveloperSettings · System/DCLyraDevelopmentStatics | 봇 수/공격 허용 설정 및 원본 CanPlayerBotsAttack 등 소비 함수 |
+| GameModes/Lyra/DCLyraWorldSettings | 맵 기본 Experience 해석·원본 PlayerStart map-check |
+
+기본 변경은 클래스/모듈/include·로그 및 기존 DC 타입 대응이다. 게임 동작 함수는 보존했다. 한 가지 메타데이터 차이는 아래에 명시한다. 픽업의 Blueprint GiveWeapon이나 실제 AI BP가 이식·실행됐다는 뜻은 아니다.
+
+**별도4파일:**
+
+- `GameModes/Lyra/DCLyraGameMode.h/.cpp`: 원본 gameplay/AI 함수19개 중18개는 타입 치환 외 본문 동일. Experience 선택 함수는 URL→PIE 개발설정→명령줄→WorldSettings 순서를 유지하며 마지막 fallback만 명시적인 `DefaultExperience`로 연결한다. 원본 프로젝트의 B_LyraDefaultExperience나 온라인 서버 로그인으로 자동 진입하지 않는다. 실제 ExperienceManager.SetCurrentExperience를 호출하므로 가짜 Loaded 상태를 만들지 않는다.
+- `Player/Lyra/DCLyraExperiencePlayerState.h/.cpp`: 기존 ADCPlayerState를 상속해 ASC/속성을 중복 생성하지 않고, 원본 PostInitializeComponents의 Experience 구독과 OnExperienceLoaded의 PawnData 부여를 추가한다. 기존에 PawnData가 있으면 중복 부여하지 않는다. 이 파생형은 새 GameMode에서만 기본으로 선택되며 기존 플레이어 초기화는 바꾸지 않는다.
+- 새 GameMode 생성자는 기이식 GameState/Character/PlayerController/HUD와 이 신규 PlayerState를 사용한다. **기존 전역 GameMode·WorldSettings·GameInstance 설정, 기존 맵의 GameMode는 변경하지 않는다.** 새 GameMode는 명시적으로 구성된 새 맵에서만 사용할 준비 상태다.
+
+**원본 그대로 가져오지 않은 부분과 후속 연결:**
+
+1. 사용자 승인대로 원본 GameMode의 `TryDedicatedServerLogin`, `HostDedicatedServerMatch`, `OnUserInitializedForDedicatedServer`, 온라인 GameSession/ReplaySpectator 생성자 선택은 이번에 이식하지 않았다. 함수 삭제/완료 처리가 아니라 후속 이식 대기다. 이후 원본 GameSession·UserFacingExperience·CommonSession 및 서비스 설정/리플레이 의존성을 대조한다.
+2. 원본 DeveloperSettings의 `bShouldAlwaysPlayForceFeedback` 데이터는 보존하지만, 현재 플레이어 Controller에 없는 `LyraPC.ShouldAlwaysPlayForceFeedback` CVar 메타데이터는 제거하고 편집을 비활성화했다. 엔진 DeveloperSettingsBackedByCVars→ImportConsoleVariableValues는 이 CVar 부재를 Error로 기록한다. 플레이어 Controller 전체 이식이 원본 보존 대안이지만 이번 사용자 보존 범위 밖이다. 가짜 CVar를 등록하지 않으며 이 설정의 진동 동작을 검증했다고 보고하지 않는다. 봇 공격/수량 옵션과 원본 소비 함수에는 이 변경이 없다.
+3. 원본 BotCreation.RemoveOneBot의 Controller 파괴로 사망 Ability가 중단될 수 있다는 원본 TODO도 그대로다. 프로젝트 인카운터의 유한 처치/DeathFinished 정리와 연결할 때 별도 실제 검증한다. 현재 기존 스포너를 이 경로로 바꾸지 않았다.
+
+**기존 파일 변경3개:**
+
+- Build.cs: AssetRegistry, Editor 한정 MessageLog 모듈 의존성 추가.
+- DefaultEngine.ini: AI/스폰/픽업/개발설정/GameMode·WorldSettings/Experience 관련 Class16개＋Enum1개＋Struct1개, 총18개 CoreRedirect 추가. 기존 LyraPlayerState→DCPlayerState 등 매핑은 그대로이며 새 ExperiencePlayerState는 GameMode 선택으로만 사용한다.
+- DefaultGame.ini: DCLyraExperienceDefinition(BP class) / DCLyraExperienceActionSet(data asset)의 PrimaryAsset scan2개를 `/Game/LyraMigration/AI`와 `/Game/DreamCatcher/GAS/Test/R10/LyraAI`에 한정해 추가. 기존 AssetManager fallback/PawnData·맵 선택·온라인 설정은 불변이다. 아직 이 경로의 새 Experience 에셋은 만들지 않았다.
+
+**작성한 검사/현재 확인:** `Tests/DCLyraAIFoundationTestTypes.h`와 `DCLyraAIFoundationAutomationTests.cpp`에 `DreamCatcher.R10.LyraAI`4건(NativeDefaultsAndSettings, TeamAndUnPossess, ExperienceWaitContract, PickupCooldown)을 작성했다. 별도 unattended 프로세스의 `-DCR10LyraAIIsolatedAutomation`을 요구하며 설정/프레임 카운터는 범위 종료 시 복원한다. 임시 native 월드의 부분 검사이고 실제 BP/BT/EQS/Experience 로드 성공/픽업 GiveWeapon/복제 검사가 아니다. **UHT/C++ 빌드 및 새 검사 실행은 아직 하지 않았으며 미검증**이다.
+
+정적 검사에서는22개 원본 기반 파일의 명시적 변환 대조, GameMode18함수 대조,28개 신규 소스의 quoted include/마지막 generated include, 신규 Redirect 중복 확인을 통과했다. 보호518개 기존 파일 중 차이는 Build.cs/Config2개뿐이며 나머지515개는 해시 불변이다. 이는 빌드/실행 성공이 아니다. 근거는 `Saved/Diagnostics/R10/lyra_ai_native_before.json`, `lyra_ai_native_static.json`이다. 기존 사용자 dirty/staged 변경은 보존했다.
+
+**재개 순서:** 사용자 Development Editor/Win64 빌드→새4건 및 기존 R10/R5/R9 회귀→원본 AI15에셋/필수 픽업 에셋의 새 경로 이식·Compile·재로드→별도 GameMode/Experience/PawnData/NavMesh 맵에서 감지/이동·추적/사격/재장전/무기 탐색/사망·정리→사용자 화면·소리 확인. 기존 플레이어/테스트 맵/스포너의 활성 경로는 그대로이며 코드 빌드만으로 현재 맵의 적이 원본 AI로 바뀌지 않는다. R10 전체·온라인 PVP·복제/패키징 완료가 아니다.
+
+### 2026-10-11 사용자 빌드 확인·native23/24 — 승인된 테스트 초기화 교정
+
+**빌드 근거:** 사용자 UBT 로그는20:41:43 KST 시작, DreamCatcherEditor Win64 Development, Result:Succeeded/71.51초다. 게임 DLL은20:42:54 갱신/5,011,968 bytes다. Codex는 C++ 빌드·패키징을 실행하지 않았다.
+
+**검사 결과:** `Saved/Automation/R10LyraAINative_A/index.json`의20:54:55 KST 결과는 성공23/실패1/보고서 경고0/notRun0, 프로세스 종료0이다. 새4건 중 NativeDefaultsAndSettings/ExperienceWaitContract/PickupCooldown3건과 기존 R10.Enemy/Attack·R5 Equipment/TeamColor·R6 Weapon·R9 DashDefense20건은 통과했다. TeamAndUnPossess의 `PlayerState change forwarded by bot`가 기대2/실제1로 실패했으며, 이후 팀 재바인딩/관찰 해제·UnPossess 조건에는 추가 실패가 없다. 전체 성공이나 원본 AI 실행 완료로 처리하지 않는다.
+
+**원인·원본 보존:** 이 테스트는 CreateTestWorld만 하고 실제 월드 초기화/BeginPlay를 하지 않았다. UE5.8 `Engine/Private/Actor.cpp:1513`의 AActor::ProcessEvent는 World.AreActorsInitialized() 또는 명시적인 editor 실행 허용 없이는 동적 콜백을 실행하지 않는다. 따라서 PlayerState→봇 Actor.OnPlayerStateChangedTeam→관찰자 전달 중 Actor 단계가 차단된다. 직접 호출하는 OnRep/팀 조회 및 UObject 관찰자의 초기 통지는 이 경계와 다르다. 원본 팀 전달 함수를 바꾸거나 assertion을 약화시키는 해결책이 아니다.
+
+**승인된 교정:** 사용자가 테스트 초기화 교정을 승인했다. `Source/DreamCatcher/Tests/DCLyraAIFoundationAutomationTests.cpp`의 TeamAndUnPossess에 기본 AGameModeBase 선택, BeginPlayInTestWorld, AreActorsInitialized 확인5줄만 추가했다. 원본 AIController/팀/ASC/픽업 코드·기존 assertion·Config·에셋은 수정하지 않았다. **교정본의 컴파일/검사 실행은 아직 미검증**이다.
+
+**보존/다음:** 실행 전 기록한546파일은 검사 종료 후 모두 불변이었다(`Saved/Diagnostics/R10/lyra_ai_postbuild_A_before.json`). 교정 후 코드 변경은 승인한 테스트1파일뿐이며 상태 문서2개를 갱신했다. 에셋 저장/기존 맵 변경은0이다. 사용자 재빌드 후 동일24건을 다시 검사하고 통과하면 기승인 원본 AI/픽업 에셋 이식·재로드 및 별도 GameMode/Experience/맵 연결로 진행한다. 온라인 호스팅·리플레이 보류, 실제 AI/복제·패키징 미완료 경계는 유지한다.
+
+### 2026-10-11 native24건 통과 및 승인된 픽업 GamePhase 의존성 추가
+
+**교정본 검증 완료:** 사용자 빌드는20:59:16 KST 시작/7.60초/Result:Succeeded, DLL20:59:23 갱신/5,012,480 bytes다. `Saved/Automation/R10LyraAINative_B/index.json`의21:06:49 KST 결과는 성공24/실패·보고서경고0/notRun0이다. 로그 Error/ensure/Fatal도0이다. 팀 변경 전달/재바인딩/해제/UnPossess를 포함한 새4건과 기존20건을 모두 통과했다. 임시 native 기반 검사와 실제 AI BP/전투·픽업·복제/화면 동작은 구분한다.
+
+**다음 에셋 단계에서 확인한 실제 의존성:** `Saved/Diagnostics/R10/presentation_source_Pickup_A/report.json`은 원본 `/ShooterCore/Blueprint/B_WeaponSpawner`, `B_AbilitySpawner`2개를21:07:57에 저장 없이 조회했다(complete/missing0/보호 파일 변화0). B_AbilitySpawner는 B_WeaponSpawner의 자식이다. 원본 무기 GiveWeapon은 **IsPhaseActive(ShooterGame.GamePhase.PostGame)**를 호출한다. 이 native Phase 기반이 대상에 없으며, 픽업 Cue 태그와 기존 이식 메시지/Helper 타입 매핑도 빠져 있다. 원본 구조를 보존하려면 필요한 의존성으로, 해당 조회를 제거하거나 false 상수로 대체하면 게임 종료 후 픽업 제한이 달라진다.
+
+**승인 및 작성 내용:** 사용자에게 원본5파일/검사/필요 Redirect·원본 태그2개 범위를 설명했고 `필수 의존성 추가 진행` 승인을 받았다.
+
+- `Source/DreamCatcher/AbilitySystem/Phases/DCLyraGamePhaseSubsystem.h/.cpp`, `DCLyraGamePhaseAbility.h/.cpp`, `DCLyraGamePhaseLog.h`: 원본5파일을 타입/include/이름 대응만 하여 이식했다. 서버 GameState ASC에 phase Ability를 부여·활성화하고 원본의 부모/자식·형제 종료·관찰 로직을 보존한다. **어떤 phase도 자동 시작하지 않는다.** 기존 라운드/플레이어/스포너를 새 단계 흐름으로 바꾸지 않는다.
+- `Config/DefaultEngine.ini`: PhaseSubsystem/Ability Class2개, EDCLyraPhaseTagMatchType Enum1개, 이미 이식된 DCVerbMessageHelpers Class1개·DCAbilitySimpleFailureMessage Struct1개의 Redirect 총5개를 추가했다. 기존 DCVerbMessage Struct 매핑은 재사용했다.
+- `Config/DefaultGameplayTags.ini`: 원본 ShooterCoreTags.ini의 `ShooterGame.GamePhase.PostGame`, `GameplayCue.ShooterGame.Interact.WeaponPickup`2개만 추가했다. `Ability.UserFacingSimpleActivateFail.Message`는 이미 native 등록돼 있어 중복 추가하지 않았다.
+- `Tests/DCLyraGamePhaseTestTypes.h`, `DCLyraGamePhaseAutomationTests.cpp`: `DreamCatcher.R10.LyraAI.PhaseDataValidation` 및 `PhaseNestedLifecycleAndGate`2건 작성. 태그 검증/자동 phase 없음/부모와 PostGame 자식 공존/자식 취소 시 gate 해제·부모 유지/최종 종료 callback을 임시 GameState ASC에서 확인한다. 실제 픽업 GiveWeapon/BT/EQS/복제/게임 전체 단계 검사는 아니다.
+
+**현재 한계:** 신규 Phase 코드/검사는 아직 UHT/C++ 빌드·실행하지 않았다. 원본5파일의 명시적 변환 대조는 통과했으며 `lyra_ai_phase_static.json`에 기록했다. 보호546파일 중 현재 달라진 파일은 승인한 Config2개뿐이다. 신규7개 소스와 상태 문서/읽기 전용 진단 외 기존 소스·플레이어·맵·무기 에셋·DLL은 그대로다. 에셋 생성·저장0, Codex 빌드/패키징0이다.
+
+**다음:** 사용자 재빌드→기존24＋Phase2=26건 검사→원본 AI/픽업 에셋의 새 경로 이식·원본 비교·재로드→별도 GameMode/Experience/PawnData/NavMesh 테스트 맵에서 실제 AI 행동 확인. R10 전체 완료가 아니며 온라인 호스팅·리플레이는 후속 이식으로 유지한다.
+
+### 2026-10-11 native26건 및 원본 AI·픽업62개 이식 / 실제 AI 연결 전
+
+**빌드·native 검증 완료:** 사용자 UBT21:19:37 KST 시작·40.84초 Succeeded, 게임 DLL21:20:18/5,078,528 bytes. `Saved/Automation/R10LyraAINative_C/index.json`21:21:54 결과는 성공26/실패·보고서경고0/notRun0이며 로그 Error/ensure/Fatal0이다. Phase2건을 포함한다. Codex는 빌드·패키징을 실행하지 않았다.
+
+**범위와 원본 보존:** 원본6개 진입점(AIController/BotSpawner/무기·회복Spawner/라이플PickupData/픽업Cue)의 의존성을 조사했다. `ai_manifest_A/report.json`에는 신규62개, 기존 R5/R6 ID_Rifle 재사용1개, 내용 비교가 필요한 공용5개가 있다. 공용 SFX class·Random MetaSound·squares HDR texture·Heal GE parent·라이플 MaterialInstance는 필드/기본값/GE·HDR EXR 등으로 비교했다. Random은 그래프/값은 같고 root class ID만 다르다. 기존 파일을 덮어쓰지 않으며 데이터 비교를 실제 재생/형상·화면 전체 동등성으로 확대하지 않는다.
+
+**승인된 이식 경로:** 일반 Duplicate API는 EQS_GetAllEnemy의 생성자 override 탐지 오류 및 편집 데이터 차이를 냈다. `ai_assets_Prepare_A`는 저장0/원본 보호 불변으로 중단했다. 이를 설명한 뒤 사용자가 **기존 경로와 겹치지 않는62개를 Migrate 후 전용 경로 이동**하도록 승인했다. 엔진 새 Migrate는 serialized package를 별도 mount에서 로드/저장하므로 byte-identical 복사라고 보고하지 않는다. 레거시 Migrate는 대상에 없는 ShooterCore mount를 바로 대응하지 못해 사용하지 않았다.
+
+- `ai_assets_MigrateOriginal_A`:21:53:28 성공, 중간 `/Game/...`의 비어 있던62개 경로에 정확한 패키지만 이식. 기존 에셋 conflict=SKIP/의존성 자동 확대 없음.
+- `ai_assets_TargetInspect_A`: 기존 native InventoryManager·TeamSubsystem·TeamComparison 이름 연결이 없어 BP Compile 실패/저장0. 이미 이식된 DC 타입3개를 프로세스에서만 대응한 TargetInspect_B는 전체 로드/저장0/정상종료0이다. 새 영구 Redirect를 추가하지 않았다.
+- `ai_assets_Relocate_A`:21:57:31, 신규62개만 Unreal RenameAssets로 `/Game/LyraMigration/AI/ShooterCore/...` 및 `/Game/LyraMigration/AI/Game/...`에 이동/참조 갱신·저장. 이동 전 기존 외부 referencer0을 확인했다. source path 계층/leaf 이름을 보존한다. 원본과 다른 프로젝트 기본값을 상속한 새 BP4개에는 원본 `bReplicateUsingRegisteredSubObjectList=true`를 보존하며 전역 복제 설정은 바꾸지 않았다.
+
+**픽업 음원 참조 정리:** 새 BaseLayer Patch/Replenish preset/Collect MetaSound3개에 공용 Random의 옛 ID `765086AE...`와 옛 BaseLayer 캐시가 남았다. 공용 원본 별도 복제 대신 의미상 동일한 기존 Random을 재사용하면서, 새3개의 내부 참조 ID를 대상 `F17B99BE...`로 대응하고 stock MetaSound editor 등록 경로로 파생 class cache를 갱신했다. UObject/struct editor API만 사용했으며 바이너리 외부 편집이 아니다. 첫 Finalize_A는 editor가 추가한 trigger-member 편집 metadata 차이 때문에 저장0으로 중단했다. Finalize_B는 정확한 원문 문서/노드·연결·입력 기본값을 복원하고 참조 ID만 대응해22:04:32 저장3/정상종료0으로 통과했다. 공용 음원은 불변이고 실제 소리 청취는 아직이다.
+
+**최종 검증:** `ai_assets_Verify_C/report.json` 및 `R10LyraAI-assets-Verify_C.log`22:08:24, 프로세스 전용 Redirect 없는 새 로드에서62개/Blueprint14개 Compile/저장0/종료0, Error·ensure·Fatal0. 실제 package 의존성에서 원본 ShooterCore/중간 경로0, 중간 redirector0, 보호 경로 변경0이다. 음원3개의 새 class cache도 재로드로 확인했다. 기존553파일의 해시는 작업 전과 같고 기존 활성 맵/플레이어·라이플·Config·C++는 수정하지 않았다. GA_Weapon_AutoReload의 기존 LyraGame import 경고는 그대로다. Verify_A는 없는 중간 경로를 오류를 내는 조회 API로 검사한 진단 실패였으며, 이를 조용한 Registry 조회로 교정한 B/C 결과와 구분한다.
+
+`comparison_Verify_C.json`은 명시한 native 이름/경로/MetaSound ID 대응 후 필드·기본값·연결 비교 차이0이다. 이름 있는 CDO 자식 객체의 출력 순서만 정규화했으며 내부 속성/배열 순서는 보존했다. stock Compile이 메모리에서 버리는 완전 미연결 pure BreakStruct1개는 별도 기록했고 에셋 파일을 저장하지 않았다. **완전한 byte/픽셀 동일성 판정은 아니다.** BB/4EQS의 내부 export는 대응 후 동일하다.
+
+**미완료 편집 메타데이터:** BT 서비스·decorator의 `ClassData.GeneratedClassPackage`7곳은 옛 ShooterCore 문자열이다. 그중 CanFireWeapon 이름1개는 원본에도 낡은 metadata로 존재한다. 실행 NodeInstance의 클래스 경로/노드·조건은 새 이식본을 가리킨다. `ai_metadata_Metadata_A`에서 Python 보호 필드 접근 제한으로 정리하지 못했으며 **저장0**이다. 이를 삭제하거나 가짜 경로로 덮지 않았고 이 정리만을 위한 새 C++ 도구/빌드 왕복도 추가하지 않았다. 엔진의 UpdateNodeClassDataFrom과 실제 에디터 경로를 후속 확인하며, 해당7곳을 완료 처리하지 않는다.
+
+**현재 단계/다음 변경안:** R10 원본 AI의 native 기반과 에셋 이식·정적 검증까지 진행했으며 **실제 AI PIE는 아직 미검증**이다. 다음은 `/Game/DreamCatcher/GAS/Test/R10/LyraAI/` 전용 GameMode/Experience/PawnData·봇 구성/NavMesh·픽업 테스트 맵이다. 원본 `LAS_ShooterGame_StandardComponents`와 시작 Inventory/팀 조립 등 필요한 연결부터 조사하고 정확한 새 파일·Config 범위를 제시한다. 원본 BotCreation/ExperienceReady/BT·EQS를 사용하며 감지/이동·사격·재장전·무기 탐색·사망 정리를 확인한다. 기존 플레이어/맵/스포너·강공격 예고 프로토타입은 유지한다. 전체 ShooterCore/온라인/라운드 게임 규칙을 자동 활성화하지 않는다. 이미 통과한 native26건이나62개 이식을 다시 수행하려고 사용자 재빌드를 요구하지 않는다.
+
+레시피: `Scripts/Editor/r10_lyra_ai_assets.py`, `r10_lyra_ai_audio.py`. R10 전체, AI 실플레이/복제, 실제 픽업 FX·음향, 온라인 호스팅·리플레이, R7 잔여HUD/R13, R14 정리·패키징·디자이너 병합은 미완료다.
+
+### 2026-10-11 AI 실제 조립 조사 / 다음 필수 코드·Config 묶음 제안
+
+사용자가 별도 GameMode/Experience·NavMesh 테스트 맵 연결 진행을 승인한 뒤 원본 조립을 읽기 전용으로 확인했다. `Saved/Diagnostics/R10/presentation_source_Assembly_A/report.json`22:15:46은 StandardComponents/Elimination/Perf3개, `presentation_source_AssemblyParts_A/report.json`22:18:12는 ShooterCore GameFeatureData·QuickBar·TeamSetup·TeamSpawningRules·Hero Pawn/PawnData·Elimination7개를 조회했다. 양쪽 complete/저장0/missing0/보호변경0이며 Error/ensure/Fatal0, 프로세스 종료0이다. 작업 전 기존553파일 불변이다. 소스코드·Config·바이너리 에셋·새 맵 수정 및 Codex 빌드/패키징은 없다.
+
+**원본 구성과 확인된 제약**
+
+1. `ShooterCore`의 AddComponents가 Controller에 InventoryManager/WeaponState, Character에 EquipmentManager를 붙인다. `LAS_ShooterGame_StandardComponents`가 Controller에 원본 B_QuickBarComponent를 붙이며3슬롯이다. 원본 초기 장비 부여/정리는 B_Hero_ShooterMannequin의 AddInitialInventory/ClearInventory, 준비 대기는 WaitForInventoryReadiness에 있다. 현재 테스트 Controller의 타이머 초기장착을 원본과 동일한 조립으로 간주하지 않는다. 전체 Hero BP에는 Cosmetics·Emote·Pistol 등 의존성이 있어 이 전체를 무조건 활성화하는 것과 필수 장비 함수 보존은 별개다. 정확한 이식/비교·실행은 후속이다.
+2. Experience AddComponents는 GameState에 BotSpawner·B_TeamSetup_TwoTeams·B_TeamSpawningRules를 붙인다. TeamSetup 부모 `LyraTeamCreationComponent`가 대상에 없고, 원본은 Experience HighPriority로 팀1/2를 만든 뒤 최소 인원→동률시낮은ID 순으로 PlayerState를 배정한다. GenericPlayerInitialization에서 새 플레이어/봇도 배정한다. 고정 Player0/적팀1 값으로 대체하면 원본 균등 배정/새 접속 처리와 달라진다.
+3. B_TeamSpawningRules는 ShooterCoreRuntime의 `TDM_PlayerSpawningManagmentComponent` 자식이다. 기존 이식 PlayerSpawningManager 기반만으로 같은 규칙이 아니다. 원본은 적 Pawn과의 거리, 점유 상태 및 occupancy를 고려해 시작점을 선택하고 fallback을 제공한다. 임의 고정 위치/무작위 선택으로 바꾸지 않는다.
+4. 원본 BotController.GetTeamAttitudeTowards는 대상 Pawn의 **Controller가 팀 인터페이스를 구현하는지** 확인한다. 현재 DreamCatcherPlayerController/RifleIntegrationController에는 그 인터페이스가 없어 코드상 Neutral 경로다. TeamSubsystem의 PlayerState fallback과 이 AI Controller cast는 서로 다른 경로다. 이 판정은 실제 PIE로 관찰한 결과가 아니라 소스/타입 계약에서 확인한 누락이다. 원본 LyraPlayerController는 PlayerState 팀을 조회하고 Init/Cleanup/OnRep 시 구독·해제를 전달한다.
+
+**정확한 추가 변경안 — 아직 미승인·미작성**
+
+- 신규 게임 코드6개: `Teams/DCTeamCreationComponent.h/.cpp`, `Player/Lyra/DCLyraTDMPlayerSpawningManagementComponent.h/.cpp`, `Development/DCLyraAIIntegrationController.h/.cpp`.
+- 앞4개는 원본 알고리즘을 이름/include/기이식 타입만 대응한다. 기존 DCTeamInfoBase/PublicInfo의 UDCTeamCreationComponent friend 선언을 그대로 사용한다.
+- 마지막 Controller2개는 **ADCRifleIntegrationController 파생형**에 원본 PlayerState 기반 팀 전달 부분만 추가한다. 새 테스트 Blueprint에서만 선택하며, 기존 플레이어 Controller·입력/카메라/무기 UI·기존 맵은 변경하지 않는다. 원본 전체 PlayerController 이식으로 보고하지 않는다. 공용 Controller를 직접 고치는 대안보다 영향 범위가 작으며, 원본 AIController의 판정 함수를 변경하거나 항상 Hostile로 반환하는 대안은 사용하지 않는다.
+- 검사2개 파일: `Tests/DCLyraAIAssemblyTestTypes.h`, `Tests/DCLyraAIAssemblyAutomationTests.cpp`. 팀 생성/균등 배정/관전자·신규 연결, 시작점 선택, 플레이어-봇 관계와 PlayerState 팀 변경 구독·해제를 한정 검사하고 기존26건을 회귀한다. 새 범용 도구나 검증 프레임워크를 추가하지 않는다.
+- `DefaultEngine.ini`: 원본 LyraTeamCreationComponent 및 ShooterCoreRuntime.TDM_PlayerSpawningManagmentComponent를 신규 타입으로 연결하는 ClassRedirect2개.
+- `DefaultGame.ini`: `/Game/LyraMigration/AI/ShooterCore/GameplayCues` 등록1개. 원본 픽업 Cue는 이식됐으나 현재 스캔 경로에 없다. 기존 Rifle/Death/Dash 등록과 전역 GameMode·입력·태그·전투 수치는 유지한다.
+
+**원본 보존/범위 차이:** 원본 ShooterCore/Elimination Experience 전체에는 점수·음악·Replay·Accolades·정식HUD·입력·Cosmetics 조립도 있다. 전체를 복제·활성화하는 대안은 현재 플레이어 보존/온라인 후속·R7/R13 분리 결정과 충돌한다. 따라서 새 AI 통합 Experience에 필요한 원본 Action/팀·스폰·장비 연결을 구성하고 나머지는 미완료 후속 범위로 유지한다. 이것을 원본 전체 Experience 이식 완료로 표시하지 않는다.
+
+**재개:** 이 추가 코드·Config 범위를 승인받은 뒤 코드 작성→사용자 빌드→원본 팀 BP2개/TeamDA_Red·Blue(현재 대상에 없음)의 의존성 검증·새 경로 이식→별도 Experience/PawnData/봇 장비/NavMesh·픽업 맵으로 이어간다. 새로운 의존성이 나오면 정확한 근거·범위를 다시 설명하며 모든 의존성 조사가 끝났다고 확약하지 않는다. 원본 BT 편집 metadata7곳 및 실제 AI·사격·재장전·픽업·복제/전체R10은 아직 미완료다.
+
+### 2026-10-11 승인 후 작성 — AI 팀·스폰 및 테스트 플레이어 팀 연결 / 빌드 대기
+
+사용자가 위 추가 묶음의 코드 작업을 승인했다. 이번에는 **신규 게임 코드6파일, 검사2파일, Config2파일**을 작성했으며 Unreal 실행/에셋 저장·C++ 빌드·패키징은 하지 않았다. 직전 빌드26건 통과는 이번 신규 코드의 컴파일/실행 성공을 의미하지 않는다.
+
+| 파일 묶음 | 적용 범위 |
+|---|---|
+| Teams/DCTeamCreationComponent.h/.cpp | 원본 HighPriority Experience 구독→팀 생성/기존·신규 플레이어 배정, 최소 인원·동률 ID 및 관전자 규칙 보존 |
+| Player/Lyra/DCLyraTDMPlayerSpawningManagementComponent.h/.cpp | 원본 ShooterCore TDM의 적 Pawn 거리·점유/occupancy·fallback 보존 |
+| Development/DCLyraAIIntegrationController.h/.cpp | 기존 RifleIntegrationController를 상속한 opt-in 클래스에 원본 PlayerState 팀 조회·변경 구독/해제 추가 |
+| Tests/DCLyraAIAssemblyTestTypes.h · DCLyraAIAssemblyAutomationTests.cpp | 저장 에셋 없는 native 검사3건 및 한정 fixture |
+
+첫4파일은 이름/include/module export만 대응하고 본문을 유지했다. 명시적인 Controller/Pawn/GameState/TeamDisplay include와 AController 전방 선언을 더해 Unity/PCH의 우연한 include 의존을 줄였다. 기존 TeamInfo의 `friend UDCTeamCreationComponent`는 그대로 사용했다. 생성할 팀/표시 데이터는 여전히 BP 설정이며 코드에서 팀1/2나 봇 수를 강제하지 않는다.
+
+**Controller의 정확한 범위:** 원본 LyraPlayerController의 OnPlayerStateChangedTeam/OnPlayerStateChanged/BroadcastOnPlayerStateChanged/InitPlayerState/CleanupPlayerState/SetGenericTeamId/GetGenericTeamId/GetOnTeamIndexChangedDelegate8함수 본문을 타입·로그명만 대응했다. OnRep_PlayerState는 Super 호출 후 팀 재바인딩 부분만 이식했다. 원본의 별도 클라이언트 ASC actor-info 갱신/OnSpawn 재시도까지 이식했다고 보고하지 않는다. 기존 초기화 경로를 유지하는 테스트 전용 부분 이식이며, 공용 Controller·기존 Blueprint를 수정하거나 재부모화하지 않았다. 입력·카메라·초기 라이플/무기 UI는 부모를 통해 유지된다. 새 Controller는 아직 실사용 맵에 연결하지 않았다.
+
+**Config:** DefaultEngine.ini의 LyraTeamCreationComponent→DCTeamCreationComponent 및 ShooterCoreRuntime.TDM_PlayerSpawningManagmentComponent→DCLyraTDMPlayerSpawningManagementComponent ClassRedirect2개. DefaultGame.ini의 `/Game/LyraMigration/AI/ShooterCore/GameplayCues` 경로1개. 기존 등록/태그/전역 GameMode/플러그인·게임 수치는 유지한다. 픽업 Cue 런타임 등록·실제 재생은 사용자 빌드 후 확인한다.
+
+**작성한 검사/한계:** `DreamCatcher.R10.LyraAI.Assembly.TeamCreationAndAssignment`는 자동 팀 생성 없음/팀 등록/기존·신규 배정·관전자·inactive·동률 규칙을, `TeamSpawnSelection`은 거리/비점유 우선/점유 fallback·적 없음 조건을, `PlayerTeamRelayAndAttitude`는 실제 월드 초기화 후 InitPlayerState 구독/변경·재바인딩/해제와 원본 봇의 Hostile·Friendly·Neutral 경로를 검사한다. 새 저장 Experience 로드, 실플레이어 HUD/초기 무기 부여, 막힌 geometry/실제 재시작, BT/Perception/Navigation 및 복제는 이 native fixture 검사 범위 밖이다. 기존 isolated 실행 옵션을 재사용하며 새 범용 도구는 만들지 않았다. **UHT/C++ 컴파일과 검사3건 실행은 아직 미검증이다.**
+
+**정적 확인/보호:** `Saved/Diagnostics/R10/lyra_ai_assembly_static.json`에 원본4파일/Controller8함수 대응, generated include 순서/엔진 API, Redirect 중복0·등록 개수를 기록했다. `lyra_ai_assembly_before.json`의 기존615파일 중 승인한 Config2개만 달라졌고 나머지613개는 불변이다. 기존 플레이어/맵/62개 이식본·DLL·다른 소스 변경은 없으며 dirty/staged 변경과 Git 인덱스를 보존했다. git diff 공백 검사는 통과했지만 빌드 성공으로 간주하지 않는다.
+
+**다음:** 사용자 DreamCatcherEditor Development/Win64 빌드 확인→기존26＋신규3=29건 검사→원본 TeamSetup/TeamSpawningRules 및 팀 Display 데이터 이식→별도 GameMode/Experience/PawnData·원본 초기 장비·NavMesh/픽업 맵 실제 연결. BT 편집 metadata7곳 및 전체R10/실제 AI·픽업·복제·온라인 호스팅/리플레이·패키징·디자이너 병합 미완료 경계는 유지한다.
+
+### 2026-10-11 사용자 빌드29건 및 원본 팀 에셋5개 검증 완료
+
+사용자 빌드는22:52:35 KST 시작/36.08초/Result:Succeeded, DLL22:53:10/5,168,128 bytes다. `Saved/Automation/R10LyraAIAssembly_A/index.json`22:54:30 **성공29/실패·보고서경고0/notRun0**, 로그 Error/ensure/Fatal0·프로세스 종료0이다. 신규 TeamCreationAndAssignment/TeamSpawnSelection/PlayerTeamRelayAndAttitude3건과 기존26건을 통과했다. Codex C++ 빌드·패키징은0이다.
+
+후속 원본 팀 조립의 정확한 의존성은5개였다. B_TeamSetup_TwoTeams/B_TeamSpawningRules/B_QuickBarComponent, TeamDA_Red/Blue를 Unreal 내부 Migrate→RenameAssets로 `/Game/LyraMigration/AI/ShooterCore/Game/` 및 `/Game/LyraMigration/AI/Game/System/Teams/`에 이식했다. 원본 팀ID1/2와 QuickBar3슬롯 및 기본값을 보존한다. TeamInfo Public/Private 원본 타입은 프로세스 한정 대응 후 새 에셋에 저장했으며 새 영구 Redirect·게임 코드 변경은 없다. 기존 에셋 덮어쓰기·외부 바이너리 복사는 하지 않았다.
+
+`ai_teams_Relocate_A/report.json`은 저장5건 뒤 Registry 조회의 None 반환 때문에 complete=false다. 실패 이력은 유지한다. 동기 스캔으로 조회를 교정한 별도 프로세스 `Saved/Diagnostics/R10/ai_teams_Verify_A/report.json` 및 `Saved/Logs/R10LyraAI-Teams-Verify_A.log` **23:09:42 KST**은5개 재로드/저장0/정상종료0, Error·ensure·Fatal0/보호변경0이다. `ai_team_source_comparison_A.json`에서 타입/경로 대응 후5개 원본 그래프·기본값·필드가 모두 일치했다. 기존623파일 해시도 불변이다. 정적 재로드/비교를 실제 Experience activation/AI·픽업·네트워크·색상 시각 성공으로 확대하지 않는다.
+
+**스트림 중단 이후 재개:** 앱 서버 로그에서 두 요청ID `0b5cc340-6a79-4f79-8b1f-019926b7bea5` 및 `7a53ba48-e578-45d4-b861-7c96e6225a6a`의 HTTP200 시작 후 일반 처리 오류/자동 재시도5회 소진을 확인했다. 명시적 인증·사용량 제한·네트워크·컨텍스트 초과 오류는 없다. 서버 내부 원인 및 대화 길이와의 인과관계는 미확정이며 앱 설정을 변경하지 않았다. 중단 전에 실행한 Unreal 검사는 저장된 receipts/logs로 복구·확인했다. 완료된29검사/5개 Migrate·Relocate를 반복하지 않는다.
+
+다음은 아직 없는 `/Game/DreamCatcher/GAS/Test/R10/LyraAI/`의 실제 GameMode/Experience/PawnData·초기 장비/NavMesh/픽업 맵 연결이다. 새 테스트 전용 Controller, 원본 팀/스폰·QuickBar, 기존 무기 계층을 조립하고 실제 BT 감지·이동·사격·재장전·픽업·사망을 확인한다. 원본 초기 Inventory 그래프 보존은 미구현·미검증이며 빈 인벤토리 검사 조건을 최종 초기장비 구현으로 간주하지 않는다. 기존 플레이어/맵/dirty 변경 보존, BT 편집 metadata7곳·AutoReload 경고, R7/R13 및 온라인/Replay 후속 범위는 유지한다.
+
+`docs/handoffs/r10-resume-2026-10-11.md`에 사용자가 새 채팅으로 이어갈 수 있는 재개 문구와 완료/미완료·승인 범위·근거를 저장했다. 현재 재빌드는 필요 없고 전체R10/실제 AI/복제/패키징 완료는 아니다.
+
+### 2026-10-12 실제 AI 테스트 맵·설정 클래스 연결 / 원본 인벤토리 UI 준비 단계
+
+0.83에서 완료한 빌드/native29건·AI62개/팀5개 이식은 반복하지 않고, 승인된 `/Game/DreamCatcher/GAS/Test/R10/LyraAI/`에 실제 연결5개를 생성했다. `r10_lyra_ai_map.py`가 기존 Rifle Controller를 새 DCLyraAIIntegrationController 파생 사본으로 연결하고, 기존 PawnData 사본·실제 Experience·별도 GameMode·맵을 조립한다. 봇 Controller에는 원본 Inventory/WeaponState/QuickBar, GameState에는 TeamSetup/TDM Spawning/BotSpawner를 원본 AddComponents로 추가한다. 원본 HighPriority 팀 생성/LowPriority 봇 생성과3봇·팀1/2·3슬롯을 유지한다. 플레이어의 기존 Native 컴포넌트와 Pawn의 Equipment는 중복 생성하지 않는다. 맵의 시작점4개/라이플 픽업4개/엄폐/Dynamic Recast는 독립 테스트 구성이다.
+
+**저장·재로드:** Apply_A/B는 속성/구조체 API 교정 전 저장0, Apply_C는 에셋4개 저장 후 NotPlaceable Recast 배치에서 중단했다. Resume_D는 생성 API 노출명 문제로 저장0이며, Resume_E는 World Actor API로 맵만 저장했다. Bind_F는 새 GameMode의 FPrimaryAssetId를 `DCLyraExperienceDefinition:B_DC_LyraAIExperience`로 교정하고 새 프로세스에서 맵/연결을 조회했다. `map_Bind_F.json`/`R10LyraAIMap-Bind_F.log`23:51:37 KST은 complete/보호변경0/Error·ensure·Fatal0이다. 기존 에셋의 덮어쓰기나 기존 이식본 재복사는 없다.
+
+**새 필수 Config 승인:** PIE_A에서 ExperienceManagerComponent.cpp:358→SettingsLocal.cpp:427의 `CastChecked`가 기본 GameUserSettings 객체 때문에 Fatal을 발생시켰다. 원본 OnExperienceLoaded/설정 재적용을 삭제하지 않고 프로세스 한정 SettingsLocal 선택으로 분리했다. 이후 사용자가 영구 등록/기존 플레이어 회귀를 승인하여 DefaultEngine.ini의 `/Script/Engine.Engine`에 `GameUserSettingsClassName=/Script/DreamCatcher.DCLyraSettingsLocal`1줄만 추가했다. 전역 설정 클래스 선택 변경이며 새로운 C++/빌드는 필요 없었다. 진단 실행은 GameUserSettings 저장 경로를 Saved/Diagnostics/R10의 별도 파일로 지정했다. 사용자의 기존 설정값 전체 이관/최종 화면 확인과 구분한다.
+
+**실제 PIE 범위:** C(프로세스 한정 클래스·무음)는 봇3명/팀1·2/표적/이동/원본 픽업/사격/피해·사망을 관찰했다. `ai_pie_C.json`의 Item 짧은 이름 집계는 Controller 간 충돌이 있으므로 탄약 변화는 `ai_pie_C_owner_audit.json`의 Controller/Pawn/Item별 재분석만 근거로 사용한다. 한 봇의 탄창/예비탄0/60→30/30 재장전이 관찰됐다. C Automation 성공1/실패0이나 경고2031개(무음 중 빈 TapIDs 관련 경고 다수)이며 clean 성공이 아니다. D(영구 Config·오디오 활성)는 성공1/실패0/경고15, Error·ensure·Fatal0이고 기동·팀·감지·이동까지 관찰했으나32초 내 픽업/사격은 없었다. 동일한 빈 인벤토리 조건의 결과 변동을 숨기지 않는다. 초기 장비·전체 전투 수명 완료가 아니다.
+
+**기존 플레이어 회귀:** `r10_settings_player_probe.py`, `settings_player_A.json`, `R10SettingsPlayer_A/index.json`의10월12일00:04:32 KST 성공1/실패·경고0(로그 Error·ensure·Fatal0). 실제 기존 라이플 맵에서 SettingsLocal 클래스·이동164.8cm/yaw14.5도·Hip→Shoulder(FOV70)→Hip·탄창30→27→재장전30·Reticle/Ammo UI를 확인했다. 자동 입력이며 물리키/시각 품질·복제 검증은 아니다. 기존 에셋/맵 저장0이다.
+
+**원본 인벤토리 연결의 현재 제약:** 실제 source CDO의 InitialInventoryItems는 ID_Pistol1개다. AddInitialInventory24노드/ClearInventory23/WaitForInventoryReadiness12와 Possession/DeathFinished/Reset 호출8노드를 선별한 메모리 사본은 원본 노드·핀·기본값 비교가 일치했다. 다만 Blueprint Emote 인터페이스는 함수 제거 후에도 GetEmoteAudioComponent를 등록하며 Python의 ImplementedInterfaces 속성 접근은 보호되어 실패했다. 원본/대상 저장0인 A/B/C 실패 기록은 유지했다. 새 C++ 범용 도구를 추가하는 대신 기존 Editor Class Settings UI를 사용하려 했으나 Computer Use가 UnrealEditor 화면 접근 미허용으로 거부됐다. 사용자는 약20분 뒤 허용하겠다고 했으므로 그 전에는 UI를 재시도하지 않는다.
+
+**정확한 후속 범위/준비 상태:** 원본 Lyra에 새 `/Game/DreamCatcher/GAS/Test/R10/LyraAI/BP_DC_LyraInventoryPawn` 전체 임시 사본1개만 저장했으며 원본 Hero는 불변이다. 아직 DreamCatcher에 이식하지 않았고 실제 플레이에 연결하지 않았다. UI에서 이 사본의 Emote 인터페이스만 제거·Compile·저장/Editor 종료 후 `r10_lyra_inventory_prepare.py`로 필수 그래프만 정리·원본 비교하고, `r10_lyra_inventory_target.py`로 신규1개만 Migrate한다. 대상은 기존 RiflePawn을 부모로 사용하며 메쉬/충돌/이동값을 유지하고 초기 아이템만 검증된 Rifle로 선택한다. 새 Pawn의 Possession/DeathFinished/Reset 호출에 봇 여부 분기만 추가해 기존 플레이어 Controller 초기장착/정리와 중복되지 않게 한다. 이 원본 대비 테스트 데이터·호출 주체 차이를 설명했으며 **스크립트는 정적 작성 단계, 실행/활성화 미검증**이다. 기존 플레이어·맵/기존62·5개 이식본과 Source/Build.cs를 바꾸지 않는다.
+
+전체R10/원본 인벤토리·사망 정리/탄약 소진 후 픽업/복제/화면·음향 및 R11/R12·디자이너 병합은 미완료다. 현재 보호590파일의 변화는 승인한 Config1파일뿐이며 인덱스/기존 소스/플레이어/맵은 유지됐다. UI 재개 상세는 `docs/handoffs/r10-resume-2026-10-11.md`의 최신 갱신을 따른다.
+
+### 2026-10-12 원본 초기 인벤토리 연결 및 실제 AI·플레이어·재시작 검증
+
+사용자가 Computer Use 권한을 재요청해 UI 작업을 재개했다. source의 새 BP_DC_LyraInventoryPawn에서만 BI_EmoteSoundInterface를 제거했다. unattended 실행은 YesNoCancel 대화상자를 자동 Cancel했으므로 원본을 변경하지 않은 채 Editor를 정상 종료하고 일반 모드로 재실행했다. **00:40:48 No(Emote 함수 이관 안 함), 00:41:02 해당 사본 저장, 00:42:13 Editor 정상 종료**를 확인했다. UI 저장 직후 전체 임시 사본의 ShooterCore 참조 제한 경고는 후속 선별 준비 전 상태이며 이식 준비 완료로 취급하지 않았다. 사용자가 이후 Computer Use를 끄겠다고 했고 추가 UI 조작은 없다.
+
+**source/target 준비:** `inventory_source_D.json`00:43:00은 원본 AddInitialInventory/ClearInventory/WaitForInventoryReadiness와 Possession/DeathFinished/Reset 호출의 노드·핀·값 비교가 일치하고 원본 그래프·파일이 불변임을 확인했다. source 준비본 직접 참조는 Script/LyraGame, 기존 Manny AnimBP/메시/PhysicsAsset, Engine 매크로뿐이며 ShooterCore/Pistol/Emote는 없다. 신규1개만 Migrate했다. 대상 Apply_A는 누락된 InventoryManager 클래스 이름 대응으로 Compile 실패/저장0, Apply_B는 프로세스 한정 `/Script/LyraGame.LyraInventoryManagerComponent`→`/Script/DreamCatcher.DCInventoryManagerComponent`로 해결했다. 영구 Config/Redirect·게임 C++·Editor C++ 도구는 추가하지 않았다.
+
+**최종 수정 범위/원본 대비 차이:** 새 `/Game/DreamCatcher/GAS/Test/R10/LyraAI/BP_DC_LyraInventoryPawn`은 기존 RiflePawn을 상속하고 메시/충돌/이동 템플릿을 동일하게 유지한다. 원본 인벤토리 함수·준비 매크로는 타입명 대응 외 동일하다. 원본 기본 Pistol1개 대신 이미 검증된 Rifle1개를 테스트 데이터로 지정한다. 새 Pawn의 세 lifecycle 진입부에만 IsBotControlled 분기를 추가하여 플레이어의 기존 Controller 초기장착/정리와 겹치지 않게 했다. 새 DA_DC_LyraAIPawn의 PawnClass만 이 Pawn으로 바꾸고 기존 플레이어/맵/장비·예고 스포너는 보존했다. 전체 Hero/Cosmetics/Emote/Pistol·전체 Experience 이식 완료를 의미하지 않는다.
+
+Apply_B00:47:25은 새 Pawn·새 PawnData2개 저장 성공, Verify_A00:48:58과 최종 Verify_B01:04:32는 **임시 타입 대응 없는 새 프로세스**에서 재로드/Compile/부모·초기 아이템·원본 함수/매크로 비교 성공·저장0·보호변경0/Error·ensure·Fatal0이다. 완료된 native29/AI62/팀5개는 반복하지 않았다.
+
+| 실제 PIE | 확인 범위 | 근거와 한계 |
+|---|---|---|
+| Inventory_E, 00:51:19 KST | 초기0.84초에 봇3명/플레이어 Inventory·Equipment 각1개 및 Instigator 일치/픽업4개 미사용, 팀·감지·이동·발사·재장전·픽업·피해·사망, 약8초 Death 종료 후 Inventory/슬롯/Equipment0 | `ai_pie_Inventory_E.json`, `R10LyraAIInventoryPIE_E/index.json`; 아이템 획득 boolean은 초기장착도 포함하므로 픽업은 패드 상태/후속 F로 판정 |
+| NewPawn_B, 00:54:41 KST | 새 Pawn 플레이어 이동155.5cm/yaw28.5도, Hip→Shoulder/FOV70→Hip, 탄창30→27→수동 재장전30, Reticle/Ammo UI, 중복 아이템0 | `settings_player_NewPawn_B.json`, `R10SettingsPlayer_NewPawn_B/index.json`; 원본 개발 설정으로 프로세스의 봇만0, 저장된3봇 구성 불변; 물리 입력/시각 품질 아님 |
+| Restart_F, 00:57:48 KST | 자연 사망·정리 뒤 검사자가 원본 RequestPlayerRestartNextFrame을1회 호출→새 Pawn/같은 팀/HP100/라이플·Equipment1개. 다른 봇의 탄약0/0→OutOfAmmo true→원본 픽업으로 예비탄60→재장전30/30→OutOfAmmo false/사격 재개 | `ai_pie_Restart_F.json`, `R10LyraAIRestartPIE_F/index.json`; 자동 부활 정책 추가/검증 아님, 복제 미검증 |
+
+`inventory_integration_summary.json`은 원시 관찰에서 Controller/Pawn/Item별 재장전·픽업·사망/재시작 근거를 추출한 요약이며 원시 결과를 덮어쓰지 않는다. F에서 30.23초0/0, 30.44초OutOfAmmo, 32.06초0/60 및 픽업 availability 감소, 34.47초30/30·OutOfAmmo 해제, 35.08초29/30을 확인했다. 무기 탐색·픽업 분기를 삭제하거나 무한탄약으로 우회하지 않았다.
+
+세 PIE는 각 성공1/실패0/경고16, 로그 Error/ensure/Fatal0이다. 경고 구성은 Manny PoseAsset out-of-date14개, 시작 시 CrowdManager/Recast1개, 새 안내 주석의 NodeGuid 누락1개다. Comment_C는 NodeGuid 보호 속성 때문에 저장0으로 중단했다. Comment_D01:02:18은 **이번에 추가한 선택적 안내 주석1개만 제거**하고 실행 노드/연결이 불변임을 비교했으며, Verify_B는 missing NodeGuid0을 확인했다. 동작 변화 없는 주석 정리 때문에 전체 gameplay 검사를 반복하지 않았다. Pose/Nav 및 기존 AutoReload import/BT 편집 metadata 이력은 남긴다.
+
+**현재 완료 경계:** 별도 실제 AI 테스트 맵의 초기장비·원본 전투/탄약 소진·픽업·사망 정리·명시적 재시작과 새 Pawn 플레이어 자동회귀는 통과했다. 사용자의 화면/애니메이션/음향·조작감, 멀티플레이 복제, 기존 유한 DCEnemySpawner/Encounter와의 활성 연결 및 실맵 적용은 남았다. 전체R10을 완료 표시하지 않으며 다음 코드 범위는 유한 인카운터 연결안을 제시해 승인받는다. C++ 빌드/패키징·Git stage/commit/merge는 하지 않았다.
+
+### 2026-10-12 AI 이동 중 정지 포즈 수정 — AGENTS.md 0.86
+
+사용자는 이동 모션 외 PIE 정상 동작을 확인한 뒤 AI가 정지 자세로 미끄러지는 문제의 수정을 요청했다. 기존 `ABP_Mannequin_Base`와 Rifle linked layer는 연결되어 있었다. 원본 `B_Hero_Default`/`B_Hero_ShooterMannequin`의 경로 이동 가속도 설정은 True인데, 대상 Pawn은 False여서 AI가 속도로 이동해도 현재 가속도는0이고 AnimBP `HasAcceleration`도 false였다. 원본의 가속도 기반 locomotion 조건과 맞지 않은 것이 재현된 원인이다.
+
+**수정 범위:** `/Game/DreamCatcher/GAS/Test/R10/LyraAI/BP_DC_LyraInventoryPawn`의 CharMoveComp `NavMovementProperties.bUseAccelerationForPaths`만 False→True로 복구했다. 원본 값을 그대로 사용하며 속도·가속도 크기 등 다른 struct 필드, 해당 항목을 제외한 CDO export, 전체 Blueprint 그래프를 비교했다. 기존 부모 플레이어 Pawn/맵·AnimBP·C++·Config는 수정하지 않았다. 기존 인벤토리 이식과 native 검증도 반복하지 않았다.
+
+| 검사 (KST) | 결과와 한계 |
+|---|---|
+| Source_A 19:39:11 | 원본 두 BP의 True 확인, 원본/보호 파일 불변·저장0 |
+| Trial_B 19:47:09 | 한 라이브 봇의 bool만 Editor 알림 없이 변경. 이전 이동22샘플 가속도0/HasAcceleration0회→이후64샘플 중63회 활성, 최대1200. 왼발 메시 기준 위치 변화 폭 최대1.49→112.94cm, Rifle layer/Equipment1개 유지. 에셋 저장0 |
+| Apply_C 19:49:44 / Reload_E 19:57:20 | Unreal 내부 API로 Pawn1개 Compile/저장, 새 프로세스에서 값·해시·그래프 재확인. 기존 플레이어/맵·소스·Config·DLL·Git 인덱스·원본 Hero 포함 보호597개 중 허용한 Pawn 외 변경0 |
+| Verify_F 20:00:44 | 저장본만 사용하는 실제 PIE. AI3개의 이동91/89/91샘플 중 가속도/HasAcceleration 활성88/85/88회, 다리 포즈 변화·라이플 유지. 플레이어 이동 및 이후30샘플 정지 확인. 상태머신 이름은 보호된 API로 조회할 수 없어 특정 state 진입을 직접 확인했다고 주장하지 않음 |
+| Plain_G 20:06:26 | Python 관찰 스크립트 없는 일반 PIE 기동·종료 통과. Verify_F와 각각 성공(경고 포함)1/실패0, 기존 PoseAsset14/Recast1 경고, 로그 Error/ensure/Fatal0 |
+
+`Saved/Diagnostics/R10/locomotion_evaluation.json`은 원시 receipts를 보존한 오프라인 요약이다. 일회성 설정/조회는 `Scripts/Editor/r10_ai_locomotion_assets.py`, PIE 관찰은 `r10_ai_locomotion_probe.py`에 있다. **실패 이력:** Trial_A는 기본 Editor 변경 알림으로 라이브 컴포넌트/linked layer가 재설정되어 수정 성공 근거에서 제외했다. Verify_D19:52:51은 Editor 그래프/CDO 조회와 PIE를 같은 시작 스크립트에서 실행하다 `FDCLyraEquipmentList::AddEntry`에서 접근 위반이 발생했다. 원인은 미확정이며 실패를 성공으로 바꾸지 않는다. Editor 조회를 별도 commandlet으로 분리한 뒤 Reload_E/Verify_F/Plain_G는 통과했고 장비 C++/에셋에 우회 수정은 없다.
+
+**완료 경계/다음 재개:** 저장 설정과 실제 다리 포즈 변화를 검증했고, 이후 사용자가 PIE에서 이동 모션 정상을 확인했다. 이동 모션 수정은 사용자 시각 확인까지 완료했다. 이번 작업에 Computer Use·C++ 빌드·패키징·Git stage/commit/merge는 없다. 사용자는 자동 리스폰과 테스트 맵의 추가 팀 분리를 원하지 않는다. Lyra 원본 Elimination의 `AbilitySet_Elimination → GA_AutoRespawn`은 존재하지만 이 테스트 Experience에는 연결하지 않았다. 유한 스포너 생성까지 묶는 경우와 사망 집계/정리만 연결하는 경우의 차이를 먼저 설명하라는 후속 지시에 따라 DCEnemySpawner/Encounter 변경은 아직 시작하지 않았다. 실제 인카운터 연결·복제·전체R10은 미완료다.
+
+### 2026-10-12 유한 스포너 Lyra 경로·사망 수명·인카운터 보강 — 승인된 코드 작성, 빌드 대기
+
+사용자는 현재 BotCreation 생성이 정상이라는 설명과 두 방식의 차이를 확인한 뒤 **생성 경로 추가 / 처치 집계·객체 정리 분리 / 인카운터 완료 보강**을 승인했다. 이 작업은 DreamCatcher의 유한 전투 통합이며 Lyra 원본의 스폰 오류 수정으로 취급하지 않는다. 자동 리스폰과 새 팀 분리는 포함하지 않는다.
+
+**원본 재사용과 차이:** 원본 `LyraBotCreationComponent::SpawnOneBot`의 Controller 생성 → PlayerState → GenericPlayerInitialization → GameMode 생성/Possess → PawnExtension 초기화 순서를 따른다. 기존 `DCEnemySpawner`에 선택적 LyraBotControllerClass를 추가하고, Experience의 기존 PawnData를 사용한다. 생성 위치는 RestartPlayerAtTransform으로 스포너의 SpawnPoint를 따르며, 수량/동시 생존/간격은 스포너 설정을 사용한다. 원본 BotCreation의 NumBots·개발 설정·URL 수량·RandomBotNames는 이 별도 유한 경로에 적용하지 않고 봇 표시 이름은 스포너명/생성 순번으로 지정한다. 원본 BotCreation과 GameMode/Controller 코드는 그대로다. 원본 RemoveOneBot은 Controller/PlayerState 조기 제거로 Death Ability가 중단될 수 있다는 TODO가 있어, 유한 경로는 원본 Pawn의 사망/장비 해제가 끝난 뒤 소유 Controller를 정리한다.
+
+**변경 코드:** `Source/DreamCatcher/AI/DCEnemySpawner.h/.cpp`, `Stage/DCEncounterController.h/.cpp`4개. Lyra 미지정 시 기존 GAS/legacy 경로를 유지한다. Lyra 경로는 서버 권한과 Experience 완료를 요구하고, low-priority 완료 후 다음 tick에 생성하여 팀 설정 완료를 기다린다. Health/ASC/Death Ability 설정 실패는 소유한 생성 객체를 정리하고 실패를 보고한다. 실패한 Controller에 예약된 원본 재시작 타이머도 취소하며 무한 재시도를 추가하지 않는다.
+
+사망은 `OnDeathStarted`에서 생존 수1회 감소·다음 예정 적 생성/클리어 판정으로 전달한다. 소유 객체 추적은 유지하며 `OnDeathFinished → 원본 K2_OnDeathFinished의 Inventory/Equipment 정리 → Pawn 제거 → Controller/PlayerState 정리`를 따른다. 사망 연출이 끝날 때까지 인카운터 완료를 추가 지연시키지 않는다. 스포너 제거 시 소유 Pawn/Controller만 다음 tick에 정리해 사망 콜백의 ASC를 즉시 파괴하지 않는다. 외부 객체와 기존 플레이어는 정리 대상이 아니다.
+
+인카운터는 전체 고유 스포너를 먼저 구독한 뒤 활성화하고, 시작 이벤트 처리 후 완료를 판정한다. 중복 배열/지연·위조·외부 완료 알림을 무시하며 이미 완료한 스포너는 다시 완료 알림을 기다리지 않는다. 반복 StartEncounter가 지연 타이머를 다시 밀지 않게 한다. 스포너 실패와 진행 중 스포너 제거는 OnEncounterFailed로 전달하며 OnEncounterCompleted를 내보내지 않는다. 기존 빈 legacy 스포너의 즉시 완료 및 기존 빈 인카운터 완료 정책은 유지한다. StageDirector 수정은 없다.
+
+**검증 준비/미실행:** native6건은 `DreamCatcher.R10.LyraAI.FiniteSpawner` 아래 DeathAndCleanup / EncounterRegistration / DuplicateAndAlreadyCleared / UnexpectedRemoval / OwnerTeardown / ExperienceGateAndSpawnRollback이다. 임시 native Health 이벤트·Controller/PlayerState 수명과 실패 경로를 검사하며 실제 Blueprint 성공 생성·장비·복제를 검증했다고 주장하지 않는다. 사용자 빌드 후 기존 `DreamCatcher.R10.Enemy`의 SpawnerAndEncounter / ImmediateDeathAndInvalidSetup / LegacyAndTeardown3건도 수정된 공용 코드의 회귀로 실행한다. 이전 native29·완료 마이그레이션은 일괄 반복하지 않는다.
+
+빌드 뒤 실행할 `r10_lyra_finite_setup.py`는 새 `/Game/DreamCatcher/GAS/Test/R10/LyraEncounter/`에 Experience/GameMode/Spawner BP/맵4개만 만든다. 새 Experience의 원본 AddComponents6항목 중 자동 BotCreation1개만 제외하고 나머지5개·기존 PawnData를 재사용한다. 기존 맵 구성 helper로 별도 맵을 만들고 스포너A 총2/동시1, B 총1/동시1, 간격1초와 인카운터1개를 연결한다. 기존 맵/에셋 덮어쓰기는 없다. `r10_lyra_finite_probe.py`는 실제 PIE에서 중복 장착 없음·생성 상한·처치/정리 순서·완료1회·잔류 봇 Controller0을 검사하도록 준비했다. 런타임 플레이어 면역과 봇에 자폭 태그를 붙인 기존 피해 GE를 적용하므로 무기 명중/피해 검증은 아니다.
+
+**현재 상태:** C++ 코드·native 검사·일회성 자동화를 작성했다. Python AST·공백 검사와 작업 전 보호595개 중 승인한 기존 소스4개 외591개 불변을 확인했다. **사용자 C++ 빌드/새 native 검사 실행/신규 에셋 생성/실제 PIE는 아직 미검증**이다. 기존 Config/에셋·DLL·Git 인덱스 불변이며 Computer Use·빌드·패키징·Git stage/commit/merge를 실행하지 않았다. 다음은 사용자 Development Editor/Win64 빌드 확인 후 위 순서로 검증하는 것이다. 실제 실맵 통합·복제·전체R10 완료와 구분한다.
+
+### 2026-10-12 유한 Lyra 인카운터 사용자 빌드·연결·실제 PIE 통과 — AGENTS.md 0.88
+
+사용자 빌드는 **21:53:49 KST 시작/55.19초 성공/DLL21:54:43 갱신(5,274,112 bytes)**으로 확인했다. 이후 게임 C++를 수정하거나 Codex가 재빌드하지 않았다. native `R10FiniteNative_A/index.json`22:03:06은 새6건+공용 스포너 회귀3건 **성공9/실패0/notRun0**이다. 경고1개는 빈 legacy 스포너 즉시 완료 fixture에서 나온 기존 안내이며 로그 Error/ensure/Fatal0이다.
+
+**최종 저장 경로**
+
+- `/Game/DreamCatcher/GAS/Test/R10/LyraAI/FiniteEncounter/B_DC_LyraFiniteExperience`
+- `/Game/DreamCatcher/GAS/Test/R10/LyraEncounter/BP_DC_LyraFiniteGameMode`
+- `/Game/DreamCatcher/GAS/Test/R10/LyraEncounter/BP_DC_LyraFiniteSpawner`
+- `/Game/DreamCatcher/GAS/Test/R10/LyraEncounter/L_DC_LyraFiniteEncounter`
+
+새 Experience에서 자동 BotCreation1항목을 제외하고 기존5개 컴포넌트 조립·PawnData를 유지했다. 새 맵은 스포너2개(총2+1, 동시각1, 간격1초)와 인카운터1개다. 기존 팀 배정과 플레이어·무기·이동 애니메이션을 재사용하며 자동 리스폰은 추가하지 않았다.
+
+**실패 이력/해결:** `finite_setup_Apply_A.json`/Verify_A는 직접 저장본 조회만 통과했다. 최초 PIE_A는 Experience의 새 폴더가 Config의 PrimaryAsset 검색 범위 밖이어서 AssetClass assertion/종료3으로 실패했다. 이번 새 Experience1개를 기존 검색 범위인 LyraAI의 새 FiniteEncounter 하위로 Unreal 내부 이동했다(Relocate_B). 기존 Config/원본 Experience/맵은 보존했고 새 객체4개 구성을 유지했다. Verify_C22:21:53은 직접 로드뿐 아니라 AssetManager의 PrimaryAssetId→실제 생성 클래스 해석까지 확인했다. 스크립트에도 이 검사와 최종 경로를 반영했다. PIE_B는 관찰 callable의 기본 인자를 Unreal이 두 번째 인자로 세어 실패했다(Automation실패1, 프로세스종료0). 콜백을 한 인자 closure로 교정했으며 C++ 수정은 없다.
+
+| 최종 검사 | 결과 | 한계 |
+|---|---|---|
+| `finite_pie_C.json`, `R10FinitePIE_C/index.json`,22:25:43 KST | 실제 PIE 초기2명→1회 보충, 총3명·동시스포너별1, 초기 라이플 각1개, 스포너 완료2/인카운터 완료1, 마지막 봇 Controller0·플레이어 유지 | 검사 프로세스의 기존 피해 GE+원본 자폭 태그로 사망 유도, 플레이어 임시 면역 부여/회수. 실제 무기 처치·화면/조작감·복제 검증 아님 |
+| `settings_player_FiniteRegression_D.json`, `R10FinitePlayer_D/index.json`,22:36:26 KST | 기존 RifleIntegration에서 이동155.4cm/시점14.5도, Hip→Shoulder(FOV70)→Hip,30→27→수동재장전30, Reticle | 실제 입력 주입 기반 자동 회귀이며 사용자 물리 입력/시각 확인과 구분 |
+
+C는 성공(경고 포함)1/실패0/기존 PoseAsset14+초기 Recast1 경고, D는 성공1/실패·경고0이다. 두 로그 Error/ensure/Fatal0이다. C의 마지막 처치/인카운터 완료는7.755초, 각 DeathFinished는 사망 시작8.001~8.005초 뒤, Controller/PlayerState 정리는 그 약0.108초 뒤였다. 마지막 정리는15.865초,17.866초까지 추가 생성0을 확인했다. Pawn.OnDestroyed의 C++ 구독자가 Controller를 제거하므로 관찰 로그에는 중첩 PlayerState/Controller OnDestroyed가 Pawn의 Python 관찰보다 먼저 기록될 수 있다. 같은 시간의 기록 순서로 원본 사망 연출 전에 Controller를 제거했다고 해석하지 않는다.
+
+빌드 후 보호598파일 모두 불변이고 신규 실에셋4개만 존재한다. 근거는 `finite_postbuild_before_A.json`, `finite_integration_summary_A.json` 및 위 원시 receipts/로그다. native29/AI62/팀5개 이식과 기존 이동 검증은 일괄 반복하지 않았다. **이후 사용자가 새 맵 정상 작동을 확인하여 이번 연결 묶음은 자동검증·사용자 PIE까지 완료했다.** 초기 봇2/누적 봇3이며 플레이어는 제외하는 설정을 설명했다. 실맵 통합·복제는 남았고 전체R10/R11 완료로 확대하지 않는다.
+
+### 2026-10-12 R11 변경안 준비 — 읽기 전용 조사, 구현 전
+
+`Saved/Diagnostics/R11/inspect_stage_A.json`은 기존 `/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1`과 Stage/Encounter/EnemySpawner BP3개를 Unreal에서 읽기 전용으로 조사한 결과다. 저장0/Compile 요청0/PIE0/보호변경0/ensure0이다. 로드된 배치 액터1108개 중 StageDirector·Encounter·EnemySpawner는 없고 legacy EnemyCharacter1개와 PlayerStart1개가 있다. GameMode는 `/Game/Blueprint/BP_DreamCatcherGameMode`다. BP3개는 각각 해당 native 계층을 상속하며 기본 이벤트/Construction Script 노드만 있다. 런타임 LevelScript에서 추가 생성되는 로직의 유무까지 확정하지 않는다.
+
+기존 DCStageDirector는 순차 배열을 실행하지만 인카운터 실패/플레이어 사망 연결, 완료 이후 중복·외부 알림 차단,0초 Delay 처리를 보강해야 한다. 기존 조사 `original_match_lifecycle_A/report.json`의 Lyra 원본은 Warmup/Playing/PostGame 및 팀 점수 기반 HandleVictory이며, DreamCatcher 전투1→전투2→보스의 배열을 직접 제공하는 구조는 아니다. 원본 전투/초기화는 유지하고 프로젝트 StageDirector 역할로 순서를 연결한다. 원본 GamePhase 전체를 이 작업에서 폐기하거나 교체하는 것은 아니다.
+
+**제안할 묶음(아직 구현/승인 전):** StageDirector/Encounter의 진행·실패·중단 연결, 새 R11 전용 GameMode/임시 결과 Widget 계층, `/Game/DreamCatcher/GAS/Test/R11/`의 Level1 통합 사본·GameMode BP·결과 Widget을 구성한다. 기존 Stage/Encounter/유한 스포너와 PawnData/Experience/AI를 재사용하고 원본 Level1·플레이어·R10 맵은 보존한다. 통합 사본의 배치된 legacy 적만 제외해 이중 전투를 막고 전투2회와 임시 보스1개를 순차 연결한다. 기존 팀 API로 이 R11 구성에만 플레이어/적을 고정 배정하는 변경을 포함해 설명한다. R10 테스트의 팀 구성을 소급 변경하지 않는다. 클리어/실패·명시적 다시 시작·레벨 이동 후 상태 초기화를 함께 검증하며 자동 리스폰이나 실제 보스 패턴은 추가하지 않는다. 임시 결과 UI는 R13 정식 UI 완료를 뜻하지 않는다. 새 코드/Config/에셋은 아직 변경하지 않았다.
+
+### 2026-10-13 승인된 R11 코드·자동화 작성 — 사용자 빌드 대기
+
+사용자가 위 R11 변경안 전체를 승인했다. 이 단계는 기존 프로젝트의 StageDirector로 스테이지 순서를 연결하고 이미 이식한 Lyra 전투/초기화를 재사용하는 작업이다. 원본 Warmup/Playing/PostGame의 팀 점수 경기 규칙을 DreamCatcher 스테이지 순서와 동일시하지 않는다. 원본 GamePhase 계층과 기존 R10 구성은 보존한다.
+
+**작성 범위**
+
+- `Stage/DCStageDirector.h/.cpp`: 기존 단계 enum/배열은 유지한다. RunState/현재 단계/진행·종료 알림을 추가하고,0초 Delay/처치 완료의 다음 단계 전환을 다음 tick으로 옮긴다. 현재 인카운터의 실제 완료만 수용하며 중복·외부·늦은 알림과 종료 뒤 재진입을 막는다. 빈 단계 배열의 기존 즉시 종료는 유지하지만 누락/중복 인카운터나 음수/비유한 Delay는 실패로 처리한다. 종료 상태를 BP 완료 hook보다 먼저 알린다.
+- `Stage/DCEncounterController.h/.cpp`: 명시적 AbortEncounter로 시작 지연을 취소하고 연결된 자기 스포너만 제거한다. R10의 스포너 EndPlay가 자기 봇을 안전하게 다음 tick에 정리한다. 성공 완료를 만들지 않으며 다른 World/사용되지 않는 단계 참조는 정리하지 않는다. 기존 EndPlay 정책은 그대로다.
+- 신규 `GameModes/DCStageRunGameMode.h/.cpp`: Lyra GameMode 파생의 R11 전용 조립이다. 원본 Experience/팀 생성 완료 후 기존 PlayerState 팀 API로 플레이어1/봇2를 배정한다. ASC/Health 준비 후 StageDirector를 시작하며 준비 제한15초는 EditDefaultsOnly 설정이다. 플레이어 사망·진행 실패를 연결하고, 결과 이후에만 수동 retry/return을 다음 tick의 OpenLevel로 처리한다. 중복 요청은 거부하며 자동 부활을 추가하지 않는다. 현재 이동 요청은 standalone 범위다.
+- 신규 `UI/Stage/DCStageResultWidget.h/.cpp`: Native UMG 임시 단계 제목/결과/다시 시작/돌아가기다. 별도 Widget 에셋이나 정식 HUD 교체를 만들지 않는다. 결과 때 소유한 입력 차단 태그·이동/시점 무시를 추가하고 취소 가능한 입력 Ability만 정리하며 원본 Death Ability는 유지한다. World 종료에서 자기 UI/입력/구독만 해제한다. R13 정식 UI 완료가 아니다.
+- 신규 `Tests/DCStageFlowTestTypes.h`, `DCStageFlowAutomationTests.cpp`: `DreamCatcher.R11.Stage`의 SequenceAndStaleCallbacks / AbortStopsOwnedEncounters / InvalidConfiguration / DirectorRemoval / FixedTeamsAndExplicitTravel5건을 작성했다. 임시 native 계약 검사이며 실제 UI 버튼/맵 로드/장비 상태 검증은 별도다.
+
+**새 에셋 레시피:** `Scripts/Editor/r11_stage_setup.py`의 apply/verify를 준비했다. `/Game/DreamCatcher/GAS/Test/R11/L_DC_Level1Flow`, `BP_DC_StageRunGameMode`2개가 대상이며 **아직 생성하지 않았다**. 엔진 NewLevelFromTemplate으로 Level1의 별도 사본을 만들고 환경 액터 클래스·Transform을 비교한다. 사본에서만 legacy 적1개를 제외하고 일반 PlayerStart를 같은 위치의 Lyra PlayerStart로 교체한다. 원본 PlayerSpawningManager는 ADCLyraPlayerStart만 수집하므로 필요한 타입 연결이다. 기존 적 주변에서 바닥·캡슐 여유를 확인한 위치3개를 사용하고 Dynamic NavMesh를 둔다. 단계별1명씩 총3명이며 마지막은 같은 검증된 봇을 쓰는 임시 보스다. 수량/배치는 맵에서 조정 가능하며 최종 게임 밸런스나 R12 보스 패턴으로 확정하지 않는다. 기존 Finite Experience/PawnData/스포너·Stage/Encounter BP를 재사용한다. 원본 Level1·R10 맵·기존 플레이어·Config는 수정하지 않았다.
+
+**실제 PIE 준비:** `r11_stage_probe.py`의 `clear`는 각 단계1명/팀1·2/도달 가능한 Nav 경로/장비/원본 GAS 사망/완료 UI·봇 정리를 검사한다. `fail-retry-return`은 플레이어 사망→실패→원본 사망 정리 후 수동 재시작→HP/초기 장비/입력/단계 UI 복원→기존 유한 인카운터 맵으로 이동을 검사한다. Python World/Actor/widget 참조를 맵 이동 사이에 남기지 않는다. 제어된 피해 GE·임시 면역·입력 주입을 사용하므로 실제 무기 처치·물리 버튼/시각·복제 검사와 구분한다. 이 스크립트도 아직 실행하지 않았다.
+
+**현재 검증 경계:** Python AST·공백·로컬 include 점검, 보호609개 중 승인된 기존4소스 외605개 불변만 확인했다. `Saved/Diagnostics/R11/static_B.json`은 정적 결과이며 C++ 컴파일 성공이 아니다. 다음은 사용자 Development Editor/Win64 빌드 → 새5건과 공용 Encounter에 관련된 R10 회귀9건 → 신규2에셋 생성/별도 프로세스 재로드 → 실제 두 PIE 시나리오 → 사용자 화면/버튼 확인이다. C++ 빌드·패키징·Computer Use·에셋 저장·Git stage/commit/merge는0이다. 10월12일 실행 판단 기준에는 미달이며 R11 전체·실제 디자이너 맵 활성화·R12·복제는 아직 미완료다.
+
+### 2026-10-13 R11 실제 Level1 사본 연결·클리어/실패/재시작/복귀 자동 검사 통과
+
+위 승인된 코드의 사용자 빌드는01:05:05 KST 시작/130.51초 성공, DLL01:07:15 갱신이다. **01:12:17 KST R11 native5＋관련 R10 회귀9 성공14/실패0**을 확인했다(`R11StageNative_A/index.json`, 기존 빈 legacy fixture 경고1). 이번 턴 추가 게임 C++/Config 수정 및 Codex 빌드·패키징은 없다.
+
+신규 `/Game/DreamCatcher/GAS/Test/R11/L_DC_Level1Flow`, `BP_DC_StageRunGameMode`2개를 Unreal 내부 API로 저장하고 **setup_Verify_G의 새 프로세스 재로드**를 통과했다. 원본 Level1의 환경1106액터 클래스/Transform은 재로드 비교에서도 일치한다. 사본에서만 legacy 적1개를 제외하고 PlayerStart를 같은 위치의 LyraPlayerStart로 교체했다. 전용 GameMode의 DefaultExperience는 기존 등록된 `DCLyraExperienceDefinition:B_DC_LyraFiniteExperience`, ReturnMap은 기존 R10 유한 맵, UI는 native `DCStageResultWidget`이다. 단계별1명씩 총3명/동시각1, 전투1→전투2→임시 보스→완료이며 플레이어1/적2 배정은 이 전용 GameMode에만 적용한다. 도로의 바닥/캡슐 여유 확인 지점 `(335,165,71)`, `(635,165,71)`, `(1035,165,71)`과 Dynamic NavMesh를 사용한다. 최종 보스/밸런스가 아니라 승인된 Placeholder다.
+
+**실제 PIE 결과:** `pie_Clear_D.json`/`R11StageClear_D/index.json` **01:35:12 KST 성공1/실패0**. 단계별 초기 라이플1·팀·비부분 Nav 경로, 처치3.061/5.175/7.285초→순차 전환/결과,15.417초 원본 사망 처리 후 봇 Controller0/스포너3개 완료를 확인했다. `pie_Travel_A.json`/`R11StageTravel_A/index.json` **01:37:46 KST 성공1/실패0**은 플레이어 GAS 사망→실패·소유 봇/스포너 정리→자동 리스폰 없이 대기→명시적 retry1회/중복 거부→실제 World 재로드/HP100·라이플1·UI1개·입력 복원/이동68.84cm→명시적 R10 맵 복귀/R11 UI0·입력 차단0을 확인했다. 각각 기존 경고15(PoseAsset14/Recast1),17(PoseAsset14/Recast3)이며 두 로그 Error/ensure/Fatal0이다.
+
+**실패 이력/자동화 차이:** commandlet scene query가 비어 있어 일반 editor에서 동일 바닥 충돌을 재확인하고, apply/resume을 로드 후 tick이 있는 unattended editor로 옮겼다. 비노출 capsule getter/빈 overlap None/ExecCmds 쉼표/저장 중 callback 재진입/Experience 선로드 순서를 교정했다. Resume_F의 저장 후 검사 실패는 유지하고 Verify_G를 재로드 성공 근거로 사용한다. Clear_A UI wrapper, B static NavigationSystem CDO의 World 조회 ensure, C 보호된 World.NavigationSystem 접근은 실패다. 실제 PIE World 소유 NavigationSystem에서 공개 UFunction을 호출한 D만 최종 통과다. 관찰 스크립트의 complete=true만으로 ensure/Automation 실패를 덮지 않는다. 상세는 `docs/handoffs/r10-resume-2026-10-11.md`0.90을 따른다.
+
+**경계/다음:** 빌드 후 기준615파일(소스·Config·기존 테스트/AI/디자이너 맵·DLL·Git 인덱스·uproject)은 불변이고, 이번 추가 변경은 Python2/신규2에셋/문서다. 제어된 피해 GE·임시 면역·입력 주입을 사용한 standalone 검사이며 물리 결과 버튼 클릭·실제 무기 처치·화면·조작감·복제는 사용자/후속 확인으로 남긴다. 추가 빌드·수동 에셋 설정 없이 새 맵에서 이를 확인하면 이번 R11 연결 묶음을 닫고 R12 변경안을 제시한다. R13 정식 결과 UI·실제 디자이너 맵 활성화·병합·전체 R11 수용/R12는 아직 완료가 아니다.10월12일 R11/R12 실행 판단 기준보다 늦어졌으며 R11 자동 흐름만13일01:37에 확보했다. Computer Use·Git stage/commit/merge는 하지 않았다.
+
 ### 2026-09-19까지의 이전 구현 이력 — 보존용
 
 아래 완료 기록은 기존 사용자 보고 및 소스 점검에 따른 이력이다. 이번 문서 수정으로 빌드·PIE를 다시 검증한 것은 아니다.
@@ -2842,7 +4303,7 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 | 자체 DC Reticle / Idle 전용 Linked Layer | 원본 Reticle / AnimBP·Linked Layer | R7·R8 대응 기능 검증 후 |
 | UDCCombatComponent 사격 | 원본 발사 Ability 이식본 | R6 검증 후 |
 | UDCCombatComponent 회피 / 자체 LaunchCharacter 대시 | 원본 GA_Hero_Dash 이식본 | R9-1 원본 동작 검증 후. 방어 효과는 R9-2에서 별도 검증 |
-| UDCCombatComponent 궁극기 | GA_DC_Ultimate | ResourceSet 연동 후 |
+| UDCCombatComponent 게이지형 궁극기 | 캐릭터별 쿨다운형 고유 기술 GA | 2026-10-11 사용자 결정: ResourceSet 비용 없이 GAS 쿨다운/효과 경로 전환·참조 확인 후 |
 | FDCWeaponHandlingProfile | 원본 무기·Ability·Cue 데이터 | 데이터 소유처 및 동작 검증 후 |
 | Character WeaponMesh | Equipment WeaponActor | 장비 부착 검증 후 |
 | Character 사격 Trace | 원본 RangedWeapon Ability 이식본 | TargetData·엄폐 동작 검증 후 |
@@ -2968,16 +4429,16 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 | R1 | GAS 보조 타입 및 의존성 준비 | 원본 기반 클래스 이식에 필요한 타입·모듈 목록과 독립 파일 준비 | 기반 이식/빌드 확인. 10/9 감사 보완2건은16:15까지 GameData 단일 재저장·실패태그 복구 후 비에디터 맵 로드/재로드/기존8건 통과. 패키징/전체 플레이 검증과 구분 |
 | R2 | GAS·Pawn 초기화·입력 공통 기반 교체 | 원본 ASC/Ability/AbilitySet, OnSpawn, 초기화·입력 동작 | 기존 초기화/서있는 Pawn 교체/사망·재시작 통과. crouch 태그 수명 보완은 사용자 빌드/18:24 동일 handoff 회귀 통과. 이번 자동 감사 마감. client 지연/복제는 별도 |
 | R3 | 체력·데미지·사망 교체 | 원본 Attribute/Context/Execution/Health/Death 경로 동작 |10/9 실제 플레이어 피해/치료/면역/사망8초/정리/2초뒤 레벨재시작·재사격 통과. ASC 없는 대역의 기존 ApplyDamage 수신/면역 경계 통과. 실제 적 AI·양방향 적GAS/팀 통합은 별도 |
-| R4 | 원본 카메라·조준 연결 | 원본 카메라와 확정 우클릭 규칙의 통합 | crouch Action/태그/캡슐·조준/FOV·점프·임시벽 가림 수치 및 태그 잔류 보완 후 토글 회귀 통과. 이번 자동 감사 마감, 사용자 자세/구도·반동 화면 확인 대기. 장치는 별도 |
+| R4 | 원본 카메라·조준 연결 | 원본 카메라와 확정 우클릭 규칙의 통합 | crouch/조준/FOV/점프/가림 수치·태그 수명 회귀 및10/10 사용자 자세/구도·반동 확인 통과. 이번 마감 범위 완료. 장치/전체 실맵은 별도 |
 | R5 | Inventory·QuickBar·Equipment·라이플 데이터 | 실제 Inventory 아이템에서 장비와 UI 데이터가 연결 | 실제 라이플/Item Instigator·사격후 재장착 탄약 보존·Ability 회수/복구·사망/권한 Pawn 교체 정리 통과. 전체 UI/복제·client 지연 수명은 별도 |
-| R6 | 원본 퍼짐·발사·GameplayCue·반동 | 원본 무기 계산·탄약 비용·발사·연출 동작 | 발사/탄약/사운드/0.15초 지연/상태배율 및18:05 실제 최종첫발·12/6/18/9 피해·엄폐0/해제12/재장전 통과. CameraShake/시각 반동은 사용자 미확인. R은 현재 미재현·관찰 보류 |
-| R7 | 원본 Reticle·HUD·명중 표시 | 원본 Widget/C++/Slate가 같은 무기·아이템을 표시 | UIManager·UIExtension 등 선행 의존성 준비. 원본 Reticle·HUD의 무기/아이템 통합은 미완료 |
-| R8 | 전체 AnimBP·Linked Layer·재장전 | Idle 이외 이동·조준·발사·재장전·무기 계층 연결 | AnimInstance/CharacterMovement 지원 C++ 선행 준비. 기존 Idle 연결 외 전체 원본 계층 통합은 미완료 |
-| R9 | Lyra Dash·회피 방어·궁극기 | 원본 Dash 검증 후 방어 효과와 프로젝트 궁극기 분리 연동 | 미착수 |
-| R10 | 적 GAS·공격 텔레그래프 | 공격 의도부터 후딜까지 중단 가능한 전투 흐름 | 미착수 |
-| R11 | Level 1 빈 흐름 완주 | 전투 1 → 전투 2 → 보스 Placeholder → 결과 Placeholder | 새 전투 경로 통합 미검증 |
-| R12 | 최소 보스 | 패턴 2개·페이즈 전환·HUD·사망 완료 신호 | 미착수 |
-| R13 | Experience·필요 무기/공통 기능 후속 이식 | 실제 필요한 나머지 원본 기능의 통합 | 선행 의존성 외 미착수 |
+| R6 | 원본 퍼짐·발사·GameplayCue·반동 | 원본 무기 계산·탄약 비용·발사·연출 동작 | 기존 발사/탄약/사운드/배율/첫발·거리/약점/엄폐/재장전·사용자 조작 통과 유지.10/10 원본 회복 코드 원복 후 사용자16:09빌드/무기3건·실제6발 후0.029초 냉각 통과. R은 현재 미재현·관찰 보류, 복제/실맵은 별도 |
+| R7 | 원본 Reticle·HUD·명중 표시 | 원본 Widget/C++/Slate가 같은 무기·아이템을 표시 | Reticle/명중/Root/QuickSlot 입력 경로까지 한정 검증 통과. 정식 HUD/메뉴/Experience는 사용자 승인대로 미완료 유지하여 R13과 통합. 물리 포커스/장치는 별도 |
+| R8 | 전체 AnimBP·Linked Layer·재장전 | Idle 이외 이동·조준·발사·재장전·무기 계층 연결 | 통합 이동·공중·라이플 Layer/재장전·Jump/웅크림 Jump 자동 회귀 통과,10/11 사용자 물리 점프/자세 확인 완료. 전체 Rig/표시 구조·다른 파생 Pawn/장치/복제 등 잔여 미검증 유지 |
+| R9 | Lyra Dash·회피 방어·캐릭터 고유 기술 | 원본 Dash 검증 후 방어 효과와 프로젝트 고유 기술 분리 연동 | R9-1 PC 통합 Dash/무입력 보정/효과음 사용자 확인 완료. R9-2 방어 연결·자동검증 통과/사용자 수용 대기, 성공 전용 시각·음향은 범위 제외. R9-3 공통 기반·통합 자동검증 및 사용자 Q 1회 실행/쿨다운 후 재사용 확인 완료. 실제 캐릭터별 효과/시간은 설계 대기. 최종 HUD는 R7/R13 |
+| R10 | 적 GAS·일반 적 원본 사격·선택적 예고 | 일반 적은 원본 무기 경로, 예고는 강공격/보스 전용 | R10-1 및 기존 예고 공격 프로토타입 수용 완료. 일반 적 원본 발사 연결 미완료/변경안 우선. 일반 적용 경고선 묶음은 생성 전 중단. 몸체·무기·애니메이션/강공격 연출·실맵·복제/패키징 미완료 |
+| R11 | Level 1 빈 흐름 완주 | 전투 1 → 전투 2 → 보스 Placeholder → 결과 Placeholder | 2026-10-13 별도 Level1 사본의 자동 검사 및 사용자 PIE 수용 완료. 실패·수동 재시작·맵 복귀 포함. 실제 보스/정식 결과 UI/디자이너 원본 활성화는 별도 |
+| R12 | 최소 보스 | 패턴 2개·페이즈 전환·HUD·사망 완료 신호 | 2026-10-13 승인한 최소 보스 묶음의 자동 검사 및 사용자 보스전 PIE 수용 완료. 최종 모델/연출·밸런스·복제/디자이너 통합은 별도 |
+| R13 | Experience·필요 무기/공통 기능 후속 이식 | 실제 필요한 나머지 원본 기능의 통합 | 선행 기반 재사용.2026-10-13 원본 HUD/메뉴·설정 및 Experience 연결 변경안 제시, 새 구현 승인 전 |
 | R14 | Legacy·참조·회귀 최종 정리 | 새 구조만으로 시작부터 결과까지 동작 | 미착수 |
 
 ### R0 — 기준 기록
@@ -3036,7 +4497,7 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 - GE가 Damage/Healing을 거쳐 Health에 반영되고, 사망 이벤트가 한 번만 발생한다.
 - 원본 팀 판정 의존성을 제거한 채 허용 배율이 0으로 남아 데미지가 사라지는 일이 없다. 필요한 팀 기능 재사용 또는 최소 프로젝트 판정 연결의 이유를 기록한다.
 - DamageImmunity, 사망 중 입력·장비 정리, Pawn 교체 후 체력 초기화가 일관된다.
-- 궁극기 ResourceSet은 프로젝트 고유 자원으로 분류한다. Lyra에 동일 궁극기 구현이 있다고 가정하지 않는다.
+- 기존 궁극기 ResourceSet은 프로젝트 고유 자원 이력이다. **2026-10-11 결정으로 새 캐릭터 고유 기술은 게이지 획득/소모 없이 쿨다운만 사용**하므로 필수 연동하지 않는다. 기존 참조는 승인된 정리 전까지 보존하며 Lyra에 동일한 캐릭터 기술 구현이 있다고 가정하지 않는다.
 
 ### R4 — 원본 카메라와 사용자 조준 규칙
 
@@ -3086,6 +4547,8 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 
 ### R7 — 원본 Reticle·HUD·명중 표시 재개
 
+**2026-10-10 승인된 진행 순서:** 검증된 Reticle/명중/QuickSlot 연결은 유지한다. 남은 정식 HUD·메뉴·Experience 연결은 **미완료**로 R13과 묶으며, R7 전체 완료로 표시하지 않은 채 R8을 먼저 진행한다.
+
 **선행 조건:** R5의 Inventory 연결과 R6의 무기 데이터/명중 경로. 시각 에셋이 이미 있다는 이유로 생략하지 않는다.
 
 **세부 작업**
@@ -3103,6 +4566,8 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 
 ### R8 — 전체 애니메이션 계층과 재장전
 
+**2026-10-11 재개 상태:** 통합 Pawn의 원본 이동값·라이플 Layer/재장전 및 실제 Jump 입력·웅크림 Jump 회귀를 통과했고, 사용자가 물리 점프3종/자세·발·손/총 정렬도 정상 확인했다. 이 핵심 검증 범위는 완료다. 메시/캡슐 표시 구조 차이·전체 Rig/포즈·다른 파생 Pawn·기기/복제 등 잔여 미검증은 R8에 유지하며 전체 단계 완료로 과장하지 않는다. 다음 구현 후보 R9-1의 조사/변경안은 상단 기록을 따른다.
+
 **세부 작업**
 
 - R8-1: 원본 LyraAnimInstance·CharacterMovement의 애니메이션 지원 API와 `ABP_Mannequin_Base`, `ALI_ItemAnimLayers`, `ABP_ItemAnimLayersBase`, 라이플 Linked Layer를 의존성과 함께 이식한다.
@@ -3115,36 +4580,43 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 - 재장전 완료·취소·사망·무기 교체에서 탄약 증감이 한 번만 적용되고 발사 차단 태그가 남지 않는다.
 - 장비가 링크한 Layer를 올바르게 해제하고, 실제 무기 상태와 애니메이션이 일치한다.
 
-### R9 — Lyra Dash, 방어 효과, 궁극기
+### R9 — Lyra Dash, 방어 효과, 캐릭터별 고유 기술(기존 명칭: 궁극기)
 
 **세부 작업**
 
 - R9-1: 원본 GA_Hero_Dash의 부모·태그·입력·몽타주·Root Motion·쿨다운·Cue·UI를 검수하고 이식한다. 무입력·방향 선택 규칙은 원본을 따른다.
-- R9-2: 원본의 실제 방어 기능 유무를 확인한다. 부족한 경우에만 무적/데미지 차단·시작/종료 이벤트·성공 피드백을 프로젝트 추가 기능으로 구성하고 별도 검증한다.
-- R9-3: 궁극기는 현재 확정된 기획과 원본에 재사용 가능한 Ability·비용·Effect·Cue·UI를 먼저 대조한다. 전용 효과·충전/소모·쿨다운 등 미확정 규칙은 사용자와 확정한 뒤 필요한 부분만 구현한다.
+- R9-2: 원본의 실제 방어 기능 유무를 확인한다. 부족한 경우에만 무적/데미지 차단·시작/종료 이벤트·실제 차단 기반 성공 판정을 프로젝트 추가 기능으로 구성하고 별도 검증한다. **2026-10-11 사용자 요청으로 회피 성공 전용 시각·음향 피드백은 현재 범위에서 제외한다.** 기존 Dash 연출/효과음과 방어·성공 판정은 유지한다.
+- R9-3: **캐릭터별 효과·사용 후 쿨다운, 게이지 획득/소모 없음**을 따른다(2026-10-11 사용자 확정). 원본 기반 Ability·쿨다운 GE·Task·Cue·UI를 재사용하고, 실제 캐릭터별 효과/시간·시전 및 중단 규칙은 제공된 기획으로 확정한다. ResourceSet 비용/충전 루프를 만들지 않는다.
+  - 같은 날 사용자는 **기반만 우선 구현** 및 **Q를 한 번 누를 때 한 번만 실행**하도록 승인했다. 테스트 전용 기반/2초 쿨다운은 통합 자동검증을 통과했으며 실제 캐릭터 기술 완성이나 최종2초 밸런스 확정이 아니다.
 
 **검증**
 
 - 폐기한 무입력 전방/8방향 자체 대시가 다시 실행되지 않는다. 원본과 입력 없음·지상·공중·벽·취소 상황을 비교한다.
 - 조준·발사·점프 등 상호작용과 쿨다운 시작/종료가 그래프 확인 결과와 일치한다.
 - 방어 성공은 실제 공격 차단 근거가 있는 경우에만 발생하며, 종료·사망 후 무적 태그가 남지 않는다.
-- 궁극기 설계가 미확정이면 해당 세부 작업만 대기 상태로 기록한다. 원본에 동일한 궁극기가 존재한다고 가정하지 않는다.
+- 자원0에서도 기술 사용 가능, 쿨다운 중 재사용 거부, 만료 후 재사용을 검증한다. 효과별 실패·취소·사망 때 쿨다운/Task 정리는 확정 정책에 맞춰 확인한다.
+- 캐릭터별 실제 효과/시간이 미정이면 해당 구현만 대기로 기록하고, 공통 쿨다운 검사만으로 R9-3 전체 완료를 선언하지 않는다. 원본에 동일한 캐릭터 고유 기술이 존재한다고 가정하지 않는다.
 
-### R10 — 적 GAS와 공격 텔레그래프
+### R10 — 적 GAS·일반 적 원본 사격·선택적 공격 예고
+
+**2026-10-11 사용자 결정:** 일반 적은 원본처럼 사격한다. 조준 고정·추가 선딜·경고선은 일반 적 공통 규칙이 아니며 강한 단발 공격이나 보스 패턴에만 적용한다. 원본 무기의 발사 간격·탄약·재장전 제약은 유지하고, 이를 없애는 무지연/무한 연사로 해석하지 않는다.
 
 **세부 작업**
 
 - R10-1: 현재 적의 체력·사망·Spawner 구독을 원본 GAS 전투 경로로 이전한다. ASC 소유 위치와 AI 실행 주체는 실제 프로젝트 요구로 확정한다.
-- R10-2: 재사용할 원본 공격·AbilityTask·Montage·GameplayCue를 확인하고, 의도 → 선딜 → 명중 구간 → 후딜과 중단 처리를 연결한다.
-- R10-3: 예고 VFX·애니메이션·사운드를 가능한 원본 자산으로 연결한다. DreamCatcher에만 필요한 텔레그래프 규칙은 원본 제공 기능과 구분한다.
+- R10-2: 일반 적은 원본 Inventory/Equipment/무기 Ability의 발사·탄약·재장전 경로로 연결한다. 기존 의도 → 선딜 → 명중 → 후딜 구현은 강공격용 별도 프로토타입으로 보존하며 일반 적에게 강제하지 않는다.
+- R10-3: 일반 적의 발사 VFX·애니메이션·사운드는 가능한 원본 자산과 호출 흐름으로 연결한다. 공격 전 예고는 강한 단발 공격/보스의 확정 패턴에만 별도로 연결하고, 그 신규 규칙·수치는 원본 제공 기능과 구분한다.
 
 **검증**
 
-- 공격 예고 전에 즉시 데미지가 들어가지 않고, 선딜 중 사망·취소·타깃 상실·장애물 상황에서 예정된 공격이 올바르게 정리된다.
+- 일반 적은 프로젝트용0.5초 선딜·조준점 고정 없이 원본 무기 발사/탄약·재장전/명중·피해·사망 중단을 검증한다. 원본의 실제 발사 간격/몽타주 시간을 임의로0으로 만들지 않는다.
+- 예고가 있는 강공격/보스 패턴에 한해 예고 전 피해가 없고, 선딜 중 사망·취소·타깃 상실·장애물 상황에서 예정된 공격이 올바르게 정리되는지 검증한다.
 - 적 사망 집계와 인카운터 완료가 중복 발생하지 않는다.
 - 이 작업을 이유로 Bot·대형 Behavior Tree 프레임워크 전체를 자동 도입하지 않는다.
 
 ### R11 — 실제 보스 전 빈 스테이지 흐름 완주
+
+**2026-10-13 사용자 수용 완료:** 사용자가 `L_DC_Level1Flow`의 PIE 정상 작동과 R11 완료 정리를 명시했다. 승인된 R11-1~3 묶음을 자동 검사＋사용자 수용 완료로 처리한다. 이전0.90의 화면/버튼 확인 대기를 다시 요청하거나 완료된 검증·에셋 생성을 반복하지 않는다. `돌아가기`는 기존 R10 유한 맵 `L_DC_LyraFiniteEncounter`가 임시 ReturnMap임을 설명했고 사용자가 이해했다. 실제 보스·최종 로비/스테이지 선택·정식 결과 UI·복제·디자이너 맵 활성화/병합은 이 완료 범위 밖이다.
 
 **세부 작업**
 
@@ -3161,13 +4633,74 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 
 ### R12 — 최소 보스
 
+**2026-10-13 사용자 수용 완료:** 사용자가 보스전 PIE 정상 작동과 R12 완료 정리를 명시했다. 아래 승인한 최소 보스 범위는 자동 검사＋사용자 수용 완료로 정리한다. 완료된 native/마이그레이션/사본 생성은 반복하지 않는다. 임시 외형·수치를 최종 모델/연출·밸런스로 확정하지 않고 복제·디자이너 통합 완료로 확대하지 않는다.
+
 - R12-1: 원본 GAS·Health·Cue·Animation·HUD 기반 중 재사용 가능한 부분으로 보스 전용 연결을 구성한다.
 - R12-2: 구분되는 패턴 2개, 읽을 수 있는 텔레그래프, 체력 기반 페이즈 전환 1회, 보스 체력 UI를 구현한다.
 - R12-3: 사망 신호로 R11의 Placeholder를 실제 보스전으로 교체하고 결과까지 검증한다.
 
 Lyra에 동일한 보스 패턴 시스템이 있다고 단정하지 않는다. 원본에 대응하지 않는 보스 규칙은 프로젝트 고유 구현으로 명시한다.
 
+#### 2026-10-13 R12 변경안 이력 — 제안 당시 승인 전, 코드/에셋 미작성
+
+**목표와 시작안**
+
+R11의 마지막 일반 Lyra 봇 Placeholder 자리를 **서로 다른 공격을 읽고 피할 수 있는 전용 보스전**으로 연결한다. 보스 전용 Character/패턴 조율·페이즈/체력 UI/사망 연결을 한 작업 묶음으로 진행하여 사용자 빌드 왕복을 줄인다. 제자리 공격, 기존 검증된 임시 메시·애니메이션, 체력50%에서1회 전환을 시작안으로 제안한다. 이 값과 외형은 아직 승인되지 않았고 BIG BROTHER 최종 모델·옥상/거대 보스 콘셉트·최종 패턴으로 확정하지 않는다. 체력·피해·선딜·후딜·범위·전환 비율은 Blueprint/DataAsset 조정값이다.
+
+| 제안 패턴 | 예고와 실행 | 플레이어 대응/검증 |
+|---|---|---|
+| 조준 고정 단발 | 시작 시 방향을 고정하고 선형 예고를 표시한 뒤 그 방향으로1회 발사. 예고 뒤에 플레이어를 다시 따라 조준하지 않음 | 옆으로 이동/대시 또는 엄폐. 예고 중 피해0, 실제 ray에 맞은 경우에만 원본 피해 GE 적용 |
+| 위치 고정 범위 공격 | 플레이어의 당시 지면 위치를 고정해 원형 위험 범위를 표시하고, 예고 종료 때 실제 범위 안의 유효 적대 대상에1회 피해 | 원 밖으로 이동/대시. 표시와 판정 범위 일치, 범위 밖/차폐 대상 제외, 사망·취소 때 예약 피해와 예고 제거 |
+
+페이즈1은 두 패턴을 차례로 사용하고, 체력 기준 통과 시 진행 중 예고/공격을 안전하게 취소한 뒤 전환 안내를 표시한다. 페이즈2는 같은 패턴의 후딜/조합 템포를 조정하여 차이를 주되 읽을 수 있는 예고 시간은 확보한다. 회복이나 연속 피해로 전환이 반복되지 않으며 치명타로 체력0이 되면 페이즈 전환보다 사망을 우선한다. 보스 체력 UI는 이름·현재 체력·페이즈를 표시하고 보스전 진입/사망/스테이지 실패·재시작·복귀 때 생성/구독/제거 수명을 관리한다.
+
+**재사용 및 원본 대비 차이 근거**
+
+- 현재 `AI/DCGASEnemyCharacter`는 단일 생명 NPC의 소유 ASC/HealthSet/CombatSet/`DCLyraHealthComponent`/원본 기반 Death Ability/팀을 이미 연결한다. 새 보스 Character는 이 타입에서 파생하는 안이다. Lyra 봇의 PlayerState/Inventory/BT 경쟁전 행동과 다르며, 일반 적의 기존 Lyra 경로를 교체하거나 되돌리지 않는다. 보스는 임시 외형을 쓰더라도 별도 패턴·페이즈를 갖게 한다.
+- `DCGameplayAbility_EnemyRangedAttack` 소스에서 고정 Origin/AimPoint, WaitDelay 선딜/후딜, Visibility trace 명중, 원본 `DCLyraDamageExecution` GE, 사망/취소/타깃 상실/시야 차단 정리를 확인했다. 이 클래스의 새 BP 자식으로 단발 패턴을 재사용한다. 기존 `bAutoRangedAttack`의 Player0 타이머는 켜지 않고 보스 조율기가 현재 스테이지 플레이어/적대 판정으로 명시적인 공격 요청을 한다. 기존 R10 시험 BP의 카운터·PrintString을 보스 연출로 사용하지 않는다.
+- 범위 판정·공격 선택·체력 페이즈·예고 도형은 DreamCatcher 신규 규칙이다. 피해를 별도 Health 변수나 Actor 직접 감산으로 처리하지 않고 기존 ASC/GE/팀/대시 방어 판정을 통과시킨다. Lyra C++/에셋명 검색에서 동일 보스 계층은 확인하지 못했지만 전체 BP 그래프에 동일 기능이 없다는 전면 감사는 아니다.
+- 기존 Health 변화/최대 체력/Death 이벤트와 피해 Cue·검증된 메시/Anim 구성을 재사용한다. 원본 UI 체력바 재질/시각 자산 후보는 존재하지만 보스 타깃 HUD/패턴 전용 애니메이션 연결은 미검증이다. 원본 그래프·의존성을 확인한 뒤 사용하며, 전용 보스 화면 배치/예고가 원본 제공 기능이라고 보고하지 않는다. 임시 메시/기능 예고 확인과 최종 모델·공격 모션/연출 완성을 구분한다.
+
+**승인받을 변경 범위**
+
+- 신규 게임 소스: `Source/DreamCatcher/AI/Boss/`의 `DCBossCharacter`, `DCBossPhaseComponent`, `DCBossData`; `AbilitySystem/Abilities/DCGameplayAbility_BossGroundStrike`; `UI/Boss/DCBossHealthWidget`; 필요한 선/원형 예고 표시와 제거를 담당하는 보스 전용 presentation 코드. 범용 AI/도구 프레임워크나 새 전역 Subsystem은 범위에 포함하지 않는다.
+- 기존 공용 소스: `AI/DCEnemySpawner.h/.cpp`에서 보스가 선택하는 opt-in GAS NPC 소유 추적/지연 정리를 추가하고, `GameModes/DCStageRunGameMode.h`에 현재 스테이지 플레이어 조회 훅을 제공하는 범위다. `EndPlay`가 현재 `CleanupOwnedLyraBots()`만 호출하며 GAS 경로는 사망 집계에서 `UnbindEnemy`하는 것을 확인했다. 따라서 보스 실패/중단 시 Pawn/자기 Controller/예고 정리를 확보하고, 사망 집계1회와 실제 객체 정리를 분리한다. 기본값과 기존 Lyra/legacy 동작은 유지한다. 기존 StageDirector/Encounter 진행 규칙을 재작성하지 않는다.
+- 신규 에셋 루트: `/Game/DreamCatcher/GAS/Test/R12/`. `L_DC_Level1Boss`는 검증된 R11 맵의 **별도 사본**이다. 새 보스 BP/설정 DataAsset/AbilitySet/단발·범위 Ability BP/보스 스포너 및 예고 표시 에셋을 만든다. 마지막 스포너에만 LyraBotControllerClass를 비우고 GASEnemyClass로 보스를 지정하며, 기존 팀 API에 맞춰 보스 팀2를 설정한다. 사망 신호는 기존 스포너→인카운터→결과 경로를 이용한다. R11 원본 맵·플레이어·일반 적·기존 에셋을 덮어쓰지 않는다. 현재 제안에 Config/기존 ReturnMap 변경은 없다.
+- 승인 범위의 일회성 에셋 설정/PIE 관찰 스크립트와 직접 영향을 받는 검사만 추가한다. 새 범용 마이그레이션 도구나 완료된 전체 검증 반복은 포함하지 않는다.
+
+**진행과 완료 조건**
+
+사용자 패턴/범위 승인→코드 및 에셋 레시피 준비→사용자 C++ 빌드→Unreal 내부 생성/Compile/저장/새 프로세스 재로드→실제 R12 PIE→사용자 플레이 확인 순서다. 검사 대상은 예고 중 피해0·두 패턴 명중/범위 밖/차폐/회피·중복 피해 방지·전환 정확히1회·치명타 우선·보스/타깃 사망·취소·인카운터 중단의 타이머/예고/객체 정리·체력 UI 수명·보스 처치 후 결과·플레이어 사망/재시작/복귀다. 관련 스포너/인카운터 회귀만 실행하며 기존 R11 전체 수용/AI 마이그레이션을 처음부터 반복하지 않는다. 물리 버튼·텔레그래프 가독성·공격 모션/조작감은 사용자 검증으로 구분한다.
+
+이번 요청에서는 위 변경안을 문서화했을 뿐 게임 소스/Config/에셋/새 자동화 코드를 작성하거나 Editor/빌드/패키징을 실행하지 않았다. R12 구현은 승인 전이다.
+
+#### 2026-10-13 승인된 R12 코드·자동화 준비 — 사용자 빌드 대기
+
+사용자가 위 범위를 승인하고 **기존 플레이어/R11 맵 유지**를 재확인했다. 기존 스포너 h/cpp의 opt-in GAS NPC 소유 추적/정리와 StageRunGameMode h의 플레이어 조회 getter, 신규 런타임14소스(보스 Character/Data/Phase/Telegraph·LineShot/GroundStrike·HealthWidget 각 h/cpp), native 검사2파일/5건, 에셋 및 실제 PIE Python2개를 작성했다. **아직 사용자 빌드·native 실행·R12 에셋 생성/재로드·실제 보스 PIE는 하지 않았다.** 상세 코드/레시피/명령은 인계 문서0.92를 따른다.
+
+보스는 기존 GAS NPC에서 원본 기반 ASC/Health/Death/팀을 재사용하며 별도 Controller/BT나 원본 자동 Player0 공격 루프를 사용하지 않는다. 두 granted Ability를 Stage 플레이어 대상으로 순차 요청한다. `BossLineShot`은 기존 R10 단발 본체 상속이며 예고/명중 표시 훅과 동시 활성화 방지만 추가했다. `BossGroundStrike`는 한 번 정한 지면 위치, 선딜 후 유효 적대 Pawn 중복 제거/원형 거리·발 위치 높이·차폐를 검사하여 기존 DamageExecution GE로1회 피해를 적용한다. 체력 임계값은 한 번만 잠그고 두 공격을 취소한 뒤 전환 안내/2페이즈 간격을 적용한다. 치명타는 전환보다 사망 우선이고 원본 Death Ability는 유지한다. Health 이벤트 기반 보스 UI와 transient 선/원형 예고는 사망/취소/스테이지 종료 시 해제한다. native UMG 보스 배치·예고 도형은 새 프로젝트 구현이며 원본 HUD 시각 후보·최종 공격 모션/가독성 검증과 구분한다.
+
+새 `r12_boss_setup.py`는 `/Game/DreamCatcher/GAS/Test/R12/`의 맵/보스BP/스포너BP/Data/AbilitySet/두 GA/두 Material **9개**만 생성하는 레시피다. R11의 내부 Template 사본에서 마지막 스포너만 바꾸고 기존 환경·첫 두 전투·GameMode/Experience/ReturnMap을 재사용한다. 기존 NPC 메시/Anim/Death를 연결하고 캡슐 반높이 차이만큼 스폰 높이를 보정한다. 새 경로가 있으면 덮어쓰지 않는다. 시작 수치는 HP600/전환50%·1.5초/패턴 간격1→0.35초, 단발15·선딜1.2/후딜0.65초, 범위18·반경220cm·선딜1.4/후딜0.7초, 사거리2500cm이며 BP/DataAsset으로 조정한다. 최종 밸런스가 아니다.
+
+작성한 `DreamCatcher.R12.Boss`5건은 실제 두 GA의 선딜/GE 피해·중복/동시 실행 방지, 지면 고정·범위 밖·차폐·원본 면역, 전환1회·치명타 우선, 타깃 사망/예고 정리, opt-in GAS 중단/사망 집계 후 객체 정리를 다룬다. 빌드 후 관련 R10 finite6/Enemy3만 함께 검사한다. 실제 PIE `combat`/`fail-retry-return` 레시피도 준비했으며 진단 GE·임시 면역·입력 주입이므로 물리 사격/버튼/가독성·복제를 증명하지 않는다. 기존 R11 수용/마이그레이션은 반복하지 않는다.
+
+정적 근거 `Saved/Diagnostics/R12/static_C.json`: Python AST/공백/generated include·로컬 include/기본 구문·참조 API 대조 통과. `before_A.json`의 기존617파일 중 허용3소스 외614개 불변이며 플레이어/R11·R10 에셋·Config·원본 단발/Stage·Encounter·DLL/Git 인덱스를 유지했다. R12 에셋 폴더는 아직 없고 Codex C++ 빌드/패키징/Editor/Computer Use/Git 조작0이다. 다음은 사용자 Development Editor/Win64 빌드→native/에셋/PIE 자동 검사→사용자 플레이 확인이다.
+
+#### 2026-10-13 R12 실제 연결·자동 검사 통과 — 사용자 플레이 확인 대기
+
+사용자 빌드6.80초 성공/DLL02:37:02 KST(5,603,328 bytes), **02:38:23 KST R12 native5＋직접 관련 R10 회귀9 성공14/실패0**을 확인했다. 기존 빈 스포너 fixture 경고1이며 Error/ensure/Fatal0이다. 코드/Config 추가 수정·Codex 빌드/패키징은 없다.0.92의 새 R12 에셋9개를 생성/저장/별도 재로드했고 R11 환경1106액터 클래스/Transform·첫 두 전투·GameMode/Experience/ReturnMap은 유지했다. 새 맵은 `/Game/DreamCatcher/GAS/Test/R12/L_DC_Level1Boss`, 보스 스폰은 NPC 캡슐 차이를 반영한 `(1035,165,63)`이다.
+
+**실행 문제/수정:** Combat_A에서 보스 자폭 진단의 NPC Instigator를 공용 Reticle이 PlayerState로 가정해 오류를 냈다. 새 경고/명중 재질2개는 InstancedStaticMeshes 사용 플래그가 없어 기본 재질로 대체되는 경고도 발생했다. 신규 Material2개만 플래그를 보완·재컴파일/저장하고 Verify_B에서 재로드했다. 보스 처치 진단은 플레이어 ASC→보스 피해로 바꿨다. 이후 Travel_A의 보스→플레이어 치명 피해에서도 Reticle 오류가 재현되어, 진단 전용 문제라는 초기 범위를 정정했다. 두 A 실행은 probe complete=true였어도 Automation 실패이며 이력을 보존한다.
+
+사용자는 공용 `W_Reticle_Rifle`의 최소 가드1개를 추가 승인했다. 현재 파일 해시가 기존 R7 감사와 같음을 확인한 뒤 Elimination 메시지 콜백과 기존 조건 분기 사이에 `K2Node_DynamicCast_1.bSuccess` Branch1개만 넣었다. 성공은 기존 PlayerState 처치 처리, 실패는 피드백 없이 종료한다. Compile/저장/새 프로세스 재로드, 다른 그래프 노드·기본값·핀 연결 불변을 확인했다(`reticle_guard_Apply_A.json`, `reticle_guard_Verify_A.json`). 이 에셋만 공용 UI 변경 예외이며 플레이어 Pawn/Controller·R11 맵·C++는 그대로다.
+
+**최종 실제 PIE:** `R12BossCombat_B/index.json` **03:00:11 KST 성공1/실패0/경고15**. HP600/두 패턴/예고 취소를 동반한 임계값 전환/2페이즈 두 공격/보스 처치/19.954초 최종 객체·체력 UI 정리와 결과를 확인했다. 이 검사는 가드 적용 전이며 플레이어가 공격자인 피해를 사용했다. 가드 적용 후 `R12BossTravel_B/index.json` **03:06:20 KST 성공1/실패0/경고17**은 플레이어가 일반 적2명을 처치하는 기존 PlayerState 경로와 보스가 플레이어를 처치하는 NPC 경로를 함께 확인했다. 사망12.227초/보스·예고·UI·스포너 제거/자동 부활 없이20.537초 명시적 retry·중복 거부/실제 World 재로드·HP·라이플·입력·UI 복원/이동104.39cm/기존 R10 맵 복귀까지 통과했다. 두 최종 로그 Error/ensure/Fatal0, 재질 사용 플래그 경고0이다. 남은 보고서 경고는 기존 PoseAsset14와 초기 Recast1/3이며 기동 GI import/Niagara metadata 이력도 유지한다.
+
+보존 기준 `postbuild_before_A.json`의633파일은 불변이다. 집합 밖의 공용 Reticle1개는 별도 사용자 승인/해시·그래프 비교를 남겼다. 통합 근거는 `Saved/Diagnostics/R12/integration_summary_A.json`, 상세 재개는 인계 문서0.93이다. 현재 다음은 **추가 빌드/수동 에셋 설정 없이 새 R12 맵의 사용자 실제 사격·예고 가독성·회피/모션·체력/페이즈 UI·결과 버튼 확인**이다. 제어 GE/임시 면역/입력 주입을 사용한 standalone 자동 검사를 물리 입력·최종 연출·복제·디자이너 통합으로 확대하지 않는다. R11 사용자 수용/완료된 마이그레이션은 반복하지 않는다.
+
 ### R13 — Experience 및 남은 원본 기능 확장
+
+**2026-10-10 승인된 R7 연계:** R7의 미완료 정식 HUD/Layout·QuickBar 표시·원본 나머지 위젯/메뉴/장치 화면을 Experience/GameFeature/AddWidgets 연결과 함께 처리한다. 기존 Controller 직접 Reticle 경로는 정식 경로 검증 후 승인된 범위에서 교체하며, 이 연기는 해당 기능의 제외나 R7 완료를 의미하지 않는다.
 
 - R13-1: 기존 후속 범위인 Experience·GameFeature 로딩과 PawnData/Ability/UI 조립 중 실제 필요한 부분을 검토·이식한다. R2 등에서 필수 의존성으로 앞당긴 부분은 여기서 중복 구현하지 않는다.
 - R13-2: 사용하기로 한 추가 무기와 공통 HUD·입력·연출 에셋도 원본 Inventory/Equipment/Ability/Layer 구조로 확장한다. 최종 무기 종류·수를 임의 확정하지 않는다.
@@ -3175,6 +4708,31 @@ Lyra에 동일한 보스 패턴 시스템이 있다고 단정하지 않는다. �
 
 대형 인벤토리 UI·보상 경제·저장·온라인 FrontEnd는 자동 포함하지 않는다. 의존성 때문에 필요한 작은 기능과 별도 게임 확장을 구분한다.
 각 도입 후 기존 수직 슬라이스와 선택한 새 기능을 모두 검증한다.
+
+#### 2026-10-13 R13 변경안 — R12 사용자 수용 후, 아직 구현 승인 전
+
+**현재와 목적:** R11/R12는 이미 원본 기반 Experience/팀/전투 초기화로 실행된다. ExperienceManager·DCLyraHUD/HUDLayout·DCGameFeatureAction_AddWidgets·UIExtension·R7 Root/QuickSlot 입력을 재작성하지 않는다. 현재 Controller의 직접 Reticle 표시와 시험용 QuickBar 표시를 원본 HUD 슬롯/Experience 수명으로 옮기고, 미뤄둔 원본 메뉴·설정/장치 경로를 연결하는 것이 다음 핵심이다.
+
+**확인한 원본 근거:** `Saved/Diagnostics/R5UIFoundation/UIAudit_20261008_A3/source.json`의 `LAS_ShooterGame_StandardHUD`와 `W_ShooterHUDLayout` 파일 해시가 현재 로컬 Lyra와 일치한다. StandardHUD는 Layout1＋extension widget11(EliminationFeed, QuickBar, AccoladeHost, ReticleHost, PerfStats2, 터치 입력5)을 등록한다. Layout 자체에는 Healthbar/AbilityProgress/AbilityFailureFeedback/Indicator/자막 및 Esc 메뉴·장치 연결 화면 참조가 있다. QuickBar→HUD.Slot.Equipment, Reticle→HUD.Slot.Reticle, Layout→UI.Layer.Game이고 InputConfig=GameAndMenu/MouseCapture=CapturePermanently다. PC에서 플랫폼 조건에 따라 보이지 않는 터치/장치 요소를 삭제된 기능으로 취급하지 않는다.
+
+**제안하는 순서와 변경점**
+
+1. **R13-A: 원본 HUD·메뉴/설정 의존성과 Experience 연결.** 원본 레이아웃/표시·UMG 애니메이션·재질·QuickBar/Reticle을 재사용하고 기존 라이플·슬롯·체력 상태를 연결한다. 이미 이식한 R7 위젯/Root/Indicator는 재사용한다. Esc 열기/닫기, 원본 설정의 적용/취소, 메뉴에서 전투로 돌아갈 때 포커스/입력을 연결한다. 원본 GameSettings 플러그인/SettingScreen/SettingRegistry가 대상에 없는 것을 확인했으므로 필수 native·UI 의존성도 이 묶음에서 이식한다. SettingsLocal/Shared는 재작성하지 않는다. Registry의 Replay/DLC 관련 참조는 실제 호출/컴파일 의존성별로 확인하고 삭제·빈 대역으로 우회하지 않는다. 원본 메뉴가 요구하는 설정 기능이 미완성이면 HUD 전체 완료라고 보고하지 않는다.
+2. **R13-B: 스테이지 UI와 레이어/입력 수명 통합.** 단계 제목·보스 체력/페이즈·결과 표시를 원본 레이아웃과 겹치지 않게 배치하고 메뉴/결과 입력 우선순위를 연결한다. R11/R12의 전투 순서/보스 패턴/판정/명시적 재시작·복귀는 유지한다. UI 표시 주체만 새 R13 구성에서 전환하는 opt-in 연결을 사용하고 기존 R11/R12 경로는 보존한다. 처치 피드/알림의 PlayerState 가정과 단일 생명 NPC/보스 메시지 호환도 확인하며, R12에서 승인한 공용 Reticle 가드를 원본 재이식으로 덮어쓰지 않는다. NPC가 지원되지 않는 위젯은 숨겨서 완료 처리하지 않고 필요한 최소 가드/표시 어댑터를 구체화한다.
+3. **R13-C: 남은 원본 기능/선택된 콘텐츠 점검.** 기존 이식 목록과 현재 활성 경로를 대조하여 누락/보류/미검증을 구분한다. 확정된 추가 무기만 기존 Inventory/Equipment/Ability/Anim Layer 구조에 연결한다. 아직 정하지 않은 무기 종류·수나 새 고유 기술 효과는 만들지 않는다. 현재 라이플1개/빈슬롯 정책을 유지하며 두 번째 무기를 지급해야 QuickBar가 완료되는 것으로 오해하지 않는다. 게임패드/터치·장치 알림은 원본 경로를 보존하고 실기기 확인을 별도로 남긴다.
+
+**원본 대비 조립 차이/보존 방법**
+
+- 신규 `/Game/DreamCatcher/GAS/Test/R13/L_DC_Level1UI`는 R12 맵의 별도 사본이다. 전용 `BP_DC_StageUIController`, `BP_DC_StageUIGameMode`, `B_DC_StageUIExperience`, `LAS_DC_StageHUD`와 필요한 신규 UI 이식 경로 `/Game/LyraMigration/UI/R13/`를 사용한다. 기존 플레이어 Pawn/Controller·R11/R12 맵·전투/보스 에셋은 덮어쓰지 않는다.
+- 새 Controller 파생에서만 `WeaponReticleHostClass=None`으로 직접 표시를 중단하고, 같은 기존 ReticleHost/라이플 위젯을 AddWidgets 슬롯에서 표시하는 안이다. 입력·카메라·대시·기술·장비 지급 동작을 바꾸지 않는다. 정식 경로 검증 전 기존 직접 표시 코드를 삭제하지 않으며 Legacy 제거는 R14의 별도 범위다.
+- 원본 StandardHUD의 `GameFeaturesToEnable=[ShooterCore]`를 대상에 그대로 넣으면 ExperienceManager의 plugin URL lookup에서 찾지 못하는 경로가 확인돼 있다. 원본의 UI 조립 데이터를 **프로젝트 UI 전용 Feature/ActionSet으로 명시적으로 대응**하는 안을 제안한다. `Plugins/GameFeatures/DCStageUI/`를 새 UI 기능 경계로 사용하고 UI Action의 등록 주체를 한 곳으로 정해 중복 실행을 막는다. ShooterCore 전체 게임플레이/컴포넌트/Ability를 다시 부여하는 안이나 기능을 없애려고 plugin flag만 비우는 안이 아니다. 기존 원본 데이터는 비교 대상으로 보존하고 연결/참조 매핑의 차이를 기록한다.
+- Esc 메뉴는 원본 인게임 메뉴/설정·확인 흐름을 대상으로 한다. 현재 결과 ReturnMap은 R10 테스트 맵으로 유지하며 메뉴의 복귀 동작도 프로젝트의 기존 복귀 정책에 명시적으로 대응하는 안이다. 새 로비/스테이지 선택 화면, 온라인 FrontEnd·계정/매칭·보상/저장 경제 전체는 이번에 임의로 추가하지 않는다. 기존 임시 결과 표시를 원본 UI 레이어에 통합하는 것과 새 아웃게임 화면 제작을 구분한다.
+
+**승인받을 코드/설정 범위:** 원본 `GameSettings` 플러그인의 필요한 텍스트 소스/메타데이터, `UI`/`Settings` 아래 SettingScreen/Registry와 직접 필요한 원본 의존성, 새 R13 UI 연결 코드, 필요한 opt-in Stage/Boss UI 표시 훅이다. GameFeature/AddWidgets/HUD/Experience 기반은 재사용하며 수정 필요가 재현될 때만 해당 작은 변경을 설명한다. `DreamCatcher.Build.cs`/`.uproject`에는 필요한 모듈/플러그인, `Config/DefaultGame.ini`에는 새 Experience/ActionSet의 검색 경로, `DefaultEngine.ini`/`DefaultGameplayTags.ini`에는 실제 확인한 native Redirect/UI 태그만 추가하는 범위를 포함한다. 전역 GameMode/기존 맵·플레이어 설정을 바꾸지 않는다. 에셋은 Unreal 내부 API로 새 경로에 이식/설정하며 공용 경로 충돌 시 기존 파일을 자동 덮어쓰지 않는다. 정확한 직접 의존 목록/매핑을 먼저 기록하고 미확인 기능을 이식 불가로 단정하지 않는다.
+
+**진행/검증:** 승인→직접 의존성과 매핑 확정→관련 코드 묶음 준비→사용자 빌드→신규 에셋/Experience 연결·별도 재로드→실제 PIE→사용자 확인 순서다. HUD/Root/각 슬롯 위젯 중복0, 기존 라이플 발사/재장전/조준·슬롯 선택 연동, Esc 열기/닫기/설정 적용·취소와 입력·마우스 복귀, 사망/보스 전환/결과/재시작/맵 복귀·Feature 해제 때 UI/이벤트/입력 차단 잔류0을 검사한다. 설정 검사는 진단 저장 경로/복원 가능한 상태로 한정하여 사용자 설정을 보존한다. 수정된 공용 경로의 관련 회귀만 실행하고 완료된 R10~R12·마이그레이션을 일괄 반복하지 않는다. 물리 포커스/해상도·장치/시각 가독성은 사용자 확인과 구분한다.
+
+이번 턴은 R12 사용자 수용 및 이 R13 변경안의 문서3개 갱신과 로컬 읽기 전용 조사만 수행했다. R13 새 코드/Config/에셋/플러그인 등록·Editor/테스트 재실행·빌드/패키징은 하지 않았다. **새 R13 구현은 승인 전이다.**
 
 ### R14 — Legacy·참조·회귀 최종 정리
 
@@ -3194,7 +4752,7 @@ Lyra에 동일한 보스 패턴 시스템이 있다고 단정하지 않는다. �
 | OnSpawn·Ability 기반 | `Source/LyraGame/AbilitySystem/Abilities/LyraGameplayAbility.cpp`, `Source/LyraGame/AbilitySystem/LyraAbilitySystemComponent.cpp` | 원본 기반 본체 이식 및 두 OnSpawn 경로 검증 통과. 상단 2026-09-17 인계 참조 |
 | 추가 비용 | `Source/LyraGame/AbilitySystem/Abilities/LyraAbilityCost_PlayerTagStack.cpp`, `Source/LyraGame/Player/LyraPlayerState.cpp` | PlayerTagStack 및 PlayerState API 이식, 기본 검사·차감 검증 통과 |
 | 초기화 순서 등록 | `Source/LyraGame/System/LyraGameInstance.cpp` | InitState 등록 부분 이식 및 등록 순서 확인. 원본 GameInstance 전체 이식은 아님 |
-| UIManager 선행 의존성 | `Source/LyraGame/UI/Subsystem/LyraUIManagerSubsystem.h`, `Source/LyraGame/UI/Subsystem/LyraUIManagerSubsystem.cpp` | 원본 이식 및 서브시스템 생성 확인. UI Policy·Root Layout 연동은 미완료 |
+| UIManager 선행 의존성 | `Source/LyraGame/UI/Subsystem/LyraUIManagerSubsystem.h`, `Source/LyraGame/UI/Subsystem/LyraUIManagerSubsystem.cpp` | 10/10 정책·Root 이식 및 CommonPlayerController 연결 후 단일 PIE Root1개/4레이어 자동검증통과. 사용자포커스/다른맵·장치는별도 |
 | 태그 관계표 | `Source/LyraGame/AbilitySystem/LyraAbilityTagRelationshipMapping.h`, `Source/LyraGame/AbilitySystem/LyraAbilityTagRelationshipMapping.cpp` | 두 파일 본문 확인. R1-1 원본 |
 | Pawn 초기화 | `Source/LyraGame/Character/LyraPawnExtensionComponent.h`, `Source/LyraGame/Character/LyraHeroComponent.cpp`, `Source/LyraGame/Player/LyraPlayerState.cpp` | 2026-09-19 원본 기반 초기화 연결 및 Hero/PawnExtension GameplayReady 확인. 과도기 차이는 상단 인계 참조 |
 | EffectContext | `Source/LyraGame/AbilitySystem/LyraAbilitySystemGlobals.cpp`, `Source/LyraGame/AbilitySystem/LyraGameplayEffectContext.h` | 원본 Ability가 확장 Context를 요구. Config/호출부를 함께 준비 |
@@ -3335,7 +4893,31 @@ Unreal 내부 에셋 자동화는 허용하지만 C++ 빌드·패키징은 제�
 
 **2026-10-09 16:58까지의 후속 검증:** R6 회복지연 최소 보완은 사용자 빌드/신규 포함9건/실제 라이플0.15초 전 유지·후 회복을 통과했다. R2/R5 실제 재장착 탄약 보존·사격중 조종해제·권한 Pawn 순차 교체, R3 피해/치료/면역·사망8초/정리/2초뒤 레벨재시작·재사격과 ASC 없는 대역의 기존 ApplyDamage 수신/면역 경계도 통과했다. 상세 성공/진단 실패 로그와 범위는 상단16:44/16:58 절을 따른다. 실제 적 AI/양방향 적GAS·복제·화면/장치 확인까지 자동 완료 처리하지 않는다.
 
-**2026-10-09 18:26 최신 재개 — 이번 자동 감사 마감:** crouch 태그 수명 보완은 사용자18:20:53 빌드 성공 후18:24 동일 handoff/18:26 정상 토글 회귀를 통과했다. 새 Pawn crouch태그0 및 장비/Ability/재사격 정상이므로 알려진 잔류 결함을 닫는다. 첫발/피해/거리/약점/엄폐/가림 등 이미 통과한 수치 검사를 더 확대하지 않는다. 현재 남은 마감 조건은 사용자 Left Ctrl 자세·카메라구도와 조준/연사 반동 화면 확인이다. 정상 확인 후 R7-1/2 원본 무기 UI 연결 범위를 제시/승인받고 진행한다. R7 새 구현/전체 장치·복제·실맵·패키징까지 완료한 것은 아니다. 상세는 상단18:26 절을 따른다.
+**2026-10-10 최신 재개 — R7 독립 UI 연결 자동 검사 통과/화면 확인 대기:** 사용자15:01 빌드 후 원본 Host를 새 R7 경로로 이식하고 테스트 Controller에 연결했다. 새 프로세스 재로드/그래프·타입 비교, 렌더링 PIE의 실제 위젯2개/동일 무기·아이템/탄약30→27→30/조준 퍼짐0, 장비 없음·조종해제·사망·Pawn 교체·PIE 종료의 표시 수명을 확인했다. 최초 migration ensure 및 NullRHI 자식 미생성 실패는 숨기지 않고 상단 R7 이식 절에 기록했다. 최종 렌더링 검사는 성공1/실패·경고0이다. 추가 빌드/수동 에셋 설정 없이 사용자가 조준점·탄약의 화면 배치/연동/중복만 확인하면 이번 묶음을 닫는다. 이후 R7-3 신호/전체 슬롯 연결안을 먼저 설명한다. 기존 위젯/공용 HUD/Config/다른 맵과 게임 C++는 이번 턴에 변경하지 않았고, 전체 R7·복제·장치 완료는 아니다.
+
+**2026-10-10 최신 사용자 피드백/재개:** UI 기능은 정상이나 Hip/조준·사격 모두 원본보다 크며 회복이 늦다.10/9 LastFireTime 보완의0.15초 대기는 원본 대비 회복 차이의 확정 원인이다.10/6 OutsideRadius 전달로 현재 반경+3 UI단위가 적용되고, 원본ScaleToFit/대상ShortestSide의 UI배율 차이도 확인했다. 에셋의 곡선·이미지·반경/크기·조회 머티리얼값·기본FOV는 동일하다. 크기의 원인별 픽셀 기여도/원본 미초기화 Slate flag실행값은 아직 미검증이며 R7 화면 완료로 넘어가지 않는다. 위 진단 절의 게임CPP2+기존검사CPP2 원본호환 복원안을 먼저 제시했으며 적용 승인을 기다린다. 아직 게임코드/Config/에셋 변경과 빌드·패키징은 하지 않았다.
+
+**2026-10-10 최신 재개 — 원본 호환 복원 코드 작성/빌드 대기:** 사용자가 위 범위를 승인하여 AddSpread의 추가 시계 갱신과 UMG→Slate OutsideRadius 전달을 제거하고 관련 기존 테스트2개를 수정했다. 총4CPP이며 에셋/Config/DPI는 미변경, 안전한 Slate false 초기화는 유지했다. 원본4함수 본문 비교·보호22파일 해시·공백 검사는 통과했지만 새 코드의 빌드/테스트/PIE는 미실행이다. 사용자 빌드 후 무기3건/위젯3건과 같은 화면 조건의 회복/크기 비교를 진행한다. 추가 마이그레이션은 필요 없고 R7 다음 기능으로 아직 넘어가지 않는다.
+
+**2026-10-10 최신 재개 — 원본 호환 복원 자동 검증 완료/DPI 적용안 승인 대기:** 사용자16:09빌드와 무기3건+위젯3건+실제PIE 성공7/실패·경고0을 확인했다.6발 후 약0.029초부터 회복되며 추가0.15초 대기가 제거됐다. 현재1813×1326/FOV80에서UI배율1.227778, 원본ScaleToFit을 process-only로 적용하면0.944271임을 별도PIE 성공으로 확인했다. 이는 정책배율 비교이지 원본과의 픽셀 동등성 증명은 아니다. Config/게임코드/에셋은 이번 턴에 변경하지 않았다. 다음안은 DefaultEngine.ini의UIScaleRule=ScaleToFit1항목이며 모든UMG 영향/Host한정대안을 설명하고 승인을 기다린다. C++재빌드는 필요 없고 R7 다음 기능은 아직 진행하지 않는다.
+
+**2026-10-10 최신 재개 — ScaleToFit 적용/재로드 통과·사용자 화면 대기:** 사용자승인 후 DefaultEngine.ini에UIScaleRule=ScaleToFit만 추가했다. override없는 새PIE에서1813×1326/FOV80의배율0.944271/원본계산일치, 실제위젯/Item/6발 후0.038초 회복을 확인했고16:26:18 성공1/실패·경고0이다. 다른설정/C++/에셋/DLL 등은 불변이며 빌드·패키징·재마이그레이션은 하지 않았다. 다음은 에디터재시작 후 사용자의 조준점크기·회복 및 다른HUD잘림 확인이다. 추가빌드는 필요 없고 픽셀동등성/전체R7은 아직 미완료다.
+
+**2026-10-10 최신 재개 — R7 크기/회복 사용자 확인 완료·R7-3조사:** 직전보완은사용자확인까지닫았다. 실제라이플단발100→88및처치88→0에서원본Elimination애니메이션을확인했다. ADS는메시지/Controller/핀타입은정상이나별도애니메이션이재생되지않았고,로컬원본에도ADS이벤트실행선이없음을확인했다. 원본보존선호에따라임의연결하지않으며 활성화는원본에없는실행을켜는별도선택이다. 이번에게임코드/Config/에셋변경·빌드·패키징은0이다. 다음은일반명중/약점·페이드확인의마감이며전체HUD/슬롯·R7전체는미완료다.
+
+**2026-10-10 최신 재개 — 독립무기UI검증마감/원본Root연결승인대기:** 일반명중/페이드는사용자통과이며,별도PIE의일반12/약점18/빗나감0/같은팀0과실제게임viewport이미지를확인했다. 보고서는신규스크린샷기준없음경고8건을포함한성공1/실패0이다. 게임코드/Config/에셋변경과빌드·패키징은하지않았다. 다음제안은 `/Game/LyraMigration/UI/R7/Foundation/`의원본정책/Root레이아웃2개와DefaultGame의정책경로1개/DefaultGameplayTags의원본레이어태그3개다. 기존C++를재사용하고현재Controller Reticle표시는아직제거하지않는다. 글로벌Root생성/포커스영향을설명한뒤승인을받으며전체HUD/슬롯은후속필수작업이다.
+
+**2026-10-10 최신 재개 — Root 에셋·Config 적용 / 원본 Controller 부모 연결 승인 대기:** 원본정책·Root2개와 설정2파일을 적용했고 별도 재로드/Compile/구조 비교는 통과했다. 실제PIE는Root미생성으로실패1이다. Lyra는ACommonPlayerController의ReceivedPlayer알림으로Root를만들지만현재Controller는APlayerController직계라알림이없다. 다음안은기존CommonPlayerController원본부모연결이며사용자승인/빌드전까지미적용이다. 기존Reticle직접표시·HUDClass·맵·C++는그대로이고전체R7은미완료다.
+
+**2026-10-10 최신 재개 — Controller 부모 코드 적용/사용자 빌드 대기:** 승인 후 DreamCatcherPlayerController.h의 include/부모2줄을 원본 ACommonPlayerController로 연결했다. 기존 CPP·Config·에셋은 불변이며 별도 Broadcast/지연 생성은 없다. 정적 연결 점검만 수행했고 빌드·PIE 성공은 미검증이다. 사용자 Development Editor/Win64 빌드 후 기존 Root/4레이어·무기UI 수명 검사를 재실행한다. 전체 HUD/슬롯·R7은 미완료다.
+
+**2026-10-10 최신 재개 — Root 자동검증 통과/QuickBar UI 묶음 제안:** 사용자18:00빌드 후18:04:26 PIE 성공1/실패·경고0. 원본Root1개/4레이어실제Push·Pop 및 기존 무기UI·Pawn수명회귀통과. 게임코드/Config/에셋변경은없고 검사조회만교정했다. 사용자실제포커스확인은아직이다. 다음안은원본QuickBar/Slot/WeaponAmmoAndName3개와필수참조의새경로이식·실데이터검사이며아직미적용이다. 전체ShooterHUD의설정/프론트엔드의존성을삭제하지않고후속필수범위로남긴다.
+
+**2026-10-10 최신 재개 — QuickBar66개 이식/ActionWidget 원본 부모 승인 대기:** 원본 새사본 저장·대상Migrate·보호344경로불변은통과했다. 대상InputActionWidget의LyraActionWidget부모누락을실제로확인하여저장전중단했다. 신규66개는활성경로에연결하지않았다. 다음안은원본DCLyraActionWidget h/cpp2개와DefaultEngine Class1/Struct2 Redirect이며아직미적용이다. 사용자승인/빌드뒤기존레시피로타입대응·재로드·실데이터검사를재개한다. 기존게임코드/Config/에셋은불변,전체R7미완료다.
+
+**2026-10-10 최신 재개 — ActionWidget 코드·Redirect 적용/사용자 빌드 대기:** 승인 후 원본 DCLyraActionWidget h/cpp2개와 DefaultEngine Class1/Struct2 대응을 추가했다. 원본 정규화 비교2개/기존83파일 불변 검사는 통과했다. 에셋저장·빌드·패키징·PIE는 미실행이며 사용자빌드 후 부모사전검사부터 기존 QuickBar 레시피를 재개한다. QuickBar 런타임과 전체R7은 미완료다.
+
+**2026-10-10 최신 재개 — QuickBar 독립 데이터·화면 검사 통과:** 사용자빌드 확인 후 승인된 새66개 안의 누락참조/스타일·폰트·머티리얼 데이터를 원본대로 복원했다.19:50 재로드/19:53 PIE 성공(새캡처경고1)이며 숫자·아이콘·선택·빈슬롯을 이미지로 확인했다. 이름은 원본에서 숨김/미연결이라 유지했다. 실제키/클릭·정식HUD슬롯·전체R7은 미완료이며 다음은GA_QuickbarSlots의원본입력발신부확인이다. 새게임C++/Config변경·빌드·패키징은없다.
 
 ### 단계 종료 인계 양식
 

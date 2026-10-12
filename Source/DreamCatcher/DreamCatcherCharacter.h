@@ -127,6 +127,8 @@ protected:
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+	virtual bool CanJumpInternal_Implementation() const override;
+
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void UnPossessed() override;
 

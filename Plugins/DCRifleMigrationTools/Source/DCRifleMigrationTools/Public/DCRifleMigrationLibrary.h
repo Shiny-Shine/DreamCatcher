@@ -213,6 +213,27 @@ public:
 	UFUNCTION(BlueprintCallable, Category="DreamCatcher|Migration Diagnostics")
 	static bool ValidateDiagnosticContext(FString& OutReport);
 
+	/** QuickSlot-only graph bridge, not a general Blueprint copier.
+	 * Requires an isolated diagnostic commandlet plus -DCR7QuickSlotTransfer.
+	 * Copies ChangeQuickbarSlot and its five input event/call pairs from the exact
+	 * original Hero to the fixed new staging Pawn, or from that migrated staging
+	 * Pawn to the fixed integration Pawn/unsaved preview. Existing graphs are never
+	 * replaced. No assets are loaded/saved. Engine creation initializes a transient
+	 * scratch Blueprint; explicit destination Compile remains the caller's job.
+	 * True means memory copy only: caller must Compile, compare and reload before
+	 * accepting/saving. On false, discard the process without saving the target.
+	 */
+	UFUNCTION(BlueprintCallable, Category="DreamCatcher|Migration Diagnostics")
+	static bool CopyQuickSlotInputGraphs(UBlueprint* SourceBlueprint, UBlueprint* TargetBlueprint, FString& OutReport);
+
+	/** Retarget only the five original QuickSlot Action identities in the fixed
+	 * staging Blueprint's QuickSlotInput graph. Requires already-loaded migrated
+	 * Actions, the diagnostic commandlet guards and -DCR7QuickSlotTransfer.
+	 * Updates protected node bindings AND pin references; no Load/Compile/Save.
+	 */
+	UFUNCTION(BlueprintCallable, Category="DreamCatcher|Migration Diagnostics")
+	static bool RetargetQuickSlotInputActions(UBlueprint* StagingBlueprint, FString& OutReport);
+
 	/** Monotonic process counter, never reset by this tool; Python checks every stage/save boundary. */
 	UFUNCTION(BlueprintPure, Category="DreamCatcher|Migration Diagnostics")
 	static int64 GetEngineEnsureFailureCount();

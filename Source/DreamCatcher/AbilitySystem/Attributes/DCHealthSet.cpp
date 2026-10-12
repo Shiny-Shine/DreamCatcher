@@ -81,7 +81,9 @@ bool UDCHealthSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData &Data
 			if (Data.Target.HasMatchingGameplayTag(DCGameplayTags::Gameplay_DamageImmunity) && !bIsDamageFromSelfDestruct)
 			{
 				// Do not take away any health.
+				const float BlockedDamage = Data.EvaluatedData.Magnitude;
 				Data.EvaluatedData.Magnitude = 0.0f;
+				OnDamageBlocked.Broadcast(Data.EffectSpec, BlockedDamage);
 				return false;
 			}
 

@@ -109,7 +109,8 @@ bool FDCCircumferenceWidgetLifecycleTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Original UMG radius default"), Widget->Radius, 48.0f);
 	TestFalse(TEXT("Explicit UMG outside-radius default"), !!Widget->bReticleCornerOutsideSpreadRadius);
 	TestTrue(TEXT("Original non-hit-testable visibility"), Widget->GetVisibility() == ESlateVisibility::HitTestInvisible);
-	Widget->MarkerImage.ImageSize = FVector2D(10, 6);
+	// Match the inspected rifle brush dimensions without loading or editing an asset.
+	Widget->MarkerImage.ImageSize = FVector2D(6, 20);
 	Widget->SetRadius(24.0f); // Supported before Slate exists.
 	Widget->bReticleCornerOutsideSpreadRadius = true;
 	FDCLyraCircumferenceMarkerEntry& Marker = Widget->MarkerList.AddDefaulted_GetRef();
@@ -121,8 +122,13 @@ bool FDCCircumferenceWidgetLifecycleTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	TestTrue(TEXT("Rebuild/Synchronize forwards OutsideRadius=true"), FDCLyraCircumferenceTestAccess::IsOutsideRadius(*Slate));
-	TestTrue(TEXT("Radius set before creation is forwarded"), Slate->ComputeDesiredSize(1.0f).Equals(FVector2D(68, 60)));
+	TestTrue(TEXT("Original UMG option value is preserved"), !!Widget->bReticleCornerOutsideSpreadRadius);
+	TestFalse(TEXT("Original UMG bridge does not enable the Slate outside-radius offset"), FDCLyraCircumferenceTestAccess::IsOutsideRadius(*Slate));
+	TestTrue(TEXT("Radius set before creation is forwarded"), Slate->ComputeDesiredSize(1.0f).Equals(FVector2D(60, 88)));
+	FDCLyraCircumferenceMarkerEntry CardinalMarker;
+	TestTrue(TEXT("Rifle marker stays on radius 24, without the added half-width offset to 27"),
+		FDCLyraCircumferenceTestAccess::TransformMarkerPoint(*Slate, CardinalMarker, 24.0f, 1.0f, FVector2D::ZeroVector)
+		.Equals(FVector2D(0, -24), 0.001));
 	const TArray<FDCLyraCircumferenceMarkerEntry>& SlateMarkers = FDCLyraCircumferenceTestAccess::GetMarkers(*Slate);
 	if (TestEqual(TEXT("UMG marker list forwarded"), SlateMarkers.Num(), 1))
 	{
@@ -133,10 +139,13 @@ bool FDCCircumferenceWidgetLifecycleTest::RunTest(const FString& Parameters)
 	Widget->bReticleCornerOutsideSpreadRadius = false;
 	Widget->MarkerList.Reset();
 	Widget->SynchronizeProperties();
-	TestFalse(TEXT("Synchronize forwards OutsideRadius=false"), FDCLyraCircumferenceTestAccess::IsOutsideRadius(*Slate));
+	TestFalse(TEXT("Synchronize retains the safe Slate default with UMG option false"), FDCLyraCircumferenceTestAccess::IsOutsideRadius(*Slate));
 	TestEqual(TEXT("Synchronize clears marker list"), FDCLyraCircumferenceTestAccess::GetMarkers(*Slate).Num(), 0);
+	Widget->bReticleCornerOutsideSpreadRadius = true;
+	Widget->SynchronizeProperties();
+	TestFalse(TEXT("Synchronize still does not forward the UMG option after toggling true"), FDCLyraCircumferenceTestAccess::IsOutsideRadius(*Slate));
 	Widget->SetRadius(12.0f);
-	TestTrue(TEXT("SetRadius after creation reaches Slate"), Slate->ComputeDesiredSize(1.0f).Equals(FVector2D(44, 36)));
+	TestTrue(TEXT("SetRadius after creation reaches Slate"), Slate->ComputeDesiredSize(1.0f).Equals(FVector2D(36, 64)));
 
 	// Detach all external Slate owners before releasing, as when an unmounted UMG widget is rebuilt.
 	TWeakPtr<SDCLyraCircumferenceMarkerWidget> PreviousSlate = Slate;
@@ -152,8 +161,8 @@ bool FDCCircumferenceWidgetLifecycleTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	TestTrue(TEXT("Recreated Slate retains current OutsideRadius"), FDCLyraCircumferenceTestAccess::IsOutsideRadius(*Slate));
-	TestTrue(TEXT("Recreated Slate retains current radius"), Slate->ComputeDesiredSize(1.0f).Equals(FVector2D(80, 72)));
+	TestFalse(TEXT("Recreated Slate keeps its deterministic default despite UMG option true"), FDCLyraCircumferenceTestAccess::IsOutsideRadius(*Slate));
+	TestTrue(TEXT("Recreated Slate retains current radius"), Slate->ComputeDesiredSize(1.0f).Equals(FVector2D(72, 100)));
 	Slate.Reset();
 	Widget->ReleaseSlateResources(true);
 	return true;

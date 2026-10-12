@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Camera/DCCameraAssistInterface.h"
-#include "GameFramework/PlayerController.h"
+#include "CommonPlayerController.h"
 #include "PrimitiveComponentId.h"
 #include "DreamCatcherPlayerController.generated.h"
 
@@ -14,7 +14,7 @@ class UDCAbilitySystemComponent;
 
 UCLASS()
 class DREAMCATCHER_API ADreamCatcherPlayerController
-	: public APlayerController
+	: public ACommonPlayerController
 	, public IDCCameraAssistInterface
 {
 	GENERATED_BODY()

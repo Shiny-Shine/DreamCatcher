@@ -114,9 +114,6 @@ void UDCLyraRangedWeaponInstance::ComputeSpreadRange(float& MinSpread, float& Ma
 
 void UDCLyraRangedWeaponInstance::AddSpread()
 {
-	// A committed shot restarts spread recovery; keep the base activity clock independent.
-	LastFireTime = GetWorld()->GetTimeSeconds();
-
 	// Sample the heat up curve
 	const float HeatPerShot = HeatToHeatPerShotCurve.GetRichCurveConst()->Eval(CurrentHeat);
 	CurrentHeat = ClampHeat(CurrentHeat + HeatPerShot);

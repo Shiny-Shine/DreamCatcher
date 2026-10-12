@@ -9,17 +9,20 @@ class UDCInventoryItemDefinition;
 class UDCInventoryItemInstance;
 class UDCInventoryManagerComponent;
 class UDCLyraQuickBarComponent;
+class UDCLyraWeaponUserInterface;
 class UDCLyraWeaponStateComponent;
 class UDCPawnData;
 class UDCPawnExtensionComponent;
 
-/** Opt-in R5/R6 test map controller. Firing/reloading remain in imported Lyra abilities. */
+/** Opt-in R5/R6/R7 test controller. Gameplay and weapon widgets remain in imported Lyra assets. */
 UCLASS()
 class DREAMCATCHER_API ADCRifleIntegrationController : public ADreamCatcherPlayerController
 {
 	GENERATED_BODY()
 public:
 	ADCRifleIntegrationController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+	virtual void PlayerTick(float DeltaTime) override;
 
 	UFUNCTION(BlueprintCallable, Category="R5 Integration")
 	void EquipIntegrationRifle();
@@ -35,6 +38,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="R5 Integration")
 	TSubclassOf<UDCInventoryItemDefinition> StartingRifle;
 
+	/** Independent R7 display only; does not replace the project's HUD or UIExtension policy. */
+	UPROPERTY(EditDefaultsOnly, Category="R7 Integration")
+	TSubclassOf<UDCLyraWeaponUserInterface> WeaponReticleHostClass;
+
+	UPROPERTY(Transient, VisibleInstanceOnly, BlueprintReadOnly, Category="R7 Integration")
+	TObjectPtr<UDCLyraWeaponUserInterface> WeaponReticleHost;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="R5 Integration")
 	TObjectPtr<UDCInventoryManagerComponent> RifleInventory;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="R5 Integration")
@@ -45,6 +55,11 @@ protected:
 private:
 	void TryEquipWhenReady();
 	void DetachPawnListener();
+	void UpdateWeaponReticleHost();
+	void RemoveWeaponReticleHost();
+	TWeakObjectPtr<APawn> WeaponReticlePawn;
+	bool bWeaponReticleHostCreationFailed = false;
+	bool bWeaponReticleHostEndingPlay = false;
 	UPROPERTY(Transient) TObjectPtr<UDCInventoryItemInstance> GrantedRifle;
 	TWeakObjectPtr<UDCPawnExtensionComponent> BoundPawnExtension;
 	FTimerHandle EquipTimer;

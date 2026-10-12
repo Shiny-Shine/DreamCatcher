@@ -20,6 +20,10 @@ DREAMCATCHER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Lyra_Damage_Message);
 
 struct FGameplayEffectModCallbackData;
 
+// Fires only after DamageImmunity has rejected positive normal Damage. The spec
+// is borrowed for this synchronous notification; listeners must copy any payload.
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDCDamageBlockedEvent, const FGameplayEffectSpec&, float);
+
 
 /**
  * UDCHealthSet
@@ -49,6 +53,9 @@ public:
 
 	// Delegate to broadcast when the health attribute reaches zero
 	mutable FDCAttributeEvent OnOutOfHealth;
+
+	// Observation hook; does not replace the original damage/immunity policy.
+	mutable FDCDamageBlockedEvent OnDamageBlocked;
 
 protected:
 
@@ -80,7 +87,7 @@ private:
 	// Used to track when the health reaches 0.
 	bool bOutOfHealth;
 
-	// Store the health before any changes
+	// Store the health before any changesw
 	float MaxHealthBeforeAttributeChange;
 	float HealthBeforeAttributeChange;
 
