@@ -129,6 +129,18 @@
 		{
 			"Name": "DTLSHandlerComponent",
 			"Enabled": true
+		},
+		{
+			"Name": "GameSettings",
+			"Enabled": true
+		},
+		{
+			"Name": "PlatformDLC",
+			"Enabled": true
+		},
+		{
+			"Name": "DCStageUI",
+			"Enabled": true
 		}
 	]
 }

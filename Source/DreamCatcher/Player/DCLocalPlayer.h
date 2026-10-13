@@ -14,6 +14,8 @@ struct FGenericTeamId;
 class APlayerController;
 class UInputMappingContext;
 class UDCSettingsShared;
+class UDCLyraSettingsLocal;
+struct FSwapAudioOutputResult;
 class UObject;
 class UWorld;
 struct FFrame;
@@ -21,9 +23,8 @@ struct FFrame;
 /**
  * UDCLocalPlayer
  *
- * R4-2: Shared settings and team observation are ported from Lyra.
- * LocalSettings/audio-output-device hooks are deferred until their settings
- * and audio dependencies are ported; the UCommonLocalPlayer base is preserved.
+ * R4-2 shared settings/team observation; R13 restores the original local-settings
+ * getter and audio-device hooks. The UCommonLocalPlayer base is preserved.
  */
 UCLASS(MinimalAPI)
 class UDCLocalPlayer : public UCommonLocalPlayer, public IDCTeamAgentInterface
@@ -33,6 +34,9 @@ class UDCLocalPlayer : public UCommonLocalPlayer, public IDCTeamAgentInterface
 public:
 
 	UE_API UDCLocalPlayer();
+	UE_API virtual void PostInitProperties() override;
+	UFUNCTION()
+	UE_API UDCLyraSettingsLocal* GetLocalSettings() const;
 
 	//~UPlayer interface
 	UE_API virtual void SwitchController(class APlayerController* PC) override;
@@ -57,6 +61,9 @@ public:
 	UE_API void LoadSharedSettingsFromDisk(bool bForceLoad = false);
 
 protected:
+	UE_API void OnAudioOutputDeviceChanged(const FString& InAudioOutputDeviceId);
+	UFUNCTION()
+	UE_API void OnCompletedAudioDeviceSwap(const FSwapAudioOutputResult& SwapResult);
 	UE_API void OnSharedSettingsLoaded(UDCSettingsShared* LoadedOrCreatedSettings);
 
 	UE_API void OnPlayerControllerChanged(APlayerController* NewController);

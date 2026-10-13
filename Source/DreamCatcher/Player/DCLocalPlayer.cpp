@@ -6,6 +6,9 @@
 #include "GameFramework/PlayerController.h"
 #include "Settings/DCSettingsShared.h"
 #include "CommonUserSubsystem.h"
+#include "AudioMixerBlueprintLibrary.h"
+#include "Engine/Engine.h"
+#include "Settings/DCLyraSettingsLocal.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCLocalPlayer)
 
@@ -13,6 +16,38 @@ class UObject;
 
 UDCLocalPlayer::UDCLocalPlayer()
 {
+}
+
+void UDCLocalPlayer::PostInitProperties()
+{
+	Super::PostInitProperties();
+	// Bind real local players, never the class default during native class loading.
+	if (!HasAnyFlags(RF_ClassDefaultObject) && GEngine)
+	{
+		if (UDCLyraSettingsLocal* Settings = GetLocalSettings())
+		{
+			Settings->OnAudioOutputDeviceChanged.AddUObject(this, &ThisClass::OnAudioOutputDeviceChanged);
+		}
+	}
+}
+
+UDCLyraSettingsLocal* UDCLocalPlayer::GetLocalSettings() const
+{
+	return UDCLyraSettingsLocal::Get();
+}
+
+void UDCLocalPlayer::OnAudioOutputDeviceChanged(const FString& DeviceId)
+{
+	FOnCompletedDeviceSwap Callback;
+	Callback.BindUFunction(this, FName("OnCompletedAudioDeviceSwap"));
+	UAudioMixerBlueprintLibrary::SwapAudioOutputDevice(GetWorld(), DeviceId, Callback);
+}
+
+void UDCLocalPlayer::OnCompletedAudioDeviceSwap(const FSwapAudioOutputResult& SwapResult)
+{
+	if (SwapResult.Result == ESwapAudioOutputDeviceResultState::Failure)
+	{
+	}
 }
 
 void UDCLocalPlayer::SwitchController(class APlayerController* PC)

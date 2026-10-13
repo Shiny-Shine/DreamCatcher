@@ -28,11 +28,22 @@ public:
 	bool WasRunSuccessful() const { return bRunEnded && bRunSucceeded; }
 	UFUNCTION(BlueprintPure, Category="Stage")
 	UDCStageResultWidget* GetStageWidget() const { return StageWidget; }
+	UFUNCTION(BlueprintPure, Category="Stage|UI")
+	bool UsesExperienceUI() const { return bUseExperienceUI; }
+	UFUNCTION(BlueprintPure, Category="Stage|UI")
+	FText GetStageTitle() const { return PhaseTitle; }
+	UFUNCTION(BlueprintPure, Category="Stage|UI")
+	bool IsStageTravelPending() const { return bTravelPending; }
+	/** Only the opt-in R13 in-game menu may abort and return before the result. */
+	UFUNCTION(BlueprintCallable, Category="Stage|UI")
+	bool RequestExitStageFromMenu();
 	UFUNCTION(BlueprintCallable, Category="Stage")
 	bool RequestRestartStage();
 	UFUNCTION(BlueprintCallable, Category="Stage")
 	bool RequestExitStage();
 protected:
+	UPROPERTY(EditDefaultsOnly, Category="Stage|UI")
+	bool bUseExperienceUI = false;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void PerformLevelTravel(FName LevelName);
 	UPROPERTY(EditDefaultsOnly, Category="Stage|Teams", meta=(ClampMin="0", ClampMax="254"))
@@ -92,5 +103,6 @@ private:
 	bool bPreviousMouseCursor = false;
 #if WITH_DEV_AUTOMATION_TESTS
 	friend struct FDCStageFlowTestAccess;
+	friend struct FDCStageUITestAccess;
 #endif
 };

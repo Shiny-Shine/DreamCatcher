@@ -96,6 +96,18 @@
 			"Type": "RequiredResource"
 		},
 		{
+			"Path": "$(ProjectDir)/Plugins/GameSettings/Binaries/Win64/UnrealEditor-GameSettings.dll",
+			"Type": "DynamicLibrary"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/GameSettings/Binaries/Win64/UnrealEditor-GameSettings.pdb",
+			"Type": "SymbolFile"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/GameSettings/Binaries/Win64/UnrealEditor.modules",
+			"Type": "RequiredResource"
+		},
+		{
 			"Path": "$(ProjectDir)/Plugins/GameSubtitles/Binaries/Win64/UnrealEditor-GameSubtitles.dll",
 			"Type": "DynamicLibrary"
 		},
@@ -3684,6 +3696,14 @@
 			"Type": "RequiredResource"
 		},
 		{
+			"Path": "$(EngineDir)/Plugins/Experimental/PlatformDLC/Binaries/Win64/UnrealEditor-PlatformDLC.dll",
+			"Type": "DynamicLibrary"
+		},
+		{
+			"Path": "$(EngineDir)/Plugins/Experimental/PlatformDLC/Binaries/Win64/UnrealEditor.modules",
+			"Type": "RequiredResource"
+		},
+		{
 			"Path": "$(EngineDir)/Plugins/Experimental/PythonScriptPlugin/Binaries/Win64/UnrealEditor-PythonScriptPlugin.dll",
 			"Type": "DynamicLibrary"
 		},
@@ -5339,6 +5359,14 @@
 		},
 		{
 			"Path": "$(ProjectDir)/Plugins/DCRifleMigrationTools/DCRifleMigrationTools.uplugin",
+			"Type": "UFS"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/GameFeatures/DCStageUI/DCStageUI.uplugin",
+			"Type": "UFS"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/GameSettings/GameSettings.uplugin",
 			"Type": "UFS"
 		},
 		{
@@ -29830,6 +29858,10 @@
 			"Type": "UFS"
 		},
 		{
+			"Path": "$(EngineDir)/Plugins/Experimental/PlatformDLC/PlatformDLC.uplugin",
+			"Type": "UFS"
+		},
+		{
 			"Path": "$(EngineDir)/Plugins/Experimental/PythonScriptPlugin/PythonScriptPlugin.uplugin",
 			"Type": "UFS"
 		},
@@ -30398,6 +30430,7 @@
 		"CurveEditorTools",
 		"CustomMeshComponent",
 		"DCRifleMigrationTools",
+		"DCStageUI",
 		"DTLSHandlerComponent",
 		"DataRegistry",
 		"DataValidation",
@@ -30428,6 +30461,7 @@
 		"GLTFExporter",
 		"GPUReshape",
 		"GameFeatures",
+		"GameSettings",
 		"GameSubtitles",
 		"GameplayAbilities",
 		"GameplayCameras",
@@ -30527,6 +30561,7 @@
 		"PlanarCut",
 		"PlasticSourceControl",
 		"PlatformCrypto",
+		"PlatformDLC",
 		"PluginBrowser",
 		"PluginUtils",
 		"PortableObjectFileDataSource",

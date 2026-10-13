@@ -73,6 +73,9 @@ public class DreamCatcher : ModuleRules
 		});
 
 		PublicDependencyModuleNames.Add("PhysicsCore");
+		// R13 original settings UI and its replay/settings dependencies.
+		PublicDependencyModuleNames.AddRange(new[] { "GameSettings", "NetworkReplayStreaming", "PropertyPath", "DataRegistry" });
+		PrivateDependencyModuleNames.AddRange(new[] { "PlatformDLC", "RHI", "RenderCore" });
 		PrivateDependencyModuleNames.Add("NetCore");
 		// Original GameInstance parent required by the imported weapon audio Blueprint.
 		PrivateDependencyModuleNames.AddRange(new[] { "CoreOnline", "DTLSHandlerComponent" });

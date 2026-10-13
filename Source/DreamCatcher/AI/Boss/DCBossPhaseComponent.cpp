@@ -140,6 +140,7 @@ void UDCBossPhaseComponent::RefreshHUD()
 {
 	ADCBossCharacter* B = Boss.Get();
 	if (!B || State == EDCBossRunState::Stopped || !B->GetBossData()) { return; }
+	if (const ADCStageRunGameMode* Mode = GetWorld()->GetAuthGameMode<ADCStageRunGameMode>(); Mode && Mode->UsesExperienceUI()) { return; }
 	if (!HUD)
 	{
 		ADCStageRunGameMode* Mode = GetWorld()->GetAuthGameMode<ADCStageRunGameMode>();

@@ -202,6 +202,7 @@ void ADCStageRunGameMode::EndRun(bool bSucceeded)
 
 void ADCStageRunGameMode::EnsureStageWidget()
 {
+	if (bUseExperienceUI) { return; }
 	APlayerController* PC = RunPlayer.Get();
 	if (StageWidget || !PC || !PC->GetLocalPlayer() || !ResultWidgetClass || GetNetMode() == NM_DedicatedServer) { return; }
 	StageWidget = CreateWidget<UDCStageResultWidget>(PC, ResultWidgetClass);
@@ -219,7 +220,7 @@ void ADCStageRunGameMode::PresentResult()
 	if (bEndingPlay || !bRunEnded || bOwnsInputIgnore || GetWorld()->bIsTearingDown) { return; }
 	EnsureStageWidget();
 	APlayerController* PC = RunPlayer.Get();
-	if (!PC || !PC->GetLocalPlayer() || !StageWidget) { return; }
+	if (!PC || !PC->GetLocalPlayer() || (!StageWidget && !bUseExperienceUI)) { return; }
 	if (ADCPlayerState* PS = PC->GetPlayerState<ADCPlayerState>())
 	{
 		UDCAbilitySystemComponent* ASC = PS->GetDCAbilitySystemComponent();
@@ -243,8 +244,18 @@ void ADCStageRunGameMode::PresentResult()
 	PC->SetIgnoreLookInput(true);
 	bOwnsInputIgnore = true;
 	PC->bShowMouseCursor = true;
-	StageWidget->ShowResult(bRunSucceeded);
-	UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(PC, StageWidget->GetResultFocusTarget(), EMouseLockMode::DoNotLock, true);
+	if (!bUseExperienceUI)
+	{
+		StageWidget->ShowResult(bRunSucceeded);
+		UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(PC, StageWidget->GetResultFocusTarget(), EMouseLockMode::DoNotLock, true);
+	}
+}
+
+bool ADCStageRunGameMode::RequestExitStageFromMenu()
+{
+	if (!bUseExperienceUI || bEndingPlay || bTravelPending || ReturnMap.IsNull() || GetNetMode() != NM_Standalone) { return false; }
+	if (!bRunEnded) { EndRun(false); }
+	return RequestExitStage();
 }
 
 bool ADCStageRunGameMode::RequestRestartStage()

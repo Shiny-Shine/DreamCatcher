@@ -17,6 +17,7 @@ class UDCCombatSet;
 class UDCResourceSet;
 class UDCPawnData;
 class FLifetimeProperty;
+struct FDCVerbMessage;
 
 // DreamCatcher 플레이어의 GAS 상태를 소유하는 PlayerState.
 // ASC는 PlayerState가 소유하고, 실제 플레이 Character는 ASC의 Avatar로 연결됨.
@@ -32,6 +33,10 @@ public:
 	// Ported from ALyraPlayerState::GetLyraPlayerController (project-specific owner cast).
 	UFUNCTION(BlueprintCallable, Category = "Lyra|PlayerState")
 	ADreamCatcherPlayerController* GetDCPlayerController() const;
+
+	// Original Lyra notification RPC; standalone notifications are broadcast locally by the relay.
+	UFUNCTION(Client, Unreliable, BlueprintCallable, Category = "Lyra|PlayerState")
+	void ClientBroadcastMessage(const FDCVerbMessage Message);
 
 	// IAbilitySystemInterface 구현.
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;

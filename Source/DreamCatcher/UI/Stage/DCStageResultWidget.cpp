@@ -23,7 +23,7 @@ TSharedRef<SWidget> UDCStageResultWidget::RebuildWidget()
 		Root->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
-		UBorder* TitlePanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PhasePanel"));
+		TitlePanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PhasePanel"));
 		TitlePanel->SetPadding(FMargin(22, 12));
 		TitlePanel->SetBrushColor(FLinearColor(.025f, .04f, .06f, .92f));
 		UCanvasPanelSlot* TitleSlot = Root->AddChildToCanvas(TitlePanel);
@@ -92,6 +92,7 @@ void UDCStageResultWidget::ShowResult(bool bInSucceeded)
 
 void UDCStageResultWidget::RefreshText()
 {
+	if (TitlePanel) { TitlePanel->SetVisibility(bTitleVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed); }
 	if (StageTitle) { StageTitle->SetText(CurrentTitle); }
 	if (ResultTitle) { ResultTitle->SetText(bSucceeded ? LOCTEXT("Clear", "스테이지 클리어") : LOCTEXT("Failed", "스테이지 실패")); }
 	if (ResultPanel) { ResultPanel->SetVisibility(bResultVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed); }
@@ -102,6 +103,12 @@ void UDCStageResultWidget::SetTravelPending(bool bPending)
 	bActionRequested = bPending;
 	if (RetryButton) { RetryButton->SetIsEnabled(!bPending); }
 	if (ExitButton) { ExitButton->SetIsEnabled(!bPending); }
+}
+
+void UDCStageResultWidget::SetStageTitleVisible(bool bVisible)
+{
+	bTitleVisible = bVisible;
+	RefreshText();
 }
 
 UWidget* UDCStageResultWidget::GetResultFocusTarget() const

@@ -13,6 +13,8 @@
 #include "DreamCatcherPlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
+#include "Messages/DCVerbMessage.h"
+#include "GameFramework/GameplayMessageSubsystem.h"
 
 const FName ADCPlayerState::NAME_DCAbilityReady("LyraAbilitiesReady");
 
@@ -43,6 +45,15 @@ ADCPlayerState::ADCPlayerState(const FObjectInitializer& ObjectInitializer) : Su
 ADreamCatcherPlayerController* ADCPlayerState::GetDCPlayerController() const
 {
 	return Cast<ADreamCatcherPlayerController>(GetOwner());
+}
+
+void ADCPlayerState::ClientBroadcastMessage_Implementation(const FDCVerbMessage Message)
+{
+	// This check is needed to prevent running the action when in standalone mode.
+	if (GetNetMode() == NM_Client)
+	{
+		UGameplayMessageSubsystem::Get(this).BroadcastMessage(Message.Verb, Message);
+	}
 }
 
 UAbilitySystemComponent* ADCPlayerState::GetAbilitySystemComponent() const

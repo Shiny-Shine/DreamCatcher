@@ -18,6 +18,7 @@ public:
 	void SetStageTitle(const FText& Title);
 	void ShowResult(bool bSucceeded);
 	void SetTravelPending(bool bPending);
+	void SetStageTitleVisible(bool bVisible);
 	UWidget* GetResultFocusTarget() const;
 	UFUNCTION(BlueprintPure, Category="Stage")
 	bool IsResultVisible() const { return bResultVisible; }
@@ -36,6 +37,8 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> StageTitle;
 	UPROPERTY(Transient)
+	TObjectPtr<UBorder> TitlePanel;
+	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> ResultTitle;
 	UPROPERTY(Transient)
 	TObjectPtr<UBorder> ResultPanel;
@@ -47,4 +50,5 @@ private:
 	bool bResultVisible = false;
 	bool bSucceeded = false;
 	bool bActionRequested = false;
+	bool bTitleVisible = true;
 };

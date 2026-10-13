@@ -4438,8 +4438,8 @@ GameplayCue가 Camera Shake, 발사 사운드, Muzzle Flash 등을 실행하는 
 | R10 | 적 GAS·일반 적 원본 사격·선택적 예고 | 일반 적은 원본 무기 경로, 예고는 강공격/보스 전용 | R10-1 및 기존 예고 공격 프로토타입 수용 완료. 일반 적 원본 발사 연결 미완료/변경안 우선. 일반 적용 경고선 묶음은 생성 전 중단. 몸체·무기·애니메이션/강공격 연출·실맵·복제/패키징 미완료 |
 | R11 | Level 1 빈 흐름 완주 | 전투 1 → 전투 2 → 보스 Placeholder → 결과 Placeholder | 2026-10-13 별도 Level1 사본의 자동 검사 및 사용자 PIE 수용 완료. 실패·수동 재시작·맵 복귀 포함. 실제 보스/정식 결과 UI/디자이너 원본 활성화는 별도 |
 | R12 | 최소 보스 | 패턴 2개·페이즈 전환·HUD·사망 완료 신호 | 2026-10-13 승인한 최소 보스 묶음의 자동 검사 및 사용자 보스전 PIE 수용 완료. 최종 모델/연출·밸런스·복제/디자이너 통합은 별도 |
-| R13 | Experience·필요 무기/공통 기능 후속 이식 | 실제 필요한 나머지 원본 기능의 통합 | 선행 기반 재사용.2026-10-13 원본 HUD/메뉴·설정 및 Experience 연결 변경안 제시, 새 구현 승인 전 |
-| R14 | Legacy·참조·회귀 최종 정리 | 새 구조만으로 시작부터 결과까지 동작 | 미착수 |
+| R13 | Experience·필요 무기/공통 기능 후속 이식 | 실제 필요한 나머지 원본 기능의 통합 | 2026-10-14 승인된 HUD·메뉴·Experience·맵 연결 묶음의 자동 검사 및 사용자 PIE 수용 완료. 보스 체력·페이즈 배치/Esc 메뉴 확인 완료. 추가 무기·온라인/자동 리플레이 등 별도 잔여 범위는 유지 |
+| R14 | Legacy·참조·회귀 최종 정리 | 새 구조만으로 시작부터 결과까지 동작 | 2026-10-14 패키징 제외 현재 GAS-System 범위 완료. 2A 수용/2B 빌드·연결, 최종 Blueprint316개 및 UI 창 크기 사용자 수용 완료. 기존 맵 호환 계층 보존. 패키징은 보류·미검증, 다음은 디자이너 main 병합 준비 |
 
 ### R0 — 기준 기록
 
@@ -4709,7 +4709,7 @@ R11의 마지막 일반 Lyra 봇 Placeholder 자리를 **서로 다른 공격을
 대형 인벤토리 UI·보상 경제·저장·온라인 FrontEnd는 자동 포함하지 않는다. 의존성 때문에 필요한 작은 기능과 별도 게임 확장을 구분한다.
 각 도입 후 기존 수직 슬라이스와 선택한 새 기능을 모두 검증한다.
 
-#### 2026-10-13 R13 변경안 — R12 사용자 수용 후, 아직 구현 승인 전
+#### 2026-10-13 R13 변경안 이력 — R12 사용자 수용 후, 제안 당시 승인 전
 
 **현재와 목적:** R11/R12는 이미 원본 기반 Experience/팀/전투 초기화로 실행된다. ExperienceManager·DCLyraHUD/HUDLayout·DCGameFeatureAction_AddWidgets·UIExtension·R7 Root/QuickSlot 입력을 재작성하지 않는다. 현재 Controller의 직접 Reticle 표시와 시험용 QuickBar 표시를 원본 HUD 슬롯/Experience 수명으로 옮기고, 미뤄둔 원본 메뉴·설정/장치 경로를 연결하는 것이 다음 핵심이다.
 
@@ -4734,14 +4734,148 @@ R11의 마지막 일반 Lyra 봇 Placeholder 자리를 **서로 다른 공격을
 
 이번 턴은 R12 사용자 수용 및 이 R13 변경안의 문서3개 갱신과 로컬 읽기 전용 조사만 수행했다. R13 새 코드/Config/에셋/플러그인 등록·Editor/테스트 재실행·빌드/패키징은 하지 않았다. **새 R13 구현은 승인 전이다.**
 
+#### 2026-10-13 승인된 R13 1·2번 코드 준비 — 사용자 빌드 대기
+
+사용자가 권장한 원본 HUD·Esc/설정 연결 및 스테이지 UI 수명 통합을 승인했다. 기존 Experience/HUD/Root/QuickSlot은 재사용하고 **기존 플레이어/R11/R12 에셋은 보존**했다. 원본 GameSettings 플러그인 텍스트62파일(원본 byte hash 일치), 직접 필요한 프로젝트 native71파일을 별도 DC 이름으로 추가했다. 이름/include/export 대응 후70파일 본문은 원본과 같고 SettingScreen h1개에 Stage 전환의 미적용 설정 취소 연결을 추가했다. 설정 Registry/키 입력·해상도/언어/오디오·화면, 공통 UI·메시징/확인창, 터치/성능 표시, 직접 Replay/DLC 의존성을 포함한다. 원본 Replay/DLC 구현을 삭제하거나 빈 대역으로 만들지 않았으며 전체 녹화/온라인 기능을 활성화·검증했다고 보고하지 않는다.
+
+신규 StageResultLayer/StageOverlayWidget/StageUIComponent/StageUIBlueprintLibrary h/cpp8개를 작성했다. 결과를 CommonUI에 표시하고 Back/Esc로 닫히지 않게 하며, 단계/보스 상태는 새 HUD 슬롯에서 읽는다. Menu/Modal 표시 이벤트로 추가한 자기 ASC 입력 차단과 이동/시점 무시만 해제한다. 사망·복귀 시 미적용 설정은 취소하며 원본 Death Ability를 취소하지 않는다. 기존 StageRunGameMode의 기본false `bUseExperienceUI`와 메뉴 복귀/상태 조회, BossPhase의 opt-in 직접 HUD 생략, StageResultWidget의 기본true 제목 표시 옵션으로 기존 R11/R12 경로를 유지한다. LocalPlayer의 원본 GetLocalSettings/오디오 장치 훅도 연결했으며 CDO는 구독하지 않는다. SettingsLocal/Shared 본체/플레이어 조작·전투 구현은 교체하지 않았다.
+
+Build.cs/.uproject에는 GameSettings/PlatformDLC 및 직접 모듈 의존성, 새 UI 전용 DCStageUI descriptor를 추가했다. Feature는 ExplicitlyLoaded/초기 Installed로 두었고 **아직 FeatureData 에셋/활성화 검증은 없다**. DefaultGame의 새 R13 Experience/ActionSet 경로, DefaultEngine native Redirect38개, DefaultGameplayTags의 원본 HUD 슬롯10개, DefaultInput의 원본 Esc/Start UI 액션과 EnhancedInput 사용자 설정 지원을 추가했다. 기존 전투 IMC/키 배치·전역 GameMode/UI Policy/ReturnMap은 유지했다. 설정/키매핑 저장 검증은 진단 저장 경로 또는 확인된 보호/복원 절차로 사용자 설정을 보존해야 한다.
+
+**실제로 수행한 원본 읽기 전용 확인:** `ui_dependencies_Source_A.json`의 원본539패키지/native parent21개 중 미대응 parent는 메뉴가 원본 FrontEnd 맵을 참조하여 들어오는 FrontendStateComponent다. `menu_graph_A.json`에서 ReturnButton의 확인창/결과 분기→OpenLevel, FrontEndMapReference/FrontEndExperienceReference를 확인했다. 새 메뉴 사본의 확인 후 실행만 프로젝트 ReturnFromStageMenu API로 대응하고 미사용 원본 FrontEnd 참조를 사본에서 정리하는 승인 범위의 조립 차이다. 원본 에셋은 그대로이며 이 대응 후 UI 범위는308패키지다. **308은 기존 재사용 후보 포함 의존 수이며 신규 복사 수/모든 함수·타입 검증 완료가 아니다.** `asset_plan_A.json`에 원본 목록·기존 R7 재사용 후보·새 경로·후속 작업을 기록했다. 원본 에셋 저장/명시적Compile0이고 대상 R13 에셋은 아직 생성하지 않았다.
+
+`DreamCatcher.R13.UI`의 MenuReturnIsOptIn/MenuInputOwnership2건과 빌드 후 native 등록 검사용 `r13_native_verify.py`를 준비했다. 검사는 아직 실행하지 않았으며 fixture의 여행 호출은 실제 OpenLevel 검증이 아니다. 정적 근거 `Saved/Diagnostics/R13/static_A.json`: 원본/매핑 비교, local/generated include, 설정 getter의 기존/엔진 부모 선언, Python AST 통과. 기존863파일 중 허용13개 외850개 및 Content/DLL/Git 인덱스를 보존했다. 신규146파일과 문서3개 작성, C++ 빌드/패키징·대상 Editor·에셋 저장·Computer Use·Git 조작0이다.
+
+**다음은 사용자 Development Editor/Win64 빌드** 후 R13 native2/관련 Stage 회귀·native 등록 → UI308의 실제 재사용/참조·충돌 확정 및 원본 사본 준비/내부 이식 → FeatureData/Experience/ActionSet/새 Controller/GameMode/맵 연결 → 설정·메뉴/포커스·NPC 메시지/레이어 및 여행 실제 PIE → 사용자 확인이다. 실제 에셋 저장/그래프 연결 자동화·설정 보존 실행·R13 UI 수용은 아직 남아 있다. 완료된 R10~R12나 마이그레이션을 일괄 반복하지 않는다. 상세 순서는 인계 문서0.95를 따른다.
+
+#### 2026-10-13 R13 기반 검증 및 알림 의존성 보완 — AGENTS 0.96
+
+사용자 빌드7.08초 성공/DLL22:23:28 KST(6,537,216 bytes)와22:25:40 `R13Native_A`의 R13 UI2＋관련 R11 Stage5 **성공7/실패·보고서경고0**, Error/ensure/Fatal0을 확인했다. `native_verify_Verify_A.json`에서44클래스 등록/기존 Stage opt-in 기본false도 통과했다. 앞선 enum/PropertyPath 문제는 이 빌드로 해결되었으며 완료된 검사를 일괄 재실행하지 않는다.
+
+실제 위젯/Feature 조회로 기존 LyraGame 중심 parent 조사에서 빠졌던 ShooterCoreRuntime의 AccoladeHost를 확인했다. 원본 HUD의 칭찬 알림은 NotificationMessage, GameplayMessageProcessor, DataRegistry/표, Relay 및 연속 처치·연속 생존 처치·Assist 처리기에 의존한다. `ui_assets_Extras_A/Extra3.t3d`는 ShooterCore의 KillFeed Relay/DataRegistry 등록을, `ui_assets_Extras_B/Extra3.t3d`는 EAS의 처리기4개 등록을 보여 준다. 원본 그대로 필요한 **14 h/cpp**를 DC 이름으로 이식하고 DataRegistry 모듈/Feature 의존성, Redirect11개와 실제 참조하는 알림/아이콘 태그14개를 추가했다. 원본 식별자/include/API 대응 외 본문 로직은 유지했다. `notification_native_A.json`이 정확한 소스/목적지/해시/대응 근거다. 새 무기·팀·스폰·피해 규칙 또는 전체 ShooterCore gameplay 등록은 포함하지 않는다. **새14개는 사용자 재빌드 전**이다.
+
+원본 메뉴/설정/기존 R7 재사용과 Config 지정 확인창2개, 알림 데이터를 포함한 새 후보는214개/재사용49개다. 공용17개 속성/텍스트를 비교했고16개 일치, 기존 `sfx_RandomStereo_nl_meta`는 root graph class ID만 다르므로 기존 파일을 유지하고 새 preset에서 ID 연결을 확인해야 한다. 원본214개가 전부 이식·Compile·실행된 것은 아니다.
+
+원본 프로젝트의 신규 `/Game/LyraMigration/UI/R13/Game/UI/Hud/W_LyraGameMenu` 사본1개는 `Prepare_D` 저장과 `MenuVerify_A` 재로드/Compile을 통과했다. 사본의 기존 FrontEnd 맵/Experience 기본값을 비워 원본 로비 의존을 제거했다. 확인창/그래프/위젯 구조/문구는 유지하며 복제 과정의 text namespace/key2개 차이만 명시적으로 기록했다. 번역·대상 ReturnFromStageMenu 실행 연결은 미검증이다. 원본 메뉴 자체는 불변이다.
+
+**다음:** 사용자 재빌드 → `r13_native_verify.py -DCR13NativeScope=notification`의 신규6클래스/5struct 확인 → 기존 Unreal 내부 이식 절차로 실제214개 및 참조 매핑 → 새 R13 FeatureData/ActionSet/Experience/Controller/GameMode/맵 연결 → 실제 UI/메뉴·설정·NPC 메시지/입력/여행 PIE → 사용자 확인. 대상 R13 에셋/맵은 아직 생성하지 않았으며 마이그레이션/대상 저장 recipe 구현도 남아 있다. R11/R12 수용은 유지한다. 상세 재개는 인계0.96을 따른다.
+
+#### 2026-10-14 R13 HUD·메뉴·맵 연결 및 자동 PIE 통과 — AGENTS 0.97
+
+사용자 알림 코드 빌드32.10초와 원본 PlayerState 알림 RPC 추가 후54.90초 빌드를 확인했다. 새 R13 자산으로 HUD/메뉴/설정214개 및 Config 지정 입력/아이콘/스타일82개를 이식하고, 기존 R7 UI/입력과 원본 native 계층을 재사용했다. 기존 플레이어/R11/R12를 덮어쓰지 않았다. 이식본의 재로드/Blueprint Compile과 별도 조립 재로드를 통과했다. 새 조립은 Controller/GameMode/Experience/HUD ActionSet/알림 ActionSet/`L_DC_Level1UI` 및 UI 전용 FeatureData7개다.
+
+원본 Layout1/Widget11은 유지하며, 단계·보스 표시1개를 원본의 비어 있던 ModeStatus 확장점에 등록한다. UMG 위젯 GUID map은 보호되어 직접 접근하지 않고 새 R13 사본의 해당 슬롯 배치/Overlay 방식만 조정했다. 새 Controller에서만 direct Reticle=None, 새 GameMode에서만 bUseExperienceUI=true. UI Feature는 원본 처치 피드·알림 데이터와 새 UI 수명 컴포넌트를 등록하며 기존 전투/팀/Inventory/Equipment/스폰을 중복 등록하지 않는다. 환경1106액터와 R12 인카운터/보스 구성은 보존했다. 새 메뉴의 원본 확인창 이후 Stage 복귀 API가 기존 R10 유한 스포너 맵으로 이동한다.
+
+실제 로드에서 확인한 누락은 원본 PlayerState의 ClientBroadcastMessage RPC와 TeamSubsystem native Redirect였다. RPC는 원본 Client/Unreliable/NM_Client 조건을 유지해 추가했다. 첫 PIE의 Back binding 오류는 원본 Config 지정 B_CommonInputData/DefaultBack 데이터 연결로 해결했다. 원본 RichText/Throbber와 Windows 입력 glyph/지원 trait도 새 경로에 연결했으며 전투 IMC/키 매핑은 바꾸지 않았다. 이 연결은 기본 UI 기능이며 자동 리플레이 녹화/온라인 FrontEnd 활성화까지 완료한 것은 아니다.
+
+새 R13 B_EliminationFeedRelay에서 NPC 보스 처치의 null PlayerState 이름/팀 조회 오류를 재현했다. 사본에 순수 함수 GetSafeFeedName을 만들어 유효한 PlayerState의 기존 이름을 유지하고 나머지는 Enemy를 반환한다. 팀 조회에는 메시지 객체를 직접 전달하여 null은 기존 NoTeam 계약으로 처리한다. 원본 메시지/사망 집계·피해 로직과 공용 Reticle은 수정하지 않았다. 별도 재로드/Compile/null 이름 조회와 후속 전투 UI PIE를 통과했다.
+
+새 EntryWidget에서도 NoTeam=-1 색상 Select 경고가 재현되어, 표시용 인덱스만 기존0~2 범위에 맞췄다. 기존 세 옵션0/1/0과 실제 메시지의 팀 값은 유지했다. 최종 `R13Lifecycle_B` **성공1/실패0/경고17**, `R13CombatUI_C` **성공1/실패0/경고15**, 두 로그 Error/ensure/Fatal0. 경고는 기존 Manny PoseAsset14와 Recast3/1이다. HUD/설정125항목/메뉴 입력 차단·해제/메뉴 중 사망/결과/retry/원본 확인창 버튼 복귀·UI/입력 정리 및 일반 처치/연속 처치 알림/보스 체력/NPC 처치→클리어를 확인했다. 프로브 완료값만 보지 않고 Automation 보고서/로그까지 판정했다. 사용자 설정 저장/변경0. 제어된 피해·면역과 handler 호출이며 **물리 Esc/마우스/게임패드, 실제 사격, 화면 가독성, 설정 적용·저장, 터치/복제는 사용자/후속 확인**이다.
+
+현재 다음은 **추가 빌드 없이 `/Game/DreamCatcher/GAS/Test/R13/L_DC_Level1UI` 사용자 PIE 확인**이다. 완료된 migration/setup/자동 검사를 반복하지 않는다. 이 상태를 R13 전체 수용·최종 UI 아트·새 로비·디자이너 병합/R14 완료로 표현하지 않는다. 자세한 실패/복구/보존 근거는 인계0.97 및 `integration_summary_B.json`을 따른다.
+
+#### 2026-10-14 R13 사용자 부분 수용 / 상태 HUD 배치 교정 — AGENTS 0.98
+
+사용자는 보스 체력·현재 페이즈 표시가 왼쪽 바깥으로 잘리는 것과 Esc가 PIE를 종료해 메뉴를 확인하지 못한 것을 제외하고 나머지 동작은 정상 확인했다. 이를 기록하며 완료된 기능/마이그레이션을 반복하지 않는다. 메뉴와 설정까지 수용했다고 추정하지 않는다.
+
+새 R13 `W_ShooterHUDLayout.ExtensionPoint_ModeStatus`의 SpacingPattern이 비어 있었다. 엔진 `UDynamicEntryBoxBase::AddEntryChild`의 Overlay 경로는 패턴이 없으면 Fill을 EntrySpacing에 따른 Left/Top으로 덮어쓴다. 내부 StageOverlay가 전체 Canvas 폭을 기준으로 중앙 정렬하려면 Fill을 유지해야 하므로 **패턴에 `(0,0)` 한 항목**만 추가했다. 기존 Fill/Overlay/Canvas 설정·그래프·위젯 구조는 그대로다. 엔진/UIExtension 및 native Stage/Boss 위젯을 변경하거나 위치 보정 상수를 추가하지 않았다.
+
+`status_layout_fix_B.json`의 에셋1개 저장과 `status_layout_verify_A.json`의 별도 재로드/Compile/Fill·0패턴 확인을 근거로 한다. 기존 보호 파일 변경0, C++/Config/기존 플레이어/R11/R12/R13 맵 변경0이다. 기존 조립 recipe만 같은 값으로 보완했으며 조립·이식은 재실행하지 않았다. 추가 C++ 빌드가 필요 없다.
+
+화면 좌표 자동 검사는 완료 근거가 아니다. 첫 GeometryBefore_A는 Python 함수 클래스 이름 문제, Before_B는 offscreen PIE의 HUD 전체 cached geometry가0이라 실패했다. Fix_A는 열린 Editor의 파일 잠금으로 저장 실패한 이력이며 사용자가 종료한 뒤 Fix_B로 저장했다. 실패 로그/보고서는 유지한다. 배치의 시각 수용은 사용자 확인으로 남긴다.
+
+UE5.8 기본 `Play World (PIE/SIE) > Stop` 단축키가 Esc다(`DebuggerCommands.cpp:358`). 사용자가 Editor Preferences → Keyboard Shortcuts에서 Stop의 Esc를 다른 조합으로 바꾼 뒤 실제 메뉴를 확인한다. Codex는 편집기 설정을 변경하지 않았다. **다음 확인은 두 상태 표시의 상단 중앙 배치와 Esc 메뉴로 제한**하며 그 외 사용자 수용을 유지한다. R13 전체·설정 적용/저장·장치/복제·온라인/자동 리플레이·R14 완료와 구분한다.
+
+#### 2026-10-14 R13 사용자 수용 완료 — AGENTS 0.99
+
+사용자가 수정 후 보스 체력·페이즈 표시와 Esc 메뉴 정상 작동을 확인했다. 앞선 나머지 동작 수용을 합쳐 **승인된 R13 HUD·메뉴·Experience·맵 연결 작업은 정상 확인 완료**로 정리한다. 동일 에셋 이식/조립과 완료된 검사를 반복하지 않는다. 설정 값의 변경·저장 후 재실행, 모든 장치·복제, 추가 무기·온라인/자동 리플레이 등 별도 항목의 미검증 상태를 이 사용자 확인으로 덮어쓰지 않는다. 다음은 R14 변경안이다.
+
 ### R14 — Legacy·참조·회귀 최종 정리
 
 - R14-1: 이미 대체 검증한 기존 자체 GAS·Combat·Health·Camera·Equipment·Spread·Reticle·Dash·Animation 경로의 남은 참조를 점검한다.
 - R14-2: 사용자가 승인한 제거 범위에서 코드와 에셋을 정리한다. BP 부모·Config·태그·Redirect·패키지 참조를 확인하고 에셋 삭제는 Editor에서 수행한다.
-- R14-3: 전체 Editor 빌드, Blueprint Compile, 레벨 완주·사망·재시작·무기 교체·조준·회피·해상도 테스트와 배포용 패키징 검증을 수행한다.
+- R14-3: 전체 Editor 빌드, Blueprint Compile, 레벨 완주·사망·재시작·무기 교체·조준·회피·해상도 테스트를 수행한다. **2026-10-14 사용자 지시로 패키징은 이번 마감에서 보류·미검증으로 분리하고, R14 종료 후 디자이너 main 병합 순서로 진행한다.** 배포용 패키징/패키지 실행 성공을 현재 단계에서 주장하지 않는다.
 
 같은 입력/데미지/Heat/카메라 반동을 처리하는 경로가 하나로 정리되어야 한다.
 기존 미커밋 변경이나 무관한 에셋을 일괄 삭제하지 않는다. Redirect는 낡아 보인다는 이유만으로 제거하지 않는다.
+
+#### 2026-10-14 R14 변경안 — R13 사용자 수용 후, 실제 정리 승인 전
+
+**현재와 목적:** R13의 플레이 흐름은 정상 수용됐다. 구형 코드가 폴더에 존재한다는 사실만으로 이중 실행을 단정하지 않는다. 현재 동작을 보존하면서 실제로 대체된 미사용 의존을 정리하고, 제출용 실행/패키징 경로까지 검증하는 것이 R14다. 이번 요청에서는 문서3개만 갱신했다.
+
+**사전 근거:** 공용 `DreamCatcherCharacter.cpp`는 `DCCombatComponent`를 생성하고, `DCEnemyCharacter`/구형 Death Ability는 `DCHealthComponent`를 참조한다. `DCGASTestTarget`은 구형 Equipment/RangedWeapon, `DCRifleIntegrationActors`는 구형 Equipment 검사에 의존한다. Hero의 Legacy 입력/카메라 선택 플래그도 남아 있다. 따라서 구형 클래스 일괄 삭제를 승인 범위로 제안하지 않는다. C++ 조회와 BP/AssetRegistry·런타임 참조 검증은 구분한다.
+
+**R14-1 첫 묶음:** 기존 R13 맵과 PawnData/Experience/Feature/무기·장비/Ability/UI 연결을 기준으로, 위 구형 계층과 보존 맵의 BP 부모/함수·hard/soft package 참조·Config·태그/Redirect를 읽기 전용으로 조사한다. 대상은 `DreamCatcherCharacter`, `Character`, `Components`, `AbilitySystem`, `Equipment`, `Weapon`, `UI`, 관련 기존/이식 에셋과 Config다. 삭제나 값을 바꾸는 범위가 아니다. 기존 도구를 재사용하여 파일별 사용 이유·대체 경로·제거 영향과 `현재 사용/기존 맵 호환/제거 후보/미검증` 목록을 만든다. 실제 중복 입력/피해/Heat/반동이 발견되면 해당 경로만 재현·수정안으로 분리한다.
+
+**R14-2 후속 정리:** 목록에서 정확한 파일과 참조 교체 범위를 확정·승인한 뒤 대체 검증 및 미사용이 확인된 항목만 제거한다. 기존 플레이어/맵이 사용하는 것은 보존 이유와 전환 조건을 남긴다. 필요한 CoreRedirect·GameplayTag와 활성 의존은 유지한다. `Diagnostics`라는 경로 이름만으로 임시 파일 판정을 하지 않는다. 실제 DefaultGame의 활성 Rifle Cue 경로가 `RifleCore_Prepared_0247`을 사용한다. 에셋 삭제/redirector 정리는 Editor 내부 API, C++ 변경의 빌드는 사용자 담당이다.
+
+**R14-3 통합·제출:** 정리 변경의 영향에 맞춘 회귀 후 최종 후보의 레벨 완주/실패/명시적 재시작/복귀, 교체·조준·회피, HUD/메뉴·해상도와 패키지 실행을 확인한다. 완료한 마이그레이션·독립 검사를 반복하지 않는다. 현재 DefaultEngine의 시작/편집기 맵은 기존 `Level_1`이며 기본 GameMode도 기존 BP다. 제출 시작·복귀 맵과 Cook 대상을 명시한 후 별도 Config 변경 범위를 승인받는다. R13 맵 수용을 전역 실행 경로 교체 완료로 간주하지 않는다. 디자이너 최신 브랜치 반영/실제 병합도 별도 범위다. 빌드·패키징은 사용자 담당이다.
+
+#### 2026-10-14 R14-1 조사 결과 및 R14-2A 구체안 — AGENTS 0.100
+
+사용자가 R14-1 진행을 승인했다. AssetRegistry2,898개, R13 시작점5개의 hard/soft package 의존1,291개(metadata 누락0), 선택 BP26개 그래프·부모·CDO, PawnData3개/보존맵14개를 읽었다. `references_D`는 저장0/Error·ensure·Fatal0, Content 파일 상태 변화0/보호 SHA642개 최종 불변이다. 기존 이식/게임플레이 검증을 반복하지 않았으며 게임 C++/Config/에셋·Git 변경0, 빌드/패키징/Computer Use0이다. 상세 경로·판정·실패 이력은 `docs/handoffs/r14-reference-audit-2026-10-14.md`에 기록했다.
+
+현재 R13 PawnData는 DefaultWeaponDefinition=None, 원본 CM_ThirdPerson/Inventory 계층을 사용한다. Hero는 Legacy 입력/카메라=false, 원본 ADS=true다. 구형 Combat/Equipment 컴포넌트가 남아 있으나 그 존재를 이중 발사/피해로 단정하지 않는다. 구형 무기 의존은 부모 BP_DC_RiflePawn의 실행선 없는 EquipItem 노드가 WID_DC_Rifle 핀 기본값을 보유하는 경로에서 확인했다. 정확한 대상은 EventGraph의 K2Node_CallFunction_8과 여기에만 연결된 K2Node_VariableGet_0이다.
+
+프로젝트 BP 타입319개 중318개 조회 성공, 이전 `/Game/LyraMigration/Death/GCNL_Death`1개에서 로드 시 invalid macro/obsolete pin Compile 오류2개를 확인했다. `type_references_A`는 종료1/전체 검사 실패이며 저장0이다. 활성 Cue는 DefaultGame의 `/Game/GameplayCueNotifies/DCMigration/Death/GCNL_Death`로 별개다. 이 동적 Cue 검색 경로는 정적 package closure만으로 평가하지 않는다. 오류 사본 및 GA_DC_Death·CM_DC_Hip3에셋은 registry referencer0, Source/Config/Plugin 텍스트 경로·이름 참조0이었다.
+
+**다음 R14-2A 제안은 에셋4개만:** BP_DC_RiflePawn의 위 비실행 노드2개 제거/Compile/저장, GA_DC_Death·CM_DC_Hip·비활성 GCNL_Death3개를 최신 해시/참조/dirty·복구 가능 상태 확인 후 Unreal API로 제거한다. 원본 활성 기능·기존 플레이어 실행 그래프·맵/C++/Config를 유지하며 추가 C++ 빌드는 필요 없다. 대상 그래프 보존·삭제 참조 없음·원본 장비/Death/Camera/Cue 경로를 확인하고 영향 범위만 회귀한다. **이 에셋4개 변경/삭제는 아직 미승인·미실행**이다.
+
+구형 Death native2파일은 후속 제거 후보로 남긴다. 기존 플레이어와 맵에 필요한 구형 Equipment/Weapon/Health/HUD/카메라, 원본 기반 DC 계층, CoreRedirect/태그를 삭제하지 않는다. R13 이식 계획의 중간295경로는 현재 파일/Registry 모두0이므로 이전 ‘중간 redirector 유지’ 기록을 현재 잔존으로 읽지 않는다. 이번에 삭제한 것이 아니다. 별개의 기존 redirector97개 및 R13 의존 재질 redirector는 보존한다. 전역 시작/복귀/Cook 변경·디자이너 병합·최종 사용자 빌드/패키징과 전체 R14 완료는 후속 범위다.
+
+#### 2026-10-14 승인된 R14-2A 적용·자동 회귀 통과 — AGENTS 0.101
+
+사용자가 앞서 제안한 에셋4개 정리를 승인했다. 열린 Editor는 사용자가 저장·종료한 뒤 작업했다. 대상4개는 커밋 `7a10c75b0b2af4be2f15f7c104c1bbfe82c4bbe9`의 LFS 포인터/로컬 payload와 현재 파일 해시 일치를 확인해 복구 근거를 확보했다. 새 바이너리 복사·Git stage/commit/merge0이다.
+
+`BP_DC_RiflePawn`의 실행되지 않는 EquipItem 및 단독 self getter2노드만 제거/Compile/저장했다. 실제 graph membership에서 제거됐지만 GC 전 UObject iterator에 남는 객체는 정확히 이2개만 비교에서 제외했고 나머지 그래프/핀·부모·컴포넌트·메시/AnimClass·Hero 설정을 비교했다. 별도 재로드에서 두 노드 부재와 동일성을 다시 확인했다. 구형 WID_DC_Rifle 직접 package 의존이 제거됐다.
+
+GA_DC_Death·CM_DC_Hip·비활성 `/Game/LyraMigration/Death/GCNL_Death`3개는 최신 해시/참조0/dirty·복구 상태 확인 후 Unreal Editor API로 제거했다. 초기 기본 삭제 API는 메모리/Registry만 제거하고 파일이 남아 중단했다. UE5.8의 비교용 기존 참조 조사 `Editor.UseLegacyGetReferencersForDeletion=1`을 삭제 프로세스에서만 적용해 실제 파일 제거까지 성공했고0으로 복원했다. 엔진/Config 수정은 없다. 깨진 Cue의 삭제 과정에서 기존 Compile 오류2개가 발생한 이력은 보존하며 후속 오류0 검증과 구분한다.
+
+`cleanup_Verify_A.json`: 수정 Pawn/실제 자식/기존 GAS 플레이어/활성 플레이어·적 Death/활성 Cue/기본 Camera7개 재로드·Compile 통과, 저장0/Error·ensure·Fatal0. `cleanup_pie_A.json` 및 `R14Cleanup_A`는 **성공1/실패0/오류0/경고15**(기존 Manny14＋Recast1)다. 원본장비1/구형장비0, 탄약30→29, 견착→Hip, 원본 Death3.909→11.913초 및 Pawn제거12.031초, 실패결과·QuickBar 정리를 확인했다. 입력 주입과 검사용 GE·면역 기반 영향 회귀이며 전체 스테이지/보스 마이그레이션 반복이나 물리·화면·음향·복제 검증은 아니다.
+
+최종 상태는 `cleanup_summary_A.json`과 R14 전용 인계를 따른다. 실제 변경은 승인된 에셋1수정/3삭제이며 게임 C++/Config/기타 에셋·맵/DLL/Git index를 보존했다. **추가 빌드 없이 사용자 발사·조준·사망 시각 확인이 다음**이다. 구형 Death native2파일, 잔존 Combat/Equipment 및 기존 플레이어 호환 계층, CoreRedirect/태그, 제출 시작/복귀/Cook, 디자이너 통합과 최종 사용자 빌드/패키징은 이번 승인 밖이다. R14 전체 완료로 표시하지 않는다.
+
+#### 2026-10-14 R14-2A 사용자 확인 전 / R14-2B 제안 — AGENTS 0.102
+
+사용자가 2A 뒤 발사·조준·사망 연출은 아직 확인 전이라고 명시했다. 자동 회귀 통과만 유지하며 사용자 수용을 완료 처리하지 않는다. 독립적인 다음 제안은 `AbilitySystem/Abilities/DCGameplayAbility_Death.h/.cpp`2파일 제거다. 이 구형 클래스는 다른 Source/Config/Plugin 참조가 없고 유일한 자식 GA_DC_Death는2A에서 삭제됐다. 기존 BP 타입 검사318개에서도 구형 타입 함수/cast/핀 참조0이었고 당시 미조회 오류 Cue는2A에서 제거됐다. 전체 Blueprint 검사를 이번에 새로 수행한 것은 아니다.
+
+원본 기반 `DCLyraGameplayAbility_Death`, 활성 캐릭터/Health/Blueprint·맵, CoreRedirect/태그/Config는 그대로 둔다. 검토용 `native_death_proposal_A.patch`와 JSON 근거만 작성했고 실제 소스는 변경하지 않았다. **2파일 삭제는 아직 승인 전**이다. 승인 후 사용자 Development Editor/Win64 빌드1회와 새 DLL의 원본 클래스/현재 Death BP 로드·Compile 확인을 묶는다. 이식/완료한 검증/패키징을 반복하지 않는다. R14-2A 사용자 시각 확인과 R14 전체 잔여 항목은 별도로 남는다.
+
+#### 2026-10-14 R14-2A 사용자 수용 / 승인된 R14-2B 소스 제거 — AGENTS 0.103
+
+사용자가 R14-2A의 PIE 정상 확인과 R14-2B 진행 승인을 명시했다. 2A는 사용자 수용까지 완료다. 제안한 `Source/DreamCatcher/AbilitySystem/Abilities/DCGameplayAbility_Death.h/.cpp`2개(157줄)만 제거했고, 제거 전 해시/외부 참조0 및 제거 후 잔여 참조0을 확인했다. 활성 원본 DCLyraGameplayAbility_Death·Health/캐릭터/맵·에셋·Config/태그는 그대로이며 새 대체 클래스나 Redirect를 추가하지 않았다.
+
+`native_death_before_A.json`/`native_death_removed_A.json`: 다른 보호 파일784개 해시/에셋 파일2,897개 상태 불변, DLL/Git index 보존. Codex는 빌드/패키징·Editor·Computer Use·Git 조작을 하지 않았다. Python AST/공백·참조 확인은 UHT/C++/링크 성공이 아니다.
+
+**다음은 사용자 Development Editor/Win64 빌드1회**다. `r14_native_death_verify.py`는 빌드 완료 후 새 프로세스에서 구형 native 미등록/원본 등록과 GA_Hero_Death·GA_DC_EnemyDeath·실제 Lyra Pawn·Boss4개 로드/Compile을 확인하도록 준비했다. 삭제 전 DLL 해시와 같은 경우 거부하며 저장은 하지 않는다. 현재 Unreal 실행 전이다. 완료된2A 에셋 정리/마이그레이션/PIE를 반복하지 않는다. R14-2B 검증 및 전체 잔존 계층·최종 통합/패키징은 미완료다.
+
+#### 2026-10-14 R14-2B 검증 완료 / R13 패키지 경로 준비 — AGENTS 0.104
+
+사용자 UBT 빌드02:50:12 KST 시작·32.46초 성공, DLL02:50:44/6,625,792 bytes 갱신을 확인했다. `native_death_verify_Verify_A.json`에서 구형 native 미등록/원본 등록 및 현재 Death2·Pawn·Boss4개 로드/Compile이 통과했다. 종료0/Error·ensure·Fatal0/저장0, 기존 소스·Config·에셋 보존. **R14-2B 승인 범위 검증 완료**, 2A 사용자 수용도 유지하며 같은 PIE/이식/정리를 반복하지 않는다.
+
+사용자가 다음 패키지 검증을 R13으로 우선 준비하도록 선택했다. DefaultEngine.GameDefaultMap을 `/Game/DreamCatcher/GAS/Test/R13/L_DC_Level1UI.L_DC_Level1UI`로 변경하고, DefaultGame의 `[/Script/UnrealEd.ProjectPackagingSettings]` MapsToCook에 `/Game/DreamCatcher/GAS/Test/R13/L_DC_Level1UI`와 `/Game/DreamCatcher/GAS/Test/R10/LyraEncounter/L_DC_LyraFiniteEncounter`2개를 추가했다. EditorStartupMap은 기존 Level_1, 전역 기본 GameMode/GameInstance와 기존 ReturnMap은 유지한다. R13 월드의 기존 override가 StageUI GameMode를 선택한다. 맵/플레이어 에셋·게임 C++·uproject를 수정하지 않았다.
+
+`package_config_Verify_A.json`은 새 commandlet에서 유효 시작/에디터/전역 설정, Cook 맵2개 존재, R13 World GameMode·Experience·bUseExperienceUI, R10 ReturnMap, R13을 포함한 Experience/ActionSet AlwaysCook 규칙2개 및 DCStageUI enabled를 확인했다. 종료0/Error·ensure·Fatal0/저장0, 에셋 상태 불변, 변경 파일은 위 Config2개뿐이다. UE5.8의 실제 config section override와 MapsToCook의 명령줄 맵 목록 후순위 처리도 엔진 소스로 확인했다. 전체 Game 폴더 강제 Cook, 기존 맵 삭제, Feature/모듈 교체는 하지 않았다.
+
+**다음은 사용자 Windows Development 패키징·실행 확인**이다. 추가 Editor C++ 빌드는 필요 없다. 패키지 기본 시작 R13·HUD/메뉴·완주/실패·명시적 재시작·기존 R10 복귀를 확인한다. 설정 조회는 Cook/패키징/패키지 실행 성공이 아니며 모두 아직 미실행이다. 최종 근거는 `package_prepare_summary_A.json` 및 R14 전용 인계다. 디자이너 최신 맵/브랜치 통합, 구형 호환 계층 후속 전환, 최종 제출 패키지와 전체 R14 완료는 별도 잔여 범위다.
+
+#### 2026-10-14 패키징 보류·R14 후 main 병합 / 최종 Blueprint Compile — AGENTS 0.105
+
+사용자의 최신 지시는 ‘패키징 과정은 건너뛰고 R14가 끝난 뒤 디자이너 main과 병합’이다. 이에 패키징을 현재 R14 종료 조건에서 분리하되 보류·미검증으로 남긴다. 지금 패키징을 요청하거나 실제 병합을 먼저 수행하지 않는다. 기존 R13 시작/MapsToCook 설정은 임의 원복하지 않았다.
+
+새 DLL 기준 `/Game` Blueprint/UMG/AnimBP/ControlRigBlueprint 자산316개를 엔진 SkipSave API로 Compile했다. `final_blueprints_A.json`/`R14FinalBlueprints-A.log`: **성공316/실패0, Error·ensure·Fatal0, 종료0**, 경고29(Manny14＋Quinn14＋B_LyraGameInstance의 이전 Script package1). 에셋 저장0, 소스/Config·에셋 상태·DLL/Git index 불변. C++ 빌드·Cook/패키징·PIE/마이그레이션·Git 병합은 하지 않았다. 맵 내부 LevelScript/외부 플러그인 자산 전체·모든 장치/복제/패키지 실행 검증으로 확대하지 않는다.
+
+2A 사용자 PIE 수용과2B 사용자 빌드/등록·Death 연결 검증, 기존 R11~R13 완주/실패/재시작·메뉴 수용은 유지한다. 기존 플레이어·맵이 사용하는 구형 호환 계층을 일괄 제거하지 않는다. 활성 원본 입력/장비·발사·사망 경로와 비활성 잔존 컴포넌트를 구분하며 전체 프로젝트의 구형 구현 제거 완료를 주장하지 않는다.
+
+사용자는 **창 크기/해상도·DPI별 UI 배치는 아직 확인 전**이라고 답했다. 현재 R14 마감의 남은 사용자 항목은 HUD·보스 체력/페이즈·Esc 메뉴·결과 버튼이 창 크기 변경에도 잘리거나 겹치지 않는지 확인하는 것이다. 그 뒤 현재 브랜치 R14 마감→main 병합 준비로 진행한다. 반복된 발사/조준/사망 확인은 요구하지 않는다. 종합 상태는 `premerge_closeout_A.json`과 R14 전용 인계를 따른다. 아직 R14 전체 완료·main 병합·패키징 성공 상태는 아니다.
+
+#### 2026-10-14 R14 완료 / 디자이너 main 병합 준비 — AGENTS 0.106
+
+사용자가 창 크기 변경에도 UI 정상 동작을 확인하고 R14 완료 정리를 요청했다. **패키징을 제외한 현재 GAS-System의 R14 정리·검증·사용자 수용을 완료**로 기록한다. 2A 에셋 정리/PIE 수용, 2B native 제거/사용자 빌드·연결 검증, 최종 Blueprint316개 Compile, 이번 UI 배치 수용이 근거다. 모든 해상도·OS DPI/장치·복제·패키징까지 검증한 뜻은 아니며 기존 경고29와 기존 플레이어/맵 호환 계층 보존을 유지한다. 패키징은 사용자 지시로 계속 보류·미검증이다.
+
+병합 준비에서는 디자이너 작업이 모두 main에 푸시됐다는 사용자 확인과 GitHub/로컬 기준 일치를 확인했다(main ebb169c, GAS7a10c75, 공통조상50ef6ac; main23/GAS18독립 커밋). main변경964경로, GAS저장변경2,211경로 및 현재 미커밋 작업까지 비교한 동일 수정 경로 교집합0이다. 그러나 main의 Box_1 옛13경로 삭제/새폴더 추가 중5개가 R13 정적 의존에 남아 있어 Git 충돌0을 에셋 호환 완료로 해석하지 않는다.
+
+권장안은 현재 R13/R14 변경의 checkpoint 커밋 후 별도 `codex/integrate-main-20261014`에서 main을 반영하고, 디자이너 새경로와 함께 옛 Box_1 묶음13개를 기존 맵 호환용으로 보존하는 것이다. 누락 main LFS951개 약635MB 조회와 저장 대상 분류를 완료했으나 다운로드/실제 커밋·병합은 하지 않았다. 디자이너 최신 Level_1의 gameplay 활성 연결, 최종 main 반영/push와 패키징은 별도다. 실제 실행 승인 전이며 정확한 경로와 근거는 `docs/handoffs/main-merge-preparation-2026-10-14.md`를 따른다.
 
 ## 원본 검수 근거와 미검증 항목
 
