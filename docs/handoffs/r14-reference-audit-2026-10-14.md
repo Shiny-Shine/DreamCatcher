@@ -1,8 +1,144 @@
-# R14 정리 작업 인계
+# R14 정리 및 Level_1 정식 전환 조사
+
+## 최신 — 잔여 플레이어 애니메이션·입력·블록아웃 정리 완료 / AGENTS 0.113
+
+사용자 승인 후 옛 플레이어 AnimBP/레이어/롤5개, 옛 입력·Touch9개, Test_Map 블록아웃/전용 generated 메시9개를 추가 삭제했다. 최신 외부 참조0과 복구 근거를 확인했고22:49 새 프로세스에서 끊어진 참조0/Error·ensure0으로 검증했다. Level_1과 실사용 에셋·Source·Config·DLL은 그대로이며 기존 사용자 수용을 유지한다. 현재 입력 Action5개, 디자이너 Asset 맵과 연결 메시, 보스/실맵에서 사용하는 Mannequins 자료 및 회귀 검사는 보존한다. 추가 빌드·PIE 반복은 필요 없고 패키징은 계속 보류다. [정확한 정리 범위와 인계](level1-production-cleanup-2026-10-14.md)를 따른다. 프로젝트 전체 미사용 라이브러리가 0이라는 판정은 아니다.
+
+---
+
+## 최신 적용 — Level_1 R13 흐름·NavMesh 연결 / AGENTS 0.109
+
+사용자는 첫 전환 묶음을 승인하고 **돌아가기를 같은 맵 재시작으로 임시 처리**하도록 정했다. 추후 메인화면이 만들어지면 ReturnMap을 그 맵으로 바꾼다. 아래 정리 후보 전체를 삭제하거나 R13 플레이어/무기/AI 자산을 옮기는 작업은 아직 하지 않았다.
+
+| 변경 | 적용 내용 |
+|---|---|
+| `Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1.umap` | 구형 `BP_EnemyCharacter_C_1` 및 Engine `PlayerStart_1` 제거/교체. Lyra 시작점, 일반전투2회→보스→완료의 StageDirector/Encounter/스포너, NavMesh 연결 |
+| 새 `Content/DreamCatcher/Blueprints/Core/BP_DC_Level1GameMode.uasset` | R13 GameMode 복제본. Controller/Experience/HUD/팀/결과 기본값은 동일, ReturnMap만 Level_1. 기존 R13 BP는 변경하지 않음 |
+| `Config/DefaultEngine.ini` | GameDefaultMap을 Level_1으로 지정. EditorStartupMap은 이미 Level_1이며 그대로 유지 |
+| `Config/DefaultGame.ini` | 명시적 MapsToCook를 Level_1로 지정. 기존 Experience/ActionSet/Cue 검색·원본 자산은 유지. 실제 Cook/패키징은 미실행 |
+| 자동화2파일 | `Scripts/Editor/level1_r13_flow_setup.py`, `level1_r13_flow_probe.py`. 승인된 맵/BP만 저장하며 원본 이식/전체 Blueprint 검사를 반복하지 않음 |
+
+**환경 보존:** 원래4,644개 Outliner 액터 중 교체 대상2개를 제외한 환경4,642개의 클래스·위치/회전/크기를 저장 전후 및 새 프로세스 재로드에서 비교해 동일함을 확인했다. 환경 에셋/건물/장식/유효 BPP_NewMap은 수정하지 않았다. 복구 기준은 main의3665f3b 및 검증한 원본 Level_1 LFS payload이며 `before_A.json`에 기록했다.
+
+**배치:** 기존 시작점 위치/회전/크기를 유지했다. 현재 저장된 바닥을 trace하고 AI 캡슐과 충돌하지 않는 위치를 확인하여 일반 스폰을(335,165,81), (635,165,81), 보스를(1035,165,73)cm에 배치했다. R13과 같은 시작 구역의 기능 연결이며, 디자이너가 추후 맵 전역의 전투 위치/간격을 조정할 수 있다. R13 원본의 일반전투2회→보스→Complete, 각 스포너1명, 자동 리스폰 없음, HUD/메뉴/결과 흐름을 유지한다.
+
+**NavMesh:** 맵에서 충돌하는 환경4,251개의 합집합 bounds에500cm 여유를 주었다. 범위는 min=(-22982.94,-9661.08,-1780), max=(35270,27222.59,20012.91)cm, RuntimeGeneration=Dynamic이다. 지하 터널과 높은 환경도 범위에 포함한다. 전체 표면의 보행 가능/성능 수용까지 보증하는 것은 아니며, 전투 지점3개의 실제 AI 이동을 확인했다.
+
+**자동검증 최종 결과:** 새 프로세스의 저장본 검증 `setup_Verify_A.json` 성공. `Level1Flow_D`는19:49 완료, 성공1/실패0/Error·ensure·Fatal0/프로세스0이다. 경고17은 Manny PoseAsset14개와 각 월드 초기화의 Recast/Crowd3개이며 별도로 유지한다.
+
+- 실제 Experience/HUD/라이플 준비, 입력 주입 발사30→29, 견착 진입/Hip 복귀.
+- AIController의 실제 MoveTo 요청3건(RequestSuccessful), 부분 경로 허용=false, 전투 지점3개 도달(종점100cm 이내, 구간 변위 합992.85cm). 이 동안 원본 BT를 일시 중지했다가 복구한 진단이며 자연 행동/시각은 사용자 확인과 구분한다.
+- 진단 GAS 피해로 일반전투2회→보스/체력 HUD→클리어 결과와 객체 정리.
+- 결과 상태의 공개 Exit API로 같은 Level_1 재로드, 새 실행/체력/이동 입력 복구(204.63cm).
+- 원본 메뉴 ReturnButton→확인창 버튼 경로로 같은 Level_1을 다시 열고 정상 새 실행 확인.
+- Unreal에서 읽은 실효 GameDefaultMap과 MapsToCook도 Level_1 일치. 사용자 SaveGames 변경0, 에셋 저장0, 보호 파일 변화0.
+
+**검사 실패 이력은 보존한다:** PIE A/B의 Python NavigationSystem 정적 UFunction 호출은 CDO의 World 조회 ensure를 유발했다. A의 결과 UI private Content 조회도 실패했다. C는 SoftObjectPath를 str로 검사해 초기 assertion에 실패했다. 실제 AIController의 경로 추종과 기존 export_text 방식으로 교정한 D만 최종 통과 근거로 사용한다. 이 과정에서 게임 C++/에셋을 다시 바꾸거나 ensure를 허용하지 않았다.
+
+근거는 `Saved/Diagnostics/Level1Integration/`의 `before_A.json`, `placement_A.json`, `setup_Apply_A.json`, `setup_Verify_A.json`, `pie_D.json`, `completion_A.json`, 그리고 `Saved/Automation/Level1Flow_D/index.json`이다. 완료한 R0~R14 원본 이식, 전체 Blueprint Compile, native 회귀를 재실행하지 않았다. **C++ 변경/빌드·패키징은0, DLL도 기존 검증본 유지**다.
+
+**다음 사용자 확인:** Editor를 열어 Level_1에서 환경/시작 위치, 자연 AI 이동·전투/보스/HUD, 결과 및 Esc 메뉴의 돌아가기가 같은 맵을 새로 시작하는지 짧게 확인한다. 추가 빌드는 필요 없다. 확인 후 GitHub Desktop에서 새 작업 브랜치(예: `codex/level1-r13-flow`)에 현재 변경을 옮겨 커밋/푸시하며 main에 직접 커밋하지 않는다. 기존 테스트 맵/레거시 제거와 실사용 자산 정식 경로 이관은 후속 묶음이다.
+
+---
+
+## 조사 이력 — 2026-10-14 main 병합 후 정리 후보 / AGENTS 0.108
+
+**사용자 확정 방향:** 디자이너 `/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1`의 환경·건물·장식을 유지하고, 그 맵의 기존 플레이 흐름은 폐기한다. R13 테스트 맵에서 검증한 플레이어·입력·라이플·AI·스테이지·보스·HUD/메뉴/결과 흐름을 Level_1에 연결한다. 테스트 맵을 최종 플레이 맵으로 남기는 방향이 아니다.
+
+기준 main은 PR #1 병합 커밋 `3665f3ba690bab286784da7aae183b7485932cd0`이다. 사용자는 리뷰 수정본 PIE 정상 동작과 커밋/푸시, 병합까지 직접 완료했다. R14 및 리뷰 검증 완료를 취소하거나 반복하지 않는다. 이번 추가 작업은 **조사와 변경안 정리**이며 C++·Config·에셋 수정/삭제, Blueprint Compile, PIE, 빌드/패키징, Git 조작은 하지 않았다.
+
+### 실제 두 맵의 차이
+
+| 항목 | 디자이너 Level_1 | 검증된 R13 L_DC_Level1UI |
+|---|---|---|
+| 에디터 Outliner 조회 액터 | 4,644 | 1,116 |
+| GameMode | `/Game/Blueprint/BP_DreamCatcherGameMode` | `GAS/Test/R13/BP_DC_StageUIGameMode` |
+| 플레이어 선택 | 구형 `BP_DreamCatcherChracter` / `BP_DreamCatcherPlayerController` | Experience → `DA_DC_LyraAIPawn` → `BP_DC_LyraInventoryPawn` |
+| 현재 전투 배치 | 구형 `BP_EnemyCharacter_C_1` 1개 | 일반 Lyra 스포너2개＋보스 스포너1개 |
+| 진행 배치 | StageDirector/EncounterController 없음 | StageDirector1개＋EncounterController3개, 일반전투2회→보스전→Complete |
+| PlayerStart | Engine.PlayerStart1개 | DCLyraPlayerStart1개 |
+| NavMeshBoundsVolume | 0개 | 1개 |
+| 돌아가기 | 구형 맵 흐름 | R10 `L_DC_LyraFiniteEncounter`로 이동 |
+
+LevelScriptActor도 Outliner API와 별도로 조회했지만 두 맵에서 발견되지 않았다. 따라서 이번 조회에서 별도 Level Blueprint 진행 로직은 확인되지 않았다. 열린 사용자 Editor의 미저장 상태는 조사하지 않았으며, 위 값은 저장된 맵 기준이다.
+
+R13의 게임플레이 배치를 옮겨야 하며 **맵 전체 복제로 디자이너 환경을 덮어쓰지 않는다.** 현재 R13 스포너 좌표를 그대로 최종 배치로 확정하지 않는다. Level_1의 충돌·이동 가능 공간에 맞춰 시작 위치/일반전투/보스 위치와 NavMesh 영역을 정하고 연결해야 한다. 기존 자동 리스폰 없음, 명시적 재시작/결과 흐름은 유지한다.
+
+### 정리 후보 분류
+
+숫자는 경로/분류별 조사 수이며 서로 겹칠 수 있다. ‘참조 없음’은 저장된 package 참조와 확인한 소스/설정 범위의 결과다. 모든 동적 이름·태그 조회나 최종 Cook의 미사용 판정을 의미하지 않는다.
+
+| 묶음 | 확인된 범위 | 처리 방향과 선행 조건 |
+|---|---|---|
+| GAS 테스트 에셋 | `Content/DreamCatcher/GAS/Test/`83개, 그중 맵8개 | 아래 실사용 자산을 정식 경로로 옮긴 뒤 과거 테스트/맵 제거. 폴더 전체 즉시 삭제 불가 |
+| 실사용 경로에 섞인 테스트 폴더 | 맵 간 이동을 제외한 R13 게임플레이 참조에38개 | 31개는 플레이어/입력/AI/보스/UI 등 정식 경로 이관 후보. 나머지7개는 아래 테스트 부여/빈 Set 해제 후보 |
+| 과거 GAS 테스트 BP/맵 | `Blueprints/AI/Test/BP_DC_GASTestTarget`, `Core/Test/BP_DC_GAS_TestGameMode`, `BP_DC_PlayerController_GAS_Test`, `Player/Test/BP_DC_Player_GAS_Test`, `Map/Test_Map/L_GAS_CombatTest` | 테스트 표적·구형 플레이어 묶음 제거 후보. DefaultPawnData의 구형 fallback 연결부터 교체 |
+| 구형 전투/장비/UI 구현 | Combat·Health·Equipment·Weapon·Reticle·HUD·Camera·Enemy14계열28개 h/cpp와 대응 BP | 활성 Pawn/Controller의 잔존 컴포넌트·변수·타입 참조를 먼저 분리한 뒤 제거 |
+| 별도 테스트 표적 | `AI/DCGASTestTarget.h/.cpp`, `Development/DCRifleIntegrationTarget.h/.cpp`, `BP_DC_RifleDeathTarget` | 구형 전투 테스트/라이플 테스트 맵과 함께 제거 후보 |
+| C++ 회귀 검사 | `Source/DreamCatcher/Tests/`37파일(CPP26/H11), 헤더 선언44타입 | 확인한 외부 런타임 include/선언 타입 사용과 BP 부모 참조0. 과거 이식 검사는 정리 후보, 입력·발사·장비·스테이지·보스 핵심 회귀는 개발 전용으로 보존 권장. 일반 속성/함수 참조까지 전수 미사용이라고 확정한 것은 아님 |
+| 템플릿 코드 | `Variant_Combat`42, `Variant_Platforming`8, `Variant_SideScrolling`26 =76파일 | 현재 저장 에셋의 native parent 및 다른 런타임 소스의 해당 타입 사용을 찾지 못함. 템플릿 정리 묶음 후보이며 Source include 경로도 함께 정리 |
+| 옛 템플릿 경로 | `Content/ThirdPerson`5, `Variant_Combat`28, `Variant_Platforming`11, `Variant_SideScrolling`19 =63개 | 모두 redirector이고 목적지 `/Game/Start_Contents/`가 디스크/Registry에 없음. 디스크 referencer0. 깨진 템플릿 redirector 제거 후보 |
+| 나머지 redirector | 전체114개, 디스크 referencer 없는 것은111개 | 위63개와 구분. 유효 목적지가 있는 redirector는 실제 참조 정리 후 Unreal에서 처리하며 일괄 raw 삭제하지 않음 |
+| 이식 작업 스크립트 | `Scripts/Editor/`Python87개＋추적 중 pycache4개 | 일회성 이식/진단 레시피는 작업 종료 후 정리·보관. 이번 정식 경로 이관에 필요한 reader/helper는 마지막까지 유지. pycache4개는 우선 정리 후보 |
+| Editor 이식 플러그인 | `Plugins/DCRifleMigrationTools`추적26파일, Editor 모듈1개 | 저장 에셋의 `/Script/DCRifleMigrationTools` package 의존0. 아직 에셋 조사/이관 스크립트가 사용하므로 실제 에셋 정리 후 `.uproject` 등록과 함께 제거 검토 |
+| 수동 백업 소스 | 루트 `백업/`13파일 | 현재 빌드 Source 루트 밖의 옛 C++/Build.cs/uproject 사본. Git 병합 커밋을 복구 기준으로 두고 정리할 우선 후보 |
+| 옛 Box_1 복사본 | `DreamCatcher_ENV/Prop/Box_1/`13개 | 외부 직접 참조는 R11/R12/R13 맵뿐. Level_1 및 맵을 제외한 새 게임플레이 참조0. 세 테스트 맵 폐기 후 제거 후보. 디자이너 `Prop/Mesh/Box_1`은 유지 |
+| Saved 진단/생성물 | `Saved/Diagnostics`, `Saved/Automation`, 로그·DDC·Intermediate 등 | 레거시 기능과 구분. Git에서 무시되는 자료이며 최종 근거·복구 자료를 보관한 뒤 별도 용량 정리. 저장 게임·설정과 추적 중 Binaries를 일괄 삭제하지 않음 |
+
+### 실제 PawnData에 남은 테스트 부여 7개
+
+`DA_DC_LyraAIPawn`과 기존 `DA_DC_RiflePawn`의 AbilitySets에서 아래 연결을 확인했다. 클래스/그래프/부여 목록을 직접 읽었으며 새 PIE나 Compile은 실행하지 않았다.
+
+1. `/Game/DreamCatcher/GAS/Test/AS_DC_R2_TagRelations`와 `GA_DC_R2_TagFire`, `GA_DC_R2_TagReload`: **3개**. 두 Ability는 입력 태그가 비어 있고 Commit/PrintString/WaitDelay/End 검사 그래프다. 현재 라이플의 실제 발사/재장전 Ability와 구분하여 Set 부여를 해제하고 제거할 후보다. 이름이 비슷한 원본 `/Game/LyraMigration/AbilitySystem/TagRelationships_ShooterHero`는 실전 태그 관계 데이터이므로 보존한다.
+2. `/Game/DreamCatcher/GAS/Test/R9/Signature/AS_DC_SignatureSmoke`, `GA_DC_SignatureSmoke`, `GE_DC_SignatureCooldownSmoke`: **3개**. InputTag.Ultimate에 실제로 연결됐지만 효과는 TestCommitCount/TEST 출력·0.35초 대기·검증용2초 쿨다운뿐이다. 제거하면 현재 Q 입력의 테스트 반응이 없어지는 차이가 있다. 정식 시그니처의 실제 효과를 이번 정리에서 임의 제작하지 않으며 `/Game/DreamCatcher/GAS/Abilities/Signature/GA_DC_SignatureBase`와 입력 확장 기반은 별도 보존 후보다.
+3. `/Game/DreamCatcher/GAS/Test/R4/AS_DC_PlayerPawnBase_R4`: **1개**. 현재 GrantedGameplayAbilities/Effects/Attributes가 모두 빈 Set이다. PawnData의 잔존 연결과 함께 제거 후보로 분류한다.
+
+세 PawnData(현재 Lyra AI/플레이어용, 구형 Rifle용, AssetManager fallback용)의 중복/잔여 AbilitySet·카메라·장비 필드도 함께 정리해야 한다.
+
+### 이름만 보고 지우면 안 되는 실사용 계층
+
+- `Development/DCRifleIntegrationActors`의 **Controller**는 현재 Inventory/QuickBar/라이플 장착·해제를 담당한다. `DCLyraAIIntegrationController`는 그 자식이며 현재 R13 PlayerController의 native 기반이다. 이 파일에는 구형 R5 테스트 GameMode도 함께 있으므로 통째로 삭제하지 않고 실사용 Controller를 정식 Player 계층으로 분리/정리할 대상이다.
+- `DreamCatcherCharacter`와 `DreamCatcherPlayerController`는 새 플레이어의 native 상속 기반이기도 하다. 구형 CombatComponent, FollowCamera/CameraBoom, HUD·입력 호환 분기 등 잔존 부분을 좁혀 제거해야 한다. 클래스 전체 삭제 대상이 아니다. 구형 `DreamCatcherGameMode`는 별도 `DCLyraGameMode`와 다르며 구형 BP/테스트 GameMode 폐기 후 제거 검토한다.
+- `BP_StageDirector`, `BP_EncounterController`, `DCStageDirector`, `DCEncounterController`, `DCEnemySpawner`는 R13에서도 사용한다. **DCEnemySpawner의 EnemyClass 구형 분기**와 **GASEnemyClass 보스 분기**를 구분한다. `DCBossCharacter : DCGASEnemyCharacter`이므로 보스 기반인 GAS Enemy/Health/Death 계층은 보존한다.
+- `/Game/LyraMigration/`584개 중 맵을 제외한 게임플레이 package 참조에458개가 들어간다. 나머지도 Config·AssetManager·UI/태그 검색으로 사용될 수 있다. 특히 `Rifle/Diagnostics/Explicit/RifleCore_Prepared_0247`은 현재 실전 라이플이며 `UI/R13`은 현재 HUD/메뉴다. 이름이 Migration/Diagnostics라는 이유로 삭제할 수 없다. 필요한 묶음을 정식 경로로 옮기는 대상이다.
+- CommonGame/CommonUI/CommonUser/GameSettings/UIExtension/GameplayMessageRouter/ModularGameplayActors 등 현재 런타임 플러그인과 디자이너용 Win64 DLL은 삭제 대상이 아니다. DCLyra 원본 계층과 Character/AI/Stage/Boss는 핵심 게임 코드다.
+
+### 설정과 추가 결정이 필요한 연결
+
+- `DefaultEngine.ini`의 GameDefaultMap은 R13, EditorStartupMap은 Level_1, GlobalDefaultGameMode는 구형 BP다. 새 Level_1 GameMode override와 기본 실행 설정을 함께 맞춘다.
+- `DefaultGame.ini`의 MapsToCook2개는 R13/R10 복귀 테스트 맵이다. Experience/ActionSet AlwaysCook 스캔도 Test/R10·R13 및 LyraMigration/AI에 걸려 있다. 에셋 경로만 옮기거나 삭제해서는 안 된다.
+- `DCAssetManager.DefaultPawnData`가 구형 `/Game/DreamCatcher/GAS/Pawn/DA_DC_PlayerPawn`이고, 이 데이터가 옛 테스트 플레이어·WID_DC_Rifle을 참조한다. fallback도 정식 PawnData로 교체해야 구형 장비/플레이어를 안전하게 제거할 수 있다.
+- GameplayCueNotifyPaths에 실전 라이플의 Diagnostics 경로가 등록되어 있다. Cue/원본 클래스 CoreRedirect는 이관 후 실제 serialized 참조를 확인하여 최소 변경한다. `DefaultGameplayTags.ini`의 `Test.R2.CostCharge`는 회귀 검사에서도 사용하므로 해당 검사 처리와 함께 정리한다.
+- `DefaultEditor.ini`의 `/Game/ThirdPersonCPP/Maps/ThirdPersonExampleMap`, `DefaultEditorPerProjectUserSettings.ini`의 `/Game/ThirdPersonCPP`는 오래된 템플릿 편집 경로다. 정리 후보지만 이번에는 Config를 수정하지 않았다.
+- **돌아가기 목적지는 아직 결정이 필요하다.** 현재 R13의 ReturnMap은 R10 테스트 맵이며, 이를 지우거나 null로 두면 메뉴/결과의 돌아가기가 동작하지 않는다. 등록된 맵에서 정식 로비/프런트엔드 맵은 확인되지 않았다. 테스트 맵 폐기 전에 정식 복귀 목적지 또는 임시 동작을 확정해야 하며, 버튼 삭제/기능 축소로 숨기지 않는다.
+
+### 권장 실행 순서 — 아직 적용하지 않음
+
+1. **Level_1의 플레이 흐름 교체 묶음:** 디자이너 환경 보존, 구형 적1개/기존 GameMode·PlayerStart 연결 교체, 검증된 Experience·Pawn/Controller·HUD 및 일반전투2→보스→결과 배치, NavMesh, 기본 실행/Cook/복귀 연결을 함께 다룬다. 실제 위치와 복귀 목적지를 확정하고 연결한 뒤 사용자 짧은 완주 확인을 받는다.
+2. **실사용 에셋의 정식 경로 이관 + 활성 테스트 부여 정리:** 테스트 폴더의 실사용31개 및 라이플/UI 등 필요한 imported 자산을 이름/부모/기본값을 보존하며 Unreal API로 이동하고 참조/설정을 갱신한다. 위7개 테스트 흔적과 중복 PawnData를 해제·정리한다. 실제 기능 기반은 남긴다.
+3. **레거시·과거 테스트 묶음 제거:** 구형 플레이어/적/HUD/장비·카메라의 호환 연결과 native 사용을 끊은 뒤 대응 BP/코드를 정리한다. 기존 GAS 테스트맵8개와 L_GAS_CombatTest, 테스트 표적, 옛 Box13개는 이관·복귀 전환 후 처리한다. Source 변경 후 C++ 빌드는 사용자 담당이다.
+4. **개발 잔재 마감:** 필요한 핵심 회귀와 최근 근거를 보존하고, 오래된 테스트/이식 스크립트·플러그인·템플릿76파일/63redirector·백업13파일·pycache4개를 승인된 정확한 목록으로 정리한다. 전체 redirector 일괄 삭제나 Binaries/사용자 저장 설정 제거는 하지 않는다.
+
+각 실제 변경 묶음은 정확한 파일·에셋·Config 범위를 먼저 제시한다. 현재 요청은 후보 조사이며 위 대량 이동/삭제를 이번 조사에서 실행한 것이 아니다.
+
+### 조사 근거와 한계
+
+- `Saved/Diagnostics/Level1Cleanup/assets_A/`: package3,786개 metadata/dependencies/referencers, 선택 BP36개, PawnData3개, 저장 맵3개. BP22개는 기존 R14 스냅샷과 파일 해시가 일치해 재사용했고14개만 새로 읽었다.
+- `flow_details_A.json`: 테스트 부여/현재 입력/두 GameMode 및 숨겨진 LevelScriptActor·NavMesh 추가 확인. 저장/Compile0, ensure0.
+- `classification_A.json`: GAS/Test83개·LyraMigration584개·옛 Box13개·legacy native 소비자·정식 이관 의존 경로의 전체 목록.
+- `text_A.json`: 추적 파일과 코드 그룹별 목록/크기, native 선언/소비자, Source/Config의 문자열 경로.
+- `redirector_candidates_A.json`: 전체114개 및 목적지가 없는 템플릿63개. `Content/Start_Contents`는 디스크/Registry 모두 부재다.
+- 에셋 파일3,788개의 크기/수정 시각과 보호 소스·Config·DLL·Git index 불변. 두 Unreal 조회 모두 종료0/Error·ensure·Fatal0. 원본 Lyra script import 및 Manny PoseAsset/NavMesh 관련 경고는 삭제 성공/실패와 구분한다.
+- `/Content/BlockingStarterPack/`은 Git 무시 대상이며 로컬에만 있는 파일도 포함한다. 두 pack 맵은 디스크에 있지만 Registry에 없었다. 이 미검증 외부 팩을 정리 대상으로 임의 확정하지 않는다.
+- package closure는 실행/Cook 목록이 아니다. PrimaryAssetId, 태그/문자열 로딩, C++ native 타입·Blueprint 핀 참조는 실제 삭제 직전 해당 범위에서 다시 확인해야 한다. 이번 조사에는 새 플레이어/맵 활성 변경이나 패키징 검증이 없다.
+
+---
+
+## 아래는 R14 완료 당시 이력
 
 기준일: 2026-10-14 KST. 브랜치: `GAS-System`. R13 승인 범위의 사용자 수용은 완료 상태를 유지한다.
 
-## 최신: R14 완료 / 디자이너 main 병합 준비 — AGENTS 0.106
+## 이력: R14 완료 / 디자이너 main 병합 준비 — AGENTS 0.106
 
 사용자가 **창 크기를 바꿔도 UI가 정상 작동함을 확인**했고 R14 완료 정리를 요청했다. 이에 패키징을 제외한 현재 GAS-System의 R14 정리·검증·사용자 수용을 완료로 기록한다. 구체적인 화면 크기/OS DPI 수치를 보고받은 것은 아니므로 모든 해상도·장치 검증으로 확대하지 않는다. 패키징은 사용자 지시에 따라 보류·미검증이고 기존 경고29 및 기존 플레이어/맵 호환 계층 보존도 유지한다.
 

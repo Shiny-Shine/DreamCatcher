@@ -17,13 +17,6 @@
 	],
 	"Plugins": [
 		{
-			"Name": "DCRifleMigrationTools",
-			"Enabled": true,
-			"TargetAllowList": [
-				"Editor"
-			]
-		},
-		{
 			"Name": "ModelingToolsEditorMode",
 			"Enabled": true,
 			"TargetAllowList": [

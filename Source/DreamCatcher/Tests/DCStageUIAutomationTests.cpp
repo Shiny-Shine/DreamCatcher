@@ -5,7 +5,7 @@
 
 ADCR13StageModeFixture::ADCR13StageModeFixture()
 {
-	ReturnMap = TSoftObjectPtr<UWorld>(FSoftObjectPath(TEXT("/Game/DreamCatcher/GAS/Test/R10/LyraEncounter/L_DC_LyraFiniteEncounter.L_DC_LyraFiniteEncounter")));
+	ReturnMap = TSoftObjectPtr<UWorld>(FSoftObjectPath(TEXT("/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1.Level_1")));
 }
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR && WITH_SERVER_CODE
@@ -64,7 +64,7 @@ bool FDCStageUIMenuTravelTest::RunTest(const FString&)
 	F.World.TickTestWorld(.02f); F.World.TickTestWorld(.02f);
 	TestEqual(TEXT("One queued request"), F.Mode->TravelCalls, 1);
 	TestEqual(TEXT("Existing return destination"), F.Mode->LastTravel,
-		FName(TEXT("/Game/DreamCatcher/GAS/Test/R10/LyraEncounter/L_DC_LyraFiniteEncounter")));
+		FName(TEXT("/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1")));
 	return !HasAnyErrors();
 }
 

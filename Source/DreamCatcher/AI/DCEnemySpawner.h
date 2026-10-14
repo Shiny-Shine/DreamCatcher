@@ -6,7 +6,6 @@
 
 class UArrowComponent;
 class USceneComponent;
-class ADCEnemyCharacter;
 class ADCGASEnemyCharacter;
 class ADCEnemySpawner;
 class ADCLyraPlayerBotController;
@@ -53,10 +52,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
 	TObjectPtr<UArrowComponent> SpawnPoint;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawner")
-	TSubclassOf<ADCEnemyCharacter> EnemyClass;
-
-	/** Opt-in R10 route. When assigned it takes precedence; legacy EnemyClass is retained. */
+	/** GAS NPC route, used by the boss. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawner|GAS")
 	TSubclassOf<ADCGASEnemyCharacter> GASEnemyClass;
 
@@ -64,7 +60,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawner|GAS")
 	bool bCleanupOwnedGASNPCs = false;
 
-	/** Opt-in finite Lyra route, ahead of GAS/legacy. PawnData comes from the Experience.
+	/** Finite Lyra route, ahead of the GAS NPC route. PawnData comes from the Experience.
 	 * Reuses the original bot controller BP (Inventory/QuickBar/BT); no respawn policy. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawner|Lyra")
 	TSubclassOf<ADCLyraPlayerBotController> LyraBotControllerClass;
@@ -100,8 +96,6 @@ private:
 	UFUNCTION()
 	void HandleOwnedGASDeathFinished(AActor* Enemy);
 
-	UFUNCTION()
-	void HandleSpawnedEnemyDeath(ADCEnemyCharacter* DeadEnemy);
 	UFUNCTION()
 	void HandleGASEnemyDeath(ADCGASEnemyCharacter* DeadEnemy);
 	UFUNCTION()

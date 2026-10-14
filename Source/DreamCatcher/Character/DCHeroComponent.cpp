@@ -188,8 +188,8 @@ void UDCHeroComponent::HandleChangeInitState(UGameFrameworkComponentManager* Man
 			PawnExtComp->InitializeAbilitySystem(DCPS->GetDCAbilitySystemComponent(), DCPS);
 		}
 
-		// Keep the original implementation available; do not bind it beside the Character path.
-		if (!bUseLegacyPlayerInput && GetController<ADreamCatcherPlayerController>())
+		// Hero owns player input initialization.
+		if (GetController<ADreamCatcherPlayerController>())
 		{
 			if (Pawn->InputComponent != nullptr)
 			{
@@ -198,7 +198,7 @@ void UDCHeroComponent::HandleChangeInitState(UGameFrameworkComponentManager* Man
 		}
 
 		// Hook up the delegate for all pawns, in case we spectate later
-		if (PawnData && !bUseLegacyCameraMode)
+		if (PawnData)
 		{
 			if (UDCCameraComponent* CameraComponent = UDCCameraComponent::FindCameraComponent(Pawn))
 			{

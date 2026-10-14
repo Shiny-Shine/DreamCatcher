@@ -2,7 +2,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Development/DCLyraAIIntegrationController.h"
+#include "Player/DCLyraAIIntegrationController.h"
 #include "GameModes/Lyra/DCLyraGameMode.h"
 #include "Teams/DCTeamCreationComponent.h"
 #include "DCLyraAIAssemblyTestTypes.generated.h"

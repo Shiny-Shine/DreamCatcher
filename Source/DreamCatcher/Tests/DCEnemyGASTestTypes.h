@@ -1,7 +1,6 @@
 // Native, unsaved R10 fixtures. Never use these classes in production assets.
 #pragma once
 
-#include "AI/DCEnemyCharacter.h"
 #include "AI/DCEnemySpawner.h"
 #include "AI/DCGASEnemyCharacter.h"
 #include "AbilitySystem/Abilities/DCLyraGameplayAbility_Death.h"
@@ -67,20 +66,11 @@ protected:
 };
 
 UCLASS(NotBlueprintable, Transient, HideDropDown)
-class ADCR10LegacyEnemyFixture : public ADCEnemyCharacter
-{
-	GENERATED_BODY()
-public:
-	ADCR10LegacyEnemyFixture();
-};
-
-UCLASS(NotBlueprintable, Transient, HideDropDown)
 class ADCR10SpawnerFixture : public ADCEnemySpawner
 {
 	GENERATED_BODY()
 public:
 	void ConfigureGAS(TSubclassOf<ADCGASEnemyCharacter> Class, int32 Count = 1, int32 Concurrent = 1);
-	void ConfigureLegacy();
 };
 
 UCLASS(NotBlueprintable, Transient, HideDropDown)

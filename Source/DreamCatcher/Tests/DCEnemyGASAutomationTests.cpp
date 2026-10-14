@@ -58,23 +58,14 @@ void ADCR10ImmediateEnemyFixture::BeginPlay()
 	Super::BeginPlay();
 	if (IsGASReady()) { DCEnemyGASTests::Damage(this, 1000.0f); }
 }
-ADCR10LegacyEnemyFixture::ADCR10LegacyEnemyFixture() { AutoPossessAI = EAutoPossessAI::Disabled; }
 void ADCR10SpawnerFixture::ConfigureGAS(TSubclassOf<ADCGASEnemyCharacter> Class, int32 Count, int32 Concurrent)
 {
 	GASEnemyClass = Class;
-	// Deliberately retained to verify the opt-in GAS class wins without deleting the legacy setting.
-	EnemyClass = ADCR10LegacyEnemyFixture::StaticClass();
 	SpawnCount = Count;
 	MaxAliveAtOnce = Concurrent;
 	SpawnInterval = 0.01f;
 }
-void ADCR10SpawnerFixture::ConfigureLegacy()
-{
-	GASEnemyClass = nullptr;
-	EnemyClass = ADCR10LegacyEnemyFixture::StaticClass();
-	SpawnCount = 1;
-	MaxAliveAtOnce = 1;
-}
+
 void ADCR10EncounterFixture::Configure(ADCEnemySpawner* First, ADCEnemySpawner* Second)
 {
 	Spawners.Reset();
@@ -88,7 +79,6 @@ void UDCR10Observer::EncounterCompleted(ADCEncounterController*) { ++Encounters;
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "AbilitySystem/Executions/DCLyraDamageExecution.h"
-#include "Components/DCHealthComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/GameModeBase.h"
@@ -159,7 +149,6 @@ bool FDCEnemyOriginalDamageTest::RunTest(const FString&)
 	ADCPlayerState* Source = F.Spawn<ADCPlayerState>();
 	if (!TestNotNull(TEXT("GAS target"), Target) || !TestNotNull(TEXT("PlayerState source"), Source)) { return false; }
 	TestTrue(TEXT("Initialized before BeginPlay"), Target->IsGASReady());
-	TestNull(TEXT("No second legacy HealthComponent"), Target->FindComponentByClass<UDCHealthComponent>());
 	Target->OnEnemyDeath.AddDynamic(F.Observer.Get(), &UDCR10Observer::EnemyDied);
 	UAbilitySystemComponent* SourceASC = Source->GetAbilitySystemComponent();
 	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
@@ -332,23 +321,12 @@ bool FDCEnemyEarlyDeathTest::RunTest(const FString&)
 	return !HasAnyErrors();
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCEnemyLegacyAndCleanupTest, "DreamCatcher.R10.Enemy.LegacyAndTeardown",
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCEnemyCleanupTest, "DreamCatcher.R10.Enemy.Teardown",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-bool FDCEnemyLegacyAndCleanupTest::RunTest(const FString&)
+bool FDCEnemyCleanupTest::RunTest(const FString&)
 {
 	using namespace DCEnemyGASTests;
 	FFixture F; if (!F.Start(*this)) { return false; }
-	ADCR10SpawnerFixture* Legacy = F.Spawner();
-	if (!TestNotNull(TEXT("Legacy spawner"), Legacy)) { return false; }
-	Legacy->ConfigureLegacy(); Legacy->ActivateSpawner();
-	ADCEnemyCharacter* LegacyEnemy = nullptr;
-	for (TActorIterator<ADCEnemyCharacter> It(F.World.GetTestWorld()); It; ++It) { LegacyEnemy = *It; break; }
-	if (!TestNotNull(TEXT("Legacy class still spawns"), LegacyEnemy)) { return false; }
-	FDCEnemyDeathSignature Replay = LegacyEnemy->OnEnemyDeath;
-	LegacyEnemy->GetHealthComponent()->ApplyDamage(1000,nullptr);
-	Replay.Broadcast(LegacyEnemy);
-	TestTrue(TEXT("Legacy death still clears"), Legacy->IsSpawnerCleared());
-	TestEqual(TEXT("Legacy clear once"), F.Observer->Clears, 1);
 	ADCR10SpawnerFixture* Removed = F.Spawner(2);
 	if (!TestNotNull(TEXT("Teardown spawner"), Removed)) { return false; }
 	Removed->ActivateSpawner();
@@ -358,7 +336,7 @@ bool FDCEnemyLegacyAndCleanupTest::RunTest(const FString&)
 	Damage(Enemies[0],1000);
 	F.World.TickTestWorld(.1f);
 	TestEqual(TEXT("Dead spawner does not spawn again"), F.Living().Num(), 0);
-	TestEqual(TEXT("No clear emitted by EndPlay"), F.Observer->Clears, 1);
+	TestEqual(TEXT("No clear emitted by EndPlay"), F.Observer->Clears, 0);
 	ADCR10SpawnerFixture* Unexpected = F.Spawner();
 	if (!TestNotNull(TEXT("Unexpected removal spawner"), Unexpected)) { return false; }
 	Unexpected->ActivateSpawner();
