@@ -1,5 +1,4 @@
 #include "AI/DCEnemySpawner.h"
-#include "AI/DCEnemyCharacter.h"
 #include "AI/DCGASEnemyCharacter.h"
 #include "AbilitySystem/Abilities/DCLyraGameplayAbility_Death.h"
 #include "AbilitySystem/DCAbilitySystemComponent.h"
@@ -69,7 +68,7 @@ void ADCEnemySpawner::ActivateSpawner()
 		return;
 	}
 
-	// GAS NPCs and finite Lyra bots are authority-owned; preserve the legacy route's policy.
+	// GAS NPCs and finite Lyra bots are authority-owned.
 	if ((GASEnemyClass || LyraBotControllerClass) && (!HasAuthority() || GetNetMode() == NM_Client)) { return; }
 	if ((GASEnemyClass || LyraBotControllerClass) && (SpawnCount <= 0 || MaxAliveAtOnce <= 0 || !FMath::IsFinite(SpawnInterval) || SpawnInterval < 0.0f))
 	{
@@ -109,10 +108,10 @@ void ADCEnemySpawner::TrySpawnNext()
 		return;
 	}
 
-	// EnemyClass 누락 시 인카운터가 멈추지 않게 즉시 종료 처리.
-	if (!EnemyClass && !GASEnemyClass && !LyraBotControllerClass)
+	// An unconfigured optional spawner retains its existing immediate-completion behavior.
+	if (!GASEnemyClass && !LyraBotControllerClass)
 	{
-		UE_LOG(LogDreamCatcher, Warning, TEXT("%s has no EnemyClass assigned. Completing spawner immediately."), *GetName());
+		UE_LOG(LogDreamCatcher, Warning, TEXT("%s has no GAS or Lyra spawn class assigned. Completing spawner immediately."), *GetName());
 		CompleteSpawner();
 		return;
 	}
@@ -156,14 +155,14 @@ void ADCEnemySpawner::SpawnEnemy()
 		SpawnLyraEnemy();
 		return;
 	}
-	if (!EnemyClass && !GASEnemyClass)
+	if (!GASEnemyClass)
 	{
 		return;
 	}
 
 	TGuardValue<bool> SpawnGuard(bSpawningEnemy, true);
 	const FTransform Transform = SpawnPoint->GetComponentTransform();
-	UClass* SpawnClass = GASEnemyClass ? GASEnemyClass.Get() : EnemyClass.Get();
+	UClass* SpawnClass = GASEnemyClass.Get();
 	AActor* SpawnedEnemy = GetWorld()->SpawnActorDeferred<AActor>(SpawnClass, Transform, nullptr, nullptr,
 		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
 	if (!SpawnedEnemy)
@@ -378,11 +377,6 @@ void ADCEnemySpawner::ScheduleNextSpawn()
 	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &ADCEnemySpawner::TrySpawnNext, Delay, false);
 }
 
-void ADCEnemySpawner::HandleSpawnedEnemyDeath(ADCEnemyCharacter* DeadEnemy)
-{
-	ConsumeEnemyDeath(DeadEnemy);
-}
-
 void ADCEnemySpawner::HandleGASEnemyDeath(ADCGASEnemyCharacter* DeadEnemy)
 {
 	if (DeadEnemy && DeadEnemy->IsDeadOrDying()) { ConsumeEnemyDeath(DeadEnemy); }
@@ -393,11 +387,7 @@ void ADCEnemySpawner::TrackEnemy(AActor* Enemy)
 	check(Enemy);
 	LivingEnemies.Add(TWeakObjectPtr<AActor>(Enemy));
 	++SpawnedCount;
-	if (ADCEnemyCharacter* Legacy = Cast<ADCEnemyCharacter>(Enemy))
-	{
-		Legacy->OnEnemyDeath.AddUniqueDynamic(this, &ThisClass::HandleSpawnedEnemyDeath);
-	}
-	else if (ADCGASEnemyCharacter* GAS = Cast<ADCGASEnemyCharacter>(Enemy))
+	if (ADCGASEnemyCharacter* GAS = Cast<ADCGASEnemyCharacter>(Enemy))
 	{
 		GAS->OnEnemyDeath.AddUniqueDynamic(this, &ThisClass::HandleGASEnemyDeath);
 		if (bCleanupOwnedGASNPCs)
@@ -419,11 +409,7 @@ void ADCEnemySpawner::UnbindEnemy(AActor* Enemy)
 		Health->OnDeathFinished.RemoveDynamic(this, &ThisClass::HandleOwnedGASDeathFinished);
 	}
 	Enemy->OnDestroyed.RemoveDynamic(this, &ThisClass::HandleTrackedEnemyDestroyed);
-	if (ADCEnemyCharacter* Legacy = Cast<ADCEnemyCharacter>(Enemy))
-	{
-		Legacy->OnEnemyDeath.RemoveDynamic(this, &ThisClass::HandleSpawnedEnemyDeath);
-	}
-	else if (ADCGASEnemyCharacter* GAS = Cast<ADCGASEnemyCharacter>(Enemy))
+	if (ADCGASEnemyCharacter* GAS = Cast<ADCGASEnemyCharacter>(Enemy))
 	{
 		GAS->OnEnemyDeath.RemoveDynamic(this, &ThisClass::HandleGASEnemyDeath);
 	}

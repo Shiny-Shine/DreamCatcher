@@ -1,0 +1,48 @@
+{
+  "scope": "Residual obsolete player animation/input and Test_Map blockout assets",
+  "delete": [
+    "/Game/DreamCatcher/Animations/Player/ABP_DC_Player",
+    "/Game/DreamCatcher/Animations/Player/ABP_DC_Player_GAS_Test",
+    "/Game/DreamCatcher/Animations/Player/AM_Roll_Placeholder",
+    "/Game/DreamCatcher/Animations/Player/LinkedLayers/ABP_DC_RifleAnimLayers",
+    "/Game/DreamCatcher/Animations/Player/LinkedLayers/ALI_DC_WeaponAnimLayers",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/Test_Map",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/Box_1272249A",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/Box_1B8C31EE",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/Box_C0C6A43F",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/Box_E1E4FEF9",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/Rectangle_44C4E719",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/SM_Fence_Field_2",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/SM_Plane_Field_1",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/SM_fence_Field_1",
+    "/Game/Input/Actions/IA_Dodge",
+    "/Game/Input/Actions/IA_Jump",
+    "/Game/Input/Actions/IA_MouseLook",
+    "/Game/Input/IMC_Default",
+    "/Game/Input/IMC_MouseLook",
+    "/Game/Input/IMC_Player",
+    "/Game/Input/Touch/BPI_TouchInterface",
+    "/Game/Input/Touch/UI_Thumbstick",
+    "/Game/Input/Touch/UI_TouchSimple"
+  ],
+  "preserve": [
+    "/Game/Input/Actions/IA_Aim",
+    "/Game/Input/Actions/IA_Fire",
+    "/Game/Input/Actions/IA_Look",
+    "/Game/Input/Actions/IA_Move",
+    "/Game/Input/Actions/IA_Ultimate",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/Asset",
+    "/Game/DreamCatcher/DreamCatcher_ENV/Map/Test_Map/_GENERATED/1004j/Box_34DB3452",
+    "/Game/Input/Abilities/Struct_UIMessaging"
+  ],
+  "reasons": {
+    "animation": "Five obsolete player animation assets; no referencers outside the deletion set.",
+    "input": "Three unused old mappings, three actions referenced only by those mappings, and three unreferenced old template touch widgets/interface.",
+    "map": "Unreferenced February blockout: 25 actors, no GameMode override; eight private/orphan generated meshes. Designer Asset map and its ninth generated mesh are preserved."
+  },
+  "external_references_before": 0,
+  "stale_references_after": 0,
+  "active_assets_unchanged": true,
+  "source_config_DLL_unchanged": true,
+  "evidence": "Saved/Diagnostics/ResidualLegacy/{inspect_A.json,manifest_A.json,cleanup_Delete_A.json,cleanup_Verify_A.json,closeout_A.json}"
+}

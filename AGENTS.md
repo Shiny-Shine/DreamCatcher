@@ -1372,7 +1372,7 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 
 ---
 
-## 0.107 최신 재개 — 2026-10-14 통합 PR #1 / 리뷰 수정 자동검증 완료·사용자 커밋/푸시 대기
+## 0.107 이력 — 2026-10-14 통합 PR #1 / 리뷰 수정 자동검증 완료
 
 - 사용자가 checkpoint 커밋과 main 병합·Box_1 옛13개 보존·통합 브랜치 publish를 직접 수행했다. 현재 브랜치는 **`integrate-main-20261014`**, 원격 PR은 **https://github.com/Shiny-Shine/DreamCatcher/pull/1**, base=`main`이다. main=`ebb169c`, 통합 HEAD=`5dfb0e6`까지 확인했다. main 최종 반영은 아직 하지 않았다.
 - 통합 검사: 디자이너 LFS951개 해시, 보존 Box_1 옛13개, 변경 Blueprint8개 Compile/Box26개 로드, 맵9개 로드 및 R13 실제 PIE 발사·조준·사망/정리 검사를 완료했다. PIE는 실패0/기존 경고15(Manny PoseAsset14＋RecastNavMesh 초기화1)다. 완료한 검사를 처음부터 반복하지 않는다.
@@ -1383,6 +1383,76 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - **R13 실제 PIE 영향 회귀는16:47 성공**했다. 발사/탄약30→29, 견착/Hip 복귀, 사망/객체·장비 정리, ensure/Error0을 확인했다. 보고서 경고16(Manny14＋RecastNavMesh1＋긴 프레임의 이동 시뮬레이션 제한1)은 별도로 기록한다. 에셋/Config/사용자 저장 설정/DLL/Git index는 검사 중 유지됐으며, 의도된 변화는 테스트 CPP의 Outer 교정뿐이다. 근거 `Saved/Diagnostics/MergeValidation/pr1_review_checks_A.json`.
 - **16:50~16:51 후속 검증 완료:** 사용자 증분 빌드 **16:50:02 시작·8.97초 성공**, DLL16:50:10/6,636,544bytes, SHA256 `d5b30577e3aa9c5fc585a8a30abf96b87f979824fdff2ea835485a39f4aea099`. `MergeReviewInput_B`의 **입력 검사1건 성공/실패·보고서 경고0, Error·ensure·Fatal0, 종료0**을 확인했다. 시작 시 기존 B_LyraGameInstance script package 경고1은 별개다. 탄환 검사/PIE는 코드 불변 근거로 기존 성공 결과를 재사용했고 재실행하지 않았다.
 - **현재 다음은 사용자 짧은 화면/입력 확인 → 같은 `integrate-main-20261014`에 코드·검사·문서·필요 DLL을 커밋/푸시하여 기존 PR #1 갱신**이다. 이번 리뷰2건 수정의 자동검증은 완료했다. 원격 PR은 아직 수정 전5dfb0e6이며 main 병합은 사용자가 진행한다. 통합 맵 외형 확인·물리 입력/조작감 수용 및 패키징까지 자동검증 완료로 확대하지 않는다. Codex 빌드·패키징·Git stage/commit/push/merge·PR 댓글/리뷰 Resolve는 하지 않았다. 패키징은 계속 보류하며 디자이너 `Level_1`의 R13 gameplay 재조립은 별도 범위다. 상세는 `docs/handoffs/main-merge-preparation-2026-10-14.md` 상단을 따른다.
+
+---
+
+## 0.108 이력 — 2026-10-14 main 병합 완료 / Level_1 전환·레거시 정리 조사
+
+- 사용자가 리뷰 수정본 PIE 정상 동작을 확인하고 `bc453e6` 커밋/푸시, PR #1 병합까지 완료했다. 현재 `main`/`origin/main`은 **`3665f3ba690bab286784da7aae183b7485932cd0`**이며 병합 시각은10월14일18:13 KST다. GAS-System의 모든 커밋도 main에 포함됐음을 확인했다. 앞선 ‘PR 갱신/병합 대기’는 이력이다. 검증된 코드·DLL·기존 플레이 확인을 다시 수행하지 않는다. 패키징은 계속 사용자 지시로 보류한다.
+- **새 사용자 방향:** 디자이너 `DreamCatcher_ENV/Map/Main/Level_1`의 환경 배치를 유지하고 **그 맵의 기존 플레이 흐름은 폐기**, 검증된 R13 플레이 흐름으로 교체한다. 테스트 맵을 정식 맵으로 삼지 않는다. 현재 요청은 프로젝트를 살펴 정리할 코드·에셋·Blueprint·테스트/레거시 후보를 찾는 조사이며 실제 대량 삭제·이관·Config/게임 코드 변경은 아직 하지 않았다.
+- 읽기 전용 조사: package3,786개 참조, BP36개(22개는 기존 해시 일치 근거 재사용/14개 새 조회), PawnData3개, 맵3개와 활성 테스트 부여/숨겨진 LevelScript·NavMesh 확인. 저장/Compile/PIE/빌드/패키징0, Error·ensure0, 에셋3,788개 및 보호 소스·Config·DLL·Git index 불변. 열린 사용자 Editor의 미저장 상태는 조사 대상이 아니다.
+- Level_1은 구형 BP GameMode/플레이어·HUD와 적1개, NavMeshBoundsVolume0이다. R13은 Experience/StageUI GameMode, 일반 Lyra 스포너2개＋보스1개, Encounter3개＋StageDirector1개, NavMesh1개다. **환경 맵 전체를 덮어쓰지 않고 게임플레이 연결과 배치만 교체**하는 변경안이 다음이다.
+- `GAS/Test`83에셋(맵8개) 중 맵을 제외한 R13 게임플레이 package 참조에38개가 남는다. 그중 실사용31개는 정식 경로로 이관할 후보이며, R2 Tag 테스트3개·SignatureSmoke3개·빈 R4 AbilitySet1개는 PawnData 부여 해제/제거 후보다. SignatureSmoke는 Q 입력의 TEST 출력/검증용 쿨다운만 제공하므로 제거 시 그 반응이 없어지는 차이를 기록한다. 정식 시그니처 효과를 임의 제작하지 않는다.
+- 그 밖의 후보: 구형 전투/장비/체력/HUD·카메라/적14계열28파일, 테스트 표적4파일, native Tests37파일, Variant 템플릿76파일, 없는 Start_Contents를 가리키는 redirector63개, 이식 스크립트87개/pycache4개, 백업13파일, 마지막에 정리할 Editor 이식 플러그인26파일, 테스트 맵 폐기 후 옛 Box_1 13개다. 서로 겹칠 수 있으며 자동 삭제 승인 목록이 아니다.
+- 현재 Controller는 `Development/DCRifleIntegrationActors`→`DCLyraAIIntegrationController`를 사용한다. Character/PlayerController 기반 전체, Boss가 상속하는 DCGASEnemyCharacter, StageDirector/Encounter/Spawner의 Lyra·GAS 경로와 원본 런타임 플러그인은 보존한다. Test/Migration/Diagnostics 이름만으로 삭제하지 않는다. 기존 Source 테스트는 핵심 회귀 보존과 과거 이식 검사 정리를 구분한다.
+- **남은 결정/다음 변경안:** Level_1 게임플레이 전환 및 실제 전투 배치/NavMesh, 정식 자산 경로와 DefaultPawnData/Experience/Cue/Cook 설정, R10 테스트 맵 대신의 `돌아가기` 목적지를 먼저 구체화한다. 정식 복귀 맵은 아직 확인되지 않았으며 버튼을 없애거나 null로 두어 기능을 축소하지 않는다. 이후 활성 테스트 부여 해제→레거시/과거 테스트 맵·자산/코드 제거→개발 잔재 정리 순서다. 상세 목록/근거/한계는 `docs/handoffs/r14-reference-audit-2026-10-14.md` 최신 조사와 `Saved/Diagnostics/Level1Cleanup/`를 따른다.
+
+---
+
+## 0.109 최신 재개 — 2026-10-14 Level_1 R13 흐름·NavMesh 연결 / 사용자 PIE 확인 대기
+
+- 사용자가 **Level_1의 환경 배치를 유지하며 구형 플레이 흐름을 R13으로 교체하고 NavMesh를 연결**하는 첫 묶음을 승인했다. `돌아가기`는 당분간 같은 맵을 다시 열고, 추후 메인화면을 만들면 그곳으로 연결하도록 명시했다. 과거 테스트 맵/에셋의 일괄 삭제나 실사용31개 경로 이관까지 이번에 확대한 것은 아니다.
+- 기존 `Level_1.umap`의 구형 적1개와 Engine PlayerStart1개를 교체하고, Lyra PlayerStart1개, StageDirector1개, Encounter3개, 일반 Lyra 스포너2개＋보스 스포너1개, NavMeshBoundsVolume/Recast를 연결했다. **기존 환경 액터4,642개의 클래스·변환값은 새 프로세스 재로드까지 불변**이며 R13 원본/테스트 에셋도 유지됐다. 일반 스폰은(335,165,81)/(635,165,81), 보스는(1035,165,73)cm로 현재 바닥·캡슐 여유 공간을 확인했다. 시작 구역 배치이며 전체 레벨의 최종 전투 배치 디자인을 완료했다는 의미는 아니다.
+- R13 GameMode를 Unreal API로 복제한 **`/Game/DreamCatcher/Blueprints/Core/BP_DC_Level1GameMode`**를 만들고 ReturnMap만 Level_1으로 override했다. Experience/Controller/HUD·팀/결과 설정은 원본과 동일하다. Level_1 WorldSettings가 새 BP를 사용한다. `DefaultEngine.ini`의 GameDefaultMap과 `DefaultGame.ini`의 명시적 MapsToCook도 Level_1로 변경했다. EditorStartupMap은 기존 Level_1 유지, 다른 맵에 쓰일 수 있는 전역 GameMode/fallback PawnData는 이번에 바꾸지 않았다.
+- NavMesh는 충돌 환경 전체에500cm 여유를 둔 범위, **Dynamic**으로 설정했다. 새 프로세스 재로드에서 연결을 확인했고 **19:49 최종 `Level1Flow_D` 실제 PIE 성공1/실패0/Error·ensure0**을 확인했다. 실제 AIController가 부분 경로를 허용하지 않고 세 전투 지점까지 이동(구간 변위 합992.85cm), 발사30→29/견착→Hip, 일반전투2→보스·HUD→클리어/정리, 결과 돌아가기와 메뉴 확인창 돌아가기로 같은 Level_1 새 실행 및 이동 입력 복구를 확인했다. 진단 입력·피해·일시적 AI 이동 명령이며 사용자 물리 입력/시각 수용과 구분한다. 보고서 경고17은 Manny PoseAsset14＋월드 초기화 Recast/Crowd3이다.
+- 앞선 PIE A/B는 검사 스크립트의 Navigation 정적 호출이 CDO World ensure를 발생시켰고 A는 private UI 속성 조회도 실패했다. C는 설정 SoftObjectPath의 단순 str 표현 검사에 실패했다. 이 결과는 성공으로 보지 않으며, 실제 AIController 이동과 기존 encode/export 방식으로 교정한 D만 최종 성공 근거다. 게임 자산/C++를 이 검사 교정 때문에 다시 변경하지 않았다.
+- 실제 게임 변경은 **맵1개＋새 GameMode BP1개＋Config2개**다. 일회성 `Scripts/Editor/level1_r13_flow_setup.py`/`level1_r13_flow_probe.py`와 문서를 추가/갱신했다. C++/DLL 변경·빌드·패키징·Git stage/commit/push0. 근거 `Saved/Diagnostics/Level1Integration/{setup_Apply_A,setup_Verify_A,pie_D,completion_A}.json`, `Saved/Automation/Level1Flow_D/index.json`.
+- **다음은 추가 빌드 없이 사용자의 Level_1 PIE 짧은 확인**: 환경/시작 위치, 실제 AI 이동·전투→보스·HUD, 결과/메뉴 돌아가기의 같은 맵 재시작. 이후 새 작업 브랜치에서 사용자 커밋/푸시한다(main 직접 커밋하지 않음). 기존 테스트 맵과 실사용 테스트 경로·레거시 native 정리는 그 다음 묶음이다. 추후 메인화면이 생기면 새 GameMode의 ReturnMap 및 Cook 대상을 갱신한다. 상세는 `docs/handoffs/r14-reference-audit-2026-10-14.md` 최상단이다.
+
+---
+
+## 0.110 최신 재개 — 2026-10-14 Level_1 정식 경로·레거시 정리 적용 / C++ 빌드 대기
+
+- 사용자가 Level_1 PIE 정상 동작을 확인하고 실사용 경로 이관과 테스트/레거시 정리를 승인했다. 환경4642개, 일반전투2→보스→완료, 자동 리스폰 없음, 돌아가기→같은 맵 재시작을 유지한다. 이전0.109의 사용자 수용 대기는 해소됐다.
+- 실사용782개를 DreamCatcher의 Blueprints/Data/GAS/Input/Experiences/FX/Audio/Lyra와 개발 전용 `/Game/Tests/Equipment`로 이관했다. Config의 PawnData/Experience/Cue/UI/장치 경로와 DCStageUI GameFeature 참조를 갱신했다. basename/Experience ID는 유지한다. 전역 구형 GameMode fallback은 Engine.GameModeBase이며 Level_1은 명시적 BP_DC_Level1GameMode를 유지한다.
+- 테스트 맵9개를 포함한 구형/테스트 에셋98개와 잔존 사본·redirector178개 =276패키지를 Unreal API로 삭제했다. 실사용 Pawn의 옛 전투 노드47개와 구형 EquipmentManager1개를 제거했다. SignatureSmoke 반응과 빈/검사용 부여를 해제하되 실제 시그니처 기반과 QuickBar·Lyra 장비·메시·AnimClass는 보존했다. 삭제 직전 확인된 실사용 라이플 MetaSound1개는 정식 경로로 보존했다.
+- 중간 이동/삭제 guard 실패와 PIE Cleanup_A/B 실패는 성공이 아니다. 새 프로세스 재로드·핵심 그래프/메시 보존·직접 영향 검사, 플러그인 참조 보완, NavMesh 재생성 후 **21:41 Level1Flow_Cleanup_C 성공1(경고 포함)/실패0/Error·ensure0**이다. 실제 AI3지점 도달(1289.85cm), 발사/견착/Hip, 일반전투2→보스/HUD→클리어/정리, 결과·메뉴의 같은 맵 재시작을 통과했다. 기존 경고17(Manny14+Recast/Crowd3)은 유지한다.
+- Nav 저장 전용 프로세스에서만 자동 비동기 대기를 껐고 영구 Config·볼륨·AgentRadius35/AgentHeight144/Dynamic은 유지했다. 최종 PIE는 그 옵션 없이 일반 설정으로 검증했다. 환경4642개와 사용자 저장 파일을 보존했다.
+- **위 PIE 이후** 구형 native36파일과 템플릿76파일을 제거했다. Character/Controller 자체와 ASC·Health·사망·ADS·입력·카메라 및 ACharacter native Tick을 보존하고 옛 분기만 제거한다. 실사용 Loadout/Team Controller는 Player 폴더로 옮기되 serialized 클래스명/API를 유지한다. 스포너의 구형 EnemyClass만 제거했고 GAS/Lyra 및 처치·정리·완료 처리는 보존한다. 삭제 타입/이전 경로 참조 및 diff 정적 검사는 통과했지만 **새 UHT/컴파일/링크와 새 DLL 기준 Blueprint·PIE는 미검증**이다.
+- C++ 회귀37파일과 장비 fixture4개(NeverCook)는 보존하며 관련 테스트의 경로/legacy 부분만 조정했다. DCRifleMigrationTools 플러그인/등록, 과거 Editor 스크립트·계약검사·pycache 및 백업13파일을 정리했다(도구 묶음 추적130파일). 레시피97파일은 `Saved/Diagnostics/Level1Cleanup/retired_editor_recipes.zip`으로 해시 검증 보존했다. 현재 재현은 플러그인 의존 없는 `Scripts/Editor/level1_gameplay_probe.py`를 사용한다.
+- **다음은 사용자 Development Editor / Win64 빌드**다. 새 DLL 확인 후 직접 영향 BP/핵심 회귀와 짧은 Level_1 PIE를 마무리한다. 완료한 R0~R14 전체 이식 검사는 반복하지 않는다. 게임 DLL/인덱스 불변이며 C++ 빌드·패키징·stage/commit/branch/merge/push는 실행하지 않았다. 패키징은 계속 보류한다. 상세/정확한 목록/복구 근거는 `docs/handoffs/level1-production-cleanup-2026-10-14.md` 및 연결된 JSON 목록을 따른다.
+
+---
+
+## 0.111 최신 재개 — 2026-10-14 새 DLL 기준 정리 후 검증 통과 / 사용자 최종 수용 대기
+
+- 사용자 Editor/Win64 빌드가21:57 성공(8.75초)했고 include 누락 오류는 해결됐다. DLL5,724,672 bytes, SHA256 `f863512bb8eb923a450e349f692f7e4eb21b618290ec9a1b3b8505d6710bffaf`를 기준으로 검증했다. 0.110의 새 C++ 빌드/검증 대기는 해소됐다.
+- 직접 영향 BP11개 Compile 성공, 검사한 삭제 native19종 등록0, Game/DCStageUI의 폐기 package 참조0, 실제 Pawn의 구형 컴포넌트0, 환경4642개 보존. 입력/탄환·장비·GAS 적·유한 Lyra 스포너·스테이지·보스 소유권/메뉴의 기존 회귀22건 성공/실패0이다. 빈 optional 스포너의 의도된 즉시 완료 경고1건은 기록한다.
+- BP_DC_RiflePawn/BP_DC_LyraInventoryPawn 저장본에 남은 구형 CombatComponent export의 로드 경고2건을 확인해 **이 두 BP만** 새 DLL로 Compile/저장했다. 그래프/메시/AnimClass/캡슐/이동/입력 설정 보존과 별도 재로드 경고0을 확인했다. C++/Config/uproject/DLL/맵/사용자 SaveGames 및 Git 인덱스는 변경하지 않았다.
+- **22:23 Level1Flow_PostBuild_B 실제 PIE 성공1(경고 포함)/실패0/Error·ensure0**. 발사, 견착/Hip·스코프/Hip 입력 전환, 웅크리기/해제 API, 실제 AI3지점 이동1521.18cm, 일반전투2→보스/HUD→완료/정리, 결과·메뉴의 같은 맵 복귀, 플레이어 치명 피해→실패 결과→Pawn/장비/AI 정리→자동 리스폰 없이 대기→명시적 재시작과 체력/탄약/입력 복구까지 확인했다. 물리 입력·화면 수용과 구분한다.
+- PostBuild_A는 사망 검사에서 detach 직후 파괴를 요구하여 원본0.1초 lifespan 유예 전에 실패했다. 검사만 기다리도록 교정했으며 게임 코드 변경/실패 은폐는 없다. B를 최종 근거로 사용한다. 기존 PIE 경고18(Manny14+월드 초기화 Crowd/Recast4), LyraGame import 경고와 UBT DataRegistry 명시적 의존성 경고는 별도 기록한다.
+- **추가 빌드는 필요 없다. 다음은 사용자의 최종 Level_1 화면/조작감 확인**이다. 정상 수용 후 사용자가 작업 브랜치에서 검토·커밋한다. 완료한 이식/전체 맵 검사를 반복하지 않고 패키징은 계속 보류한다. Codex는 빌드·패키징·stage/commit/branch/merge/push를 실행하지 않았다.
+- 최신 상세와 다음 단계는 `docs/handoffs/level1-production-cleanup-2026-10-14.md`. 근거: `Saved/Diagnostics/Level1Cleanup/{user_build_A.txt,postbuild_Assets_A.json,pawn_resave_recovery_A.json,pawn_resave_Save_A.json,pawn_resave_Verify_A.json,postbuild_closeout_A.json}`, `Saved/Automation/{Level1PostBuildCore_A,Level1Flow_PostBuild_B}/index.json`. 재현 스크립트는 `Scripts/Editor/level1_gameplay_probe.py`다.
+
+---
+
+## 0.112 최신 재개 — 2026-10-14 Level_1 정식 전환·레거시 정리 사용자 수용 완료
+
+- 사용자가 새 DLL 기준 자동검증 안내 후 **“정상 작동을 확인했어”**라고 최종 확인했다. 현재 Level_1 전환·실사용 정식 경로 이관·승인된 테스트/레거시 정리 묶음의 구현, 사용자 빌드, 자동검증 및 사용자 수용을 완료로 기록한다. 0.111의 사용자 최종 수용 대기는 해소됐다.
+- 완료 근거는0.110의 이관/정리,0.111의 새 DLL/BP11개·핵심 회귀22건·Level1Flow_PostBuild_B 통과와 이번 사용자 확인이다. 기존 경고 및 패키징 보류·미검증 상태는 유지하며 전체 플랫폼/장치 검증으로 확대하지 않는다.
+- 이번에는 문서와 수용 기록만 갱신했다. 완료한 검증/이식 재실행, C++/Config/에셋 추가 변경, 빌드·패키징, Git stage/commit/branch/merge/push는 하지 않았다.
+- 다음은 사용자가 GitHub Desktop에서 작업 브랜치의 변경을 검토·커밋/푸시하는 단계다. 후속 기능은 새 변경 범위를 먼저 정한다. 상세는 `docs/handoffs/level1-production-cleanup-2026-10-14.md`, 사용자 수용 근거는 `Saved/Diagnostics/Level1Cleanup/user_acceptance_A.json`이다.
+
+---
+
+## 0.113 최신 재개 — 2026-10-14 잔여 플레이어 애니메이션·입력·블록아웃 정리 완료
+
+- 사용자가 남은 레거시 여부를 확인하고 추가 정리를 승인했다. 0.112는 지정한 정리 묶음의 완료이며 프로젝트 전체 미사용 에셋0 판정이 아님을 명확히 한다.
+- 최신 AssetRegistry/코드·Config 참조를 읽어 옛 플레이어 AnimBP/레이어/롤5개, 옛 입력 매핑/미사용 Action/템플릿 Touch9개, Test_Map과 전용/고립 generated 메시9개 =23개를 정확한 목록으로 삭제했다. Unreal API만 사용했고 사전 외부 참조0/대상 경로 문자열 참조0 및 Git LFS 복구 payload23개를 확인했다.
+- Test_Map은2월26일 Build Test Map 1-1 커밋의 액터25개 블록아웃이며 GameMode override/외부 참조/실행 연결이 없었다. 디자이너 Asset.umap 및 연결 Box_34DB3452, 실사용 Input Action5개와 CoreRedirect 호환 Struct_UIMessaging, 보스/Level_1/Level_2가 쓰는 Mannequins 자료는 보존했다. 이름/폴더만으로 공용 라이브러리를 삭제하지 않았다.
+- **22:49 새 프로세스 검증 성공**, 삭제23개 외 에셋 변화0, 끊어진 참조0/Error·ensure0, Source/Config/프로젝트/DLL/사용자 저장/Git 인덱스 변경0이다. 실사용 Pawn2개의 SKM_Manny/ABP_Mannequin_Base와 현재 입력 로드를 확인했다. Level_1 파일도 그대로이므로 기존 수용/검증을 유지하며 빌드·PIE 반복은 필요 없다.
+- 이번 묶음 완료 후 사용자가 작업 브랜치에서 검토·커밋/푸시한다. 패키징은 계속 보류·미검증이며 Codex는 빌드·패키징·Git 조작을 실행하지 않았다. 전체 프로젝트의 모든 미사용 원본/제작 자료를 제거한 것으로 확대하지 않는다.
+- 목록: `docs/handoffs/level1-residual-cleanup-2026-10-14.json`. 상세: `docs/handoffs/level1-production-cleanup-2026-10-14.md`. 근거: `Saved/Diagnostics/ResidualLegacy/{before_A.json,inspect_A.json,manifest_A.json,cleanup_Delete_A.json,cleanup_Verify_A.json,closeout_A.json}`.
 
 ---
 

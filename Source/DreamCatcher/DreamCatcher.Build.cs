@@ -56,20 +56,7 @@ public class DreamCatcher : ModuleRules
 		}
 
 		PublicIncludePaths.AddRange(new string[] {
-			"DreamCatcher",
-			"DreamCatcher/Variant_Platforming",
-			"DreamCatcher/Variant_Platforming/Animation",
-			"DreamCatcher/Variant_Combat",
-			"DreamCatcher/Variant_Combat/AI",
-			"DreamCatcher/Variant_Combat/Animation",
-			"DreamCatcher/Variant_Combat/Gameplay",
-			"DreamCatcher/Variant_Combat/Interfaces",
-			"DreamCatcher/Variant_Combat/UI",
-			"DreamCatcher/Variant_SideScrolling",
-			"DreamCatcher/Variant_SideScrolling/AI",
-			"DreamCatcher/Variant_SideScrolling/Gameplay",
-			"DreamCatcher/Variant_SideScrolling/Interfaces",
-			"DreamCatcher/Variant_SideScrolling/UI"
+			"DreamCatcher"
 		});
 
 		PublicDependencyModuleNames.Add("PhysicsCore");

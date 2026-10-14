@@ -14,8 +14,6 @@ class UDCAbilityTagRelationshipMapping;
 class UDCCameraMode;
 class UDCInputConfig;
 class UObject;
-class UDCEquipmentDefinition;
-
 
 /**
  * UDCPawnData
@@ -52,19 +50,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DC|Camera")
 	TSubclassOf<UDCCameraMode> DefaultCameraMode;
 
-	// 과도기 필드: 현재 Character의 견착 카메라 선택에 사용합니다.
-	// 원본 카메라 연결의 대체 검증 이후 제거합니다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Legacy")
-	TSubclassOf<UDCCameraMode> ShoulderCameraMode;
-
-	// 과도기 필드: 현재 Character의 Scope 카메라 선택에 사용합니다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Legacy")
-	TSubclassOf<UDCCameraMode> ScopeCameraMode;
-
-	// 과도기 필드: 현재 EquipmentManager의 초기 장착에 사용합니다.
-	// 원본 Inventory / QuickBar / Equipment 연결 검증 이후 제거합니다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DreamCatcher|Legacy")
-	TSubclassOf<UDCEquipmentDefinition> DefaultWeaponDefinition;
 };
 
 #undef UE_API

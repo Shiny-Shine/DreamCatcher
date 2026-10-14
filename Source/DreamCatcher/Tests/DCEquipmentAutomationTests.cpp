@@ -27,9 +27,9 @@
 
 namespace DCEquipmentTests
 {
-// Prepared by Scripts/Editor/r5_equipment_automation.py after the user builds C++.
-constexpr const TCHAR* ItemClassPath = TEXT("/Game/DreamCatcher/GAS/Test/R5/Automation/Equipment/ID_DC_R5_EquipmentSmoke.ID_DC_R5_EquipmentSmoke_C");
-constexpr const TCHAR* AbilityClassPath = TEXT("/Game/DreamCatcher/GAS/Test/R5/Automation/Equipment/GA_DC_R5_EquipmentSmoke.GA_DC_R5_EquipmentSmoke_C");
+// Editor-only fixture data under /Game/Tests; excluded from game cooking.
+constexpr const TCHAR* ItemClassPath = TEXT("/Game/Tests/Equipment/ID_DC_R5_EquipmentSmoke.ID_DC_R5_EquipmentSmoke_C");
+constexpr const TCHAR* AbilityClassPath = TEXT("/Game/Tests/Equipment/GA_DC_R5_EquipmentSmoke.GA_DC_R5_EquipmentSmoke_C");
 
 template <typename T>
 T* AddTestComponent(AActor* Owner, const TCHAR* Name)
@@ -67,7 +67,7 @@ bool FDCEquipmentQuickBarLifecycleTest::RunTest(const FString& Parameters)
 	}
 	UClass* ItemClass = LoadClass<UDCInventoryItemDefinition>(nullptr, ItemClassPath);
 	UClass* AbilityClass = LoadClass<UDCLyraGameplayAbility_FromEquipment>(nullptr, AbilityClassPath);
-	if (!TestNotNull(TEXT("Prepared item fixture (run r5_equipment_automation.py prepare first)"), ItemClass)
+	if (!TestNotNull(TEXT("Editor-only equipment fixture"), ItemClass)
 		|| !TestNotNull(TEXT("Prepared FromEquipment ability fixture"), AbilityClass))
 	{
 		return false;

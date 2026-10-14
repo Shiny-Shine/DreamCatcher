@@ -84,18 +84,6 @@
 			"Type": "RequiredResource"
 		},
 		{
-			"Path": "$(ProjectDir)/Plugins/DCRifleMigrationTools/Binaries/Win64/UnrealEditor-DCRifleMigrationTools.dll",
-			"Type": "DynamicLibrary"
-		},
-		{
-			"Path": "$(ProjectDir)/Plugins/DCRifleMigrationTools/Binaries/Win64/UnrealEditor-DCRifleMigrationTools.pdb",
-			"Type": "SymbolFile"
-		},
-		{
-			"Path": "$(ProjectDir)/Plugins/DCRifleMigrationTools/Binaries/Win64/UnrealEditor.modules",
-			"Type": "RequiredResource"
-		},
-		{
 			"Path": "$(ProjectDir)/Plugins/GameSettings/Binaries/Win64/UnrealEditor-GameSettings.dll",
 			"Type": "DynamicLibrary"
 		},
@@ -5355,10 +5343,6 @@
 		},
 		{
 			"Path": "$(ProjectDir)/Plugins/CommonUser/CommonUser.uplugin",
-			"Type": "UFS"
-		},
-		{
-			"Path": "$(ProjectDir)/Plugins/DCRifleMigrationTools/DCRifleMigrationTools.uplugin",
 			"Type": "UFS"
 		},
 		{
@@ -30429,7 +30413,6 @@
 		"CryptoKeys",
 		"CurveEditorTools",
 		"CustomMeshComponent",
-		"DCRifleMigrationTools",
 		"DCStageUI",
 		"DTLSHandlerComponent",
 		"DataRegistry",
