@@ -7,7 +7,7 @@
 
 class ADreamCatcherCharacter;
 class UDCCombatComponent;
-class UDCHealthComponent;
+class UDCLyraHealthComponent;
 
 UCLASS(Abstract, Blueprintable)
 class DREAMCATCHER_API UDCPlayerHUDWidget : public UUserWidget
@@ -47,7 +47,7 @@ private:
 	void UnbindFromCurrentCharacter();
 
 	UFUNCTION()
-	void HandleHealthChanged(float CurrentHealth, float MaxHealth);
+	void HandleHealthChanged(UDCLyraHealthComponent* HealthComponent, float OldValue, float NewValue, AActor* Instigator);
 
 	UFUNCTION()
 	void HandleUltimateChargeChanged(float NormalizedCharge);
@@ -67,6 +67,7 @@ private:
 	void HandleAimModeChanged(EDCAimMode NewAimMode);
 
 	TWeakObjectPtr<ADreamCatcherCharacter> ObservedCharacter;
-	TObjectPtr<UDCHealthComponent> BoundHealthComponent;
+	UPROPERTY(Transient)
+	TObjectPtr<UDCLyraHealthComponent> BoundHealthComponent;
 	TObjectPtr<UDCCombatComponent> BoundCombatComponent;
 };

@@ -8,6 +8,7 @@ class ADCEnemySpawner;
 class ADCEncounterController;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCEncounterCompletedSignature, ADCEncounterController*, Encounter);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCEncounterFailedSignature, ADCEncounterController*, Encounter);
 
 UCLASS()
 class DREAMCATCHER_API ADCEncounterController : public AActor
@@ -19,9 +20,22 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FDCEncounterCompletedSignature OnEncounterCompleted;
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FDCEncounterFailedSignature OnEncounterFailed;
 
 	UFUNCTION(BlueprintCallable, Category="Encounter")
 	void StartEncounter();
+	/** Explicit stage cancellation; existing EndPlay behavior stays unchanged. */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Encounter")
+	void AbortEncounter();
+	UFUNCTION(BlueprintPure, Category="Encounter")
+	bool IsEncounterAborted() const { return bAborted; }
+	UFUNCTION(BlueprintPure, Category="Encounter")
+	bool IsEncounterCompleted() const { return bCompleted; }
+	UFUNCTION(BlueprintPure, Category="Encounter")
+	bool HasEncounterFailure() const { return bFailed; }
+	UFUNCTION(BlueprintPure, Category="Encounter")
+	int32 GetRemainingSpawnerCount() const { return PendingSpawners.Num(); }
 
 protected:
 	virtual void BeginPlay() override;
@@ -44,12 +58,24 @@ protected:
 
 private:
 	void StartEncounterInternal();
+	void TryCompleteEncounter();
+	void FailEncounter();
+	void UnbindSpawner(ADCEnemySpawner* Spawner);
 
 	UFUNCTION()
 	void HandleSpawnerCleared(ADCEnemySpawner* ClearedSpawner);
+	UFUNCTION()
+	void HandleSpawnerFailed(ADCEnemySpawner* FailedSpawner);
+	UFUNCTION()
+	void HandleSpawnerDestroyed(AActor* DestroyedSpawner);
 
-	int32 RemainingSpawners = 0;
+	TSet<TWeakObjectPtr<ADCEnemySpawner>> PendingSpawners;
+	bool bStartRequested = false;
 	bool bStarted = false;
 	bool bCompleted = false;
+	bool bFailed = false;
+	bool bStartingSpawners = false;
+	bool bEndingPlay = false;
+	bool bAborted = false;
 	FTimerHandle StartTimerHandle;
 };

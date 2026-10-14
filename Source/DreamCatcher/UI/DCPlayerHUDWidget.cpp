@@ -1,7 +1,9 @@
 #include "UI/DCPlayerHUDWidget.h"
 #include "DreamCatcherCharacter.h"
+#include "Character/DCPawnData.h"
+#include "Character/DCPawnExtensionComponent.h"
 #include "Components/DCCombatComponent.h"
-#include "Components/DCHealthComponent.h"
+#include "Character/DCLyraHealthComponent.h"
 
 void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 {
@@ -17,32 +19,57 @@ void UDCPlayerHUDWidget::BindToCharacter(ADreamCatcherCharacter* NewCharacter)
 		return;
 	}
 
+	const UDCPawnExtensionComponent* PawnExtension =
+		UDCPawnExtensionComponent::FindPawnExtensionComponent(NewCharacter);
+
+	const UDCPawnData* PawnData = PawnExtension ? PawnExtension->GetPawnData() : nullptr;
+
+	// Character의 입력 경로 선택과 동일한 기준을 사용.
+	const bool bUseGASAim = PawnData && PawnData->InputConfig;
+
+	if (bUseGASAim)
+	{
+		NewCharacter->OnGASAimModeChanged.AddDynamic(this, &ThisClass::HandleAimModeChanged);
+
+		HandleAimModeChanged(NewCharacter->GetGASAimMode());
+	}
+
 	BoundHealthComponent = NewCharacter->GetHealthComponent();
 	BoundCombatComponent = NewCharacter->GetCombatComponent();
 
 	if (BoundHealthComponent)
 	{
 		BoundHealthComponent->OnHealthChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleHealthChanged);
-		HandleHealthChanged(BoundHealthComponent->GetCurrentHealth(), BoundHealthComponent->GetMaxHealth());
+		BoundHealthComponent->OnMaxHealthChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleHealthChanged);
+		HandleHealthChanged(BoundHealthComponent, 0.0f, 0.0f, nullptr);
 	}
 
 	if (BoundCombatComponent)
 	{
 		// 궁극기 게이지가 변경됐을 때 HUD가 알림을 받도록 등록.
-		BoundCombatComponent->OnUltimateChargeChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
-		// 조준 모드가 변경됐을 때 HUD가 알림을 받도록 등록.
-		BoundCombatComponent->OnAimModeChanged.AddDynamic(this, &UDCPlayerHUDWidget::HandleAimModeChanged);
+		BoundCombatComponent->OnUltimateChargeChanged.
+		                      AddDynamic(this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
+		// Legacy 입력을 사용하는 Character에서만 기존 조준 이벤트를 구독.
+		if (!bUseGASAim)
+		{
+			BoundCombatComponent->OnAimModeChanged.AddDynamic(this, &ThisClass::HandleAimModeChanged);
+		}
 		// HUD 퍼짐값 전달
-		BoundCombatComponent->OnCrosshairSpreadChanged.AddDynamic(this,&UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
+		BoundCombatComponent->OnCrosshairSpreadChanged.AddDynamic(
+			this, &UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
 		// 매 발사 순간 HUD가 알림을 받음.
 		BoundCombatComponent->OnShotFired.AddDynamic(this, &UDCPlayerHUDWidget::HandleShotFired);
 
 		// HUD가 생성된 직후에도 현재 조준 모드에 맞는 UI를 표시.
-		HandleAimModeChanged(BoundCombatComponent->GetAimMode());
+		if (!bUseGASAim)
+		{
+			HandleAimModeChanged(BoundCombatComponent->GetAimMode());
+		}
 		// HUD가 생성된 직후에도 현재 궁극기 게이지를 표시.
 		HandleUltimateChargeChanged(BoundCombatComponent->GetUltimateChargeNormalized());
 
-		HandleCrosshairSpreadChanged(BoundCombatComponent->GetCrosshairSpreadNormalized(), BoundCombatComponent->GetCurrentSpreadDegrees());
+		HandleCrosshairSpreadChanged(BoundCombatComponent->GetCrosshairSpreadNormalized(),
+		                             BoundCombatComponent->GetCurrentSpreadDegrees());
 	}
 }
 
@@ -57,29 +84,42 @@ void UDCPlayerHUDWidget::UnbindFromCurrentCharacter()
 	if (BoundHealthComponent)
 	{
 		BoundHealthComponent->OnHealthChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleHealthChanged);
+		BoundHealthComponent->OnMaxHealthChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleHealthChanged);
 		BoundHealthComponent = nullptr;
 	}
 
 	if (BoundCombatComponent)
 	{
 		// 궁극기 게이지 변경 알림 등록 해제.
-		BoundCombatComponent->OnUltimateChargeChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
+		BoundCombatComponent->OnUltimateChargeChanged.RemoveDynamic(
+			this, &UDCPlayerHUDWidget::HandleUltimateChargeChanged);
 		// 조준 모드 변경 알림 등록 해제.
 		BoundCombatComponent->OnAimModeChanged.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleAimModeChanged);
-		
-		BoundCombatComponent->OnCrosshairSpreadChanged.RemoveDynamic(this,&UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
-		
-		BoundCombatComponent->OnShotFired.RemoveDynamic(this,&UDCPlayerHUDWidget::HandleShotFired);
+
+		BoundCombatComponent->OnCrosshairSpreadChanged.RemoveDynamic(
+			this, &UDCPlayerHUDWidget::HandleCrosshairSpreadChanged);
+
+		BoundCombatComponent->OnShotFired.RemoveDynamic(this, &UDCPlayerHUDWidget::HandleShotFired);
 
 		BoundCombatComponent = nullptr;
+	}
+
+	if (ObservedCharacter.IsValid())
+	{
+		ObservedCharacter->OnGASAimModeChanged.RemoveDynamic(this, &ThisClass::HandleAimModeChanged);
 	}
 
 	ObservedCharacter = nullptr;
 }
 
-void UDCPlayerHUDWidget::HandleHealthChanged(float CurrentHealth, float MaxHealth)
+void UDCPlayerHUDWidget::HandleHealthChanged(UDCLyraHealthComponent* HealthComponent, float OldValue, float NewValue,
+                                          AActor* Instigator)
 {
-	BP_OnHealthChanged(CurrentHealth, MaxHealth);
+	// Both delegates use this signature. NewValue is not necessarily Health (it may be MaxHealth).
+	if (HealthComponent && HealthComponent == BoundHealthComponent.Get())
+	{
+		BP_OnHealthChanged(HealthComponent->GetHealth(), HealthComponent->GetMaxHealth());
+	}
 }
 
 void UDCPlayerHUDWidget::HandleUltimateChargeChanged(float NormalizedCharge)

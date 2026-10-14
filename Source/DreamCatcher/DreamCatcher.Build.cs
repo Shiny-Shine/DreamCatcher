@@ -13,15 +13,47 @@ public class DreamCatcher : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"InputCore",
+			"ApplicationCore",
 			"EnhancedInput",
+
+			"GameplayAbilities",
+			"GameplayTags",
+			"GameplayTasks",
+			
+			"ModularGameplay",
+			"GameFeatures",
+
 			"AIModule",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			
+			"ModularGameplayActors",
+			"CommonUser",
+			"CommonGame",
+			"CommonUI",
+			"UIExtension",
+			"AsyncMixin",
+			"GameSubtitles",
+			"CommonLoadingScreen",
+			"DeveloperSettings"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[] {
+			"GameplayMessageRuntime",
+			"Niagara",
+			"SlateCore",
+			"CommonInput",
+			"AudioMixer",
+			"AudioModulation"
+		});
+		// Original AI development lookup and opt-in WorldSettings map validation.
+		PrivateDependencyModuleNames.Add("AssetRegistry");
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("MessageLog");
+		}
 
 		PublicIncludePaths.AddRange(new string[] {
 			"DreamCatcher",
@@ -40,12 +72,25 @@ public class DreamCatcher : ModuleRules
 			"DreamCatcher/Variant_SideScrolling/UI"
 		});
 
+		PublicDependencyModuleNames.Add("PhysicsCore");
+		// R13 original settings UI and its replay/settings dependencies.
+		PublicDependencyModuleNames.AddRange(new[] { "GameSettings", "NetworkReplayStreaming", "PropertyPath", "DataRegistry" });
+		PrivateDependencyModuleNames.AddRange(new[] { "PlatformDLC", "RHI", "RenderCore" });
+		PrivateDependencyModuleNames.Add("NetCore");
+		// Original GameInstance parent required by the imported weapon audio Blueprint.
+		PrivateDependencyModuleNames.AddRange(new[] { "CoreOnline", "DTLSHandlerComponent" });
+
+		SetupIrisSupport(Target);
+
 		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		// PrivateDependencyModuleNames.AddRange(new string[] {
+		//     "Slate", "SlateCore"
+		// });
 
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
 
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
+		// To include OnlineSubsystemSteam, add it to the plugins section
+		// in your uproject file with the Enabled attribute set to true.
 	}
 }

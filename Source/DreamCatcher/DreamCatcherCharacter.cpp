@@ -1,8 +1,21 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #include "DreamCatcherCharacter.h"
+
+#include "AbilitySystem/DCAbilitySystemComponent.h"
+#include "AbilitySystem/DCGameplayTags.h"
+#include "AbilitySystem/Attributes/DCHealthSet.h"
+#include "AbilitySystemGlobals.h"
+#include "Animation/DCAnimInstance.h"
 #include "Camera/CameraComponent.h"
+#include "Camera/DCCameraComponent.h"
+#include "Camera/DCCameraMode.h"
+#include "Character/DCPawnData.h"
+#include "Character/DCPawnExtensionComponent.h"
+#include "Character/DCHeroComponent.h"
+#include "Character/DCLyraHealthComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/DCCombatComponent.h"
-#include "Components/DCHealthComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -10,15 +23,23 @@
 #include "EnhancedInputComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameplayEffect.h"
+#include "GameplayEffectTypes.h"
+#include "Input/DCInputComponent.h"
+#include "Input/DCInputConfig.h"
 #include "InputAction.h"
 #include "InputActionValue.h"
-#include "DrawDebugHelpers.h"
-#include "GameFramework/DamageType.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/DCPlayerState.h"
+#include "Character/DCCharacterMovementComponent.h"
+#include "TimerManager.h"
 
-ADreamCatcherCharacter::ADreamCatcherCharacter()
+ADreamCatcherCharacter::ADreamCatcherCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDCCharacterMovementComponent>(
+		ACharacter::CharacterMovementComponentName))
 {
 	// Constructor는 기본 부품 조립 단계.
 	// 런타임 월드 참조나 다른 액터 찾기는 일반적으로 여기서 안함.
@@ -52,11 +73,32 @@ ADreamCatcherCharacter::ADreamCatcherCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	// CameraMode Stack을 사용할 새 카메라.
+	// CameraMode가 직접 World Transform을 계산하므로 SpringArm 끝이 아니라 RootComponent에 부착.
+	ModeCamera = CreateDefaultSubobject<UDCCameraComponent>(TEXT("ModeCamera"));
+
+	ModeCamera->SetupAttachment(RootComponent);
+
+	// CameraMode가 Controller 회전을 읽어 직접 View를 계산하므로
+	// CameraComponent 자체가 PawnControlRotation을 중복 적용하지 않게 함.
+	ModeCamera->bUsePawnControlRotation = false;
+
+	// DefaultCameraMode가 없는 기존 Character에서는 자동으로 활성화되지 않도록 함.
+	ModeCamera->SetAutoActivate(false);
+
 	// 체력, 전투를 컴포넌트로 분리해
 	// 나중에 적 캐릭터나 보스에도 재사용하기 쉽게 만ㄷ므.
-	HealthComponent = CreateDefaultSubobject<UDCHealthComponent>(TEXT("HealthComponent"));
+	PawnExtensionComponent = CreateDefaultSubobject<UDCPawnExtensionComponent>(TEXT("PawnExtensionComponent"));
+	// Ported from LyraCharacter: react to the extension's ASC lifetime rather than initialize it here.
+	PawnExtensionComponent->OnAbilitySystemInitialized_RegisterAndCall(
+		FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemInitialized));
+	PawnExtensionComponent->OnAbilitySystemUninitialized_Register(
+		FSimpleMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnAbilitySystemUninitialized));
+	HealthComponent = CreateDefaultSubobject<UDCLyraHealthComponent>(TEXT("HealthComponent"));
+	HealthComponent->OnDeathStarted.AddDynamic(this, &ThisClass::OnDeathStarted);
+	HealthComponent->OnDeathFinished.AddDynamic(this, &ThisClass::OnDeathFinished);
 	CombatComponent = CreateDefaultSubobject<UDCCombatComponent>(TEXT("CombatComponent"));
-	
+
 	// 임시 무기 모델을 표시할 컴포넌트.
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 
@@ -94,34 +136,369 @@ ADreamCatcherCharacter::ADreamCatcherCharacter()
 	FollowCamera->SetFieldOfView(HipCameraProfile.FieldOfView);
 }
 
+UAbilitySystemComponent* ADreamCatcherCharacter::GetAbilitySystemComponent() const
+{
+	return GetDCAbilitySystemComponent();
+}
+
+UDCAbilitySystemComponent* ADreamCatcherCharacter::GetDCAbilitySystemComponent() const
+{
+	return PawnExtensionComponent ? PawnExtensionComponent->GetDCAbilitySystemComponent() : nullptr;
+}
+
+void ADreamCatcherCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	PawnExtensionComponent->HandleControllerChanged();
+}
+
+void ADreamCatcherCharacter::OnRep_Controller()
+{
+	Super::OnRep_Controller();
+	PawnExtensionComponent->HandleControllerChanged();
+}
+
+void ADreamCatcherCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	PawnExtensionComponent->HandlePlayerStateReplicated();
+}
+
+void ADreamCatcherCharacter::OnAbilitySystemInitialized()
+{
+	UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent();
+	check(ASC);
+
+	// The PlayerState ASC can outlive its previous pawn's crouching state.
+	if (ASC->GetAvatarActor() == this)
+	{
+		ASC->SetLooseGameplayTagCount(DCGameplayTags::Status_Crouching, IsCrouched() ? 1 : 0);
+	}
+
+	HealthComponent->InitializeWithAbilitySystem(ASC);
+
+	InitializeGASAimStateListeners();
+	InitializeCameraModeSystem();
+}
+
+void ADreamCatcherCharacter::OnAbilitySystemUninitialized()
+{
+	if (UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent())
+	{
+		// PawnExtension clears the avatar before this callback. Do not touch a replacement avatar's tags.
+		const AActor* Avatar = ASC->GetAvatarActor();
+		if (!Avatar || Avatar == this)
+		{
+			ASC->SetLooseGameplayTagCount(DCGameplayTags::Status_Crouching, 0);
+		}
+	}
+
+	HealthComponent->UninitializeFromAbilitySystem();
+
+	UninitializeGASAimStateListeners();
+}
+
+void ADreamCatcherCharacter::InitializeCameraModeSystem()
+{
+	const UDCPawnData* PawnData = PawnExtensionComponent ? PawnExtensionComponent->GetPawnData() : nullptr;
+
+	const bool bCanUseCameraModeSystem = ModeCamera && PawnData && PawnData->DefaultCameraMode;
+
+	if (!bCanUseCameraModeSystem)
+	{
+		// DefaultCameraMode가 없는 기존 Character는 Legacy FollowCamera를 계속 사용.
+		if (ModeCamera)
+		{
+			ModeCamera->DetermineCameraModeDelegate.Unbind();
+
+			ModeCamera->Deactivate();
+		}
+
+		if (FollowCamera)
+		{
+			FollowCamera->Activate(true);
+		}
+
+		UE_LOG(LogDreamCatcher, Verbose, TEXT("Character [%s] is using ""the Legacy FollowCamera."),
+		       *GetNameSafe(this));
+
+		return;
+	}
+
+	const UDCHeroComponent* HeroComponent = UDCHeroComponent::FindHeroComponent(this);
+	if (!HeroComponent || HeroComponent->UsesLegacyCameraMode())
+	{
+		ModeCamera->DetermineCameraModeDelegate.BindUObject(this, &ThisClass::DetermineCameraMode);
+	}
+	else if (ModeCamera->DetermineCameraModeDelegate.IsBoundToObject(this))
+	{
+		// Hero supplies the original camera delegate when the R4 migration is enabled.
+		ModeCamera->DetermineCameraModeDelegate.Unbind();
+	}
+
+	// 새 카메라를 먼저 활성화.
+	ModeCamera->Activate(true);
+
+	// Actor::CalcCamera가 Legacy 카메라를 선택하지 않도록 비활성화.
+	if (FollowCamera)
+	{
+		FollowCamera->Deactivate();
+	}
+
+	UE_LOG(LogDreamCatcher, Log, TEXT("Character [%s] activated CameraMode ""system. Default Mode: [%s]"),
+	       *GetNameSafe(this), *GetNameSafe(PawnData->DefaultCameraMode));
+}
+
+bool ADreamCatcherCharacter::IsUsingCameraModeSystem() const
+{
+	return ModeCamera && ModeCamera->IsActive();
+}
+
+void ADreamCatcherCharacter::InitializeGASAimStateListeners()
+{
+	UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent();
+
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	if (BoundAimAbilitySystemComponent.Get() == AbilitySystemComponent)
+	{
+		RefreshGASAimMode(true);
+		return;
+	}
+
+	UninitializeGASAimStateListeners();
+
+	BoundAimAbilitySystemComponent = AbilitySystemComponent;
+
+	ShoulderAimTagDelegateHandle =
+		AbilitySystemComponent->
+		RegisterGameplayTagEvent(DCGameplayTags::State_Aim_Shoulder, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::HandleGASAimStateTagChanged);
+
+	ScopeAimTagDelegateHandle =
+		AbilitySystemComponent->
+		RegisterGameplayTagEvent(DCGameplayTags::State_Aim_Scope, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::HandleGASAimStateTagChanged);
+
+	RefreshGASAimMode(true);
+}
+
+void ADreamCatcherCharacter::UninitializeGASAimStateListeners()
+{
+	UDCAbilitySystemComponent* AbilitySystemComponent = BoundAimAbilitySystemComponent.Get();
+
+	if (AbilitySystemComponent)
+	{
+		if (ShoulderAimTagDelegateHandle.IsValid())
+		{
+			AbilitySystemComponent->UnregisterGameplayTagEvent(
+				ShoulderAimTagDelegateHandle,
+				DCGameplayTags::State_Aim_Shoulder,
+				EGameplayTagEventType::NewOrRemoved
+			);
+		}
+
+		if (ScopeAimTagDelegateHandle.IsValid())
+		{
+			AbilitySystemComponent->UnregisterGameplayTagEvent(
+				ScopeAimTagDelegateHandle,
+				DCGameplayTags::State_Aim_Scope,
+				EGameplayTagEventType::NewOrRemoved
+			);
+		}
+	}
+
+	ShoulderAimTagDelegateHandle = FDelegateHandle();
+
+	ScopeAimTagDelegateHandle = FDelegateHandle();
+
+	BoundAimAbilitySystemComponent.Reset();
+
+	CurrentGASAimMode = EDCAimMode::Hip;
+}
+
+void ADreamCatcherCharacter::HandleGASAimStateTagChanged(const FGameplayTag ChangedTag, int32 NewCount)
+{
+	(void)ChangedTag;
+	(void)NewCount;
+
+	RefreshGASAimMode(false);
+}
+
+void ADreamCatcherCharacter::RefreshGASAimMode(bool bForceBroadcast)
+{
+	const UDCAbilitySystemComponent* AbilitySystemComponent = BoundAimAbilitySystemComponent.Get();
+
+	EDCAimMode NewAimMode = EDCAimMode::Hip;
+
+	if (AbilitySystemComponent)
+	{
+		if (AbilitySystemComponent->HasMatchingGameplayTag(DCGameplayTags::State_Aim_Scope))
+		{
+			NewAimMode = EDCAimMode::Scope;
+		}
+		else if (AbilitySystemComponent->HasMatchingGameplayTag(DCGameplayTags::State_Aim_Shoulder))
+		{
+			NewAimMode = EDCAimMode::Shoulder;
+		}
+	}
+
+	if (!bForceBroadcast && CurrentGASAimMode == NewAimMode)
+	{
+		return;
+	}
+
+	CurrentGASAimMode = NewAimMode;
+
+	OnGASAimModeChanged.Broadcast(CurrentGASAimMode);
+
+	/*
+	 * 기존 Character Blueprint 연출 훅을 재사용.
+	 *
+	 * 단, BP_DC_Player_GAS_Test에서 이 이벤트가 Legacy CameraBoom을 직접 움직이고 있다면
+	 * 해당 카메라 노드는 제거해야함.
+	 */
+	BP_OnAimModeChanged(CurrentGASAimMode);
+}
+
+TSubclassOf<UDCCameraMode> ADreamCatcherCharacter::DetermineCameraMode() const
+{
+	// Ability가 카메라를 지정했다면 해당 카메라를 먼저 사용.
+	if (const UDCHeroComponent* HeroComponent = UDCHeroComponent::FindHeroComponent(this))
+	{
+		const TSubclassOf<UDCCameraMode> AbilityCameraMode = HeroComponent->GetAbilityCameraMode();
+
+		if (AbilityCameraMode)
+		{
+			return AbilityCameraMode;
+		}
+	}
+
+	const UDCPawnData* PawnData = PawnExtensionComponent ? PawnExtensionComponent->GetPawnData() : nullptr;
+
+	if (!PawnData)
+	{
+		return nullptr;
+	}
+
+	const UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent();
+
+	if (AbilitySystemComponent)
+	{
+		if (PawnData->ScopeCameraMode && AbilitySystemComponent->
+			HasMatchingGameplayTag(DCGameplayTags::State_Aim_Scope))
+		{
+			return PawnData->ScopeCameraMode;
+		}
+
+		if (PawnData->ShoulderCameraMode && AbilitySystemComponent->HasMatchingGameplayTag(
+			DCGameplayTags::State_Aim_Shoulder))
+		{
+			return PawnData->ShoulderCameraMode;
+		}
+	}
+
+	return PawnData->DefaultCameraMode;
+}
+
 void ADreamCatcherCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (PawnExtensionComponent->GetPawnData<UDCPawnData>())
+	{
+		ensureMsgf(UDCHeroComponent::FindHeroComponent(this),
+		           TEXT(
+			           "[R2-2] GAS pawn [%s] needs exactly one DCHeroComponent on its Blueprint. ASC initialization is owned by Hero."
+		           ), *GetNameSafe(this));
+	}
+
+	InitializeCameraModeSystem();
 
 	// BeginPlay 시점에는 컴포넌트와 런타임 객체들이 모두 살아 있으므로
 	// 이벤트 바인딩을 여기서 해두는 것이 안전.
 	if (CombatComponent)
 	{
+		// 사격, 회피, 궁극기는 아직 Legacy 시스템을 사용하므로 기존 Delegate를 유지.
 		CombatComponent->OnDodgeRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleDodgeRequested);
+
 		CombatComponent->OnUltimateRequested.AddDynamic(this, &ADreamCatcherCharacter::HandleUltimateRequested);
-		
+
 		CombatComponent->OnShotFired.AddDynamic(this, &ADreamCatcherCharacter::HandleShotFired);
 
-		// 카메라 기본값 설정
-		CombatComponent->OnAimModeChanged.AddDynamic(this, &ADreamCatcherCharacter::HandleAimModeChanged);
-		
-		HandleAimModeChanged(CombatComponent->GetAimMode());
-	}
+		// CameraMode 시스템이 없는 기존 Character만 Legacy 이벤트를 사용.
+		// GAS 테스트 Character는 RefreshGASAimMode()에서 BP 이벤트를 호출합니다.
+		if (!IsUsingCameraModeSystem())
+		{
+			CombatComponent->OnAimModeChanged.AddDynamic(this, &ADreamCatcherCharacter::HandleAimModeChanged);
 
-	if (HealthComponent)
-	{
-		HealthComponent->OnDeath.AddDynamic(this, &ADreamCatcherCharacter::HandleDeath);
+			HandleAimModeChanged(CombatComponent->GetAimMode());
+		}
 	}
 }
 
 void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	if (const UDCHeroComponent* HeroComponent = UDCHeroComponent::FindHeroComponent(this))
+	{
+		if (!HeroComponent->UsesLegacyPlayerInput())
+		{
+			PawnExtensionComponent->SetupPlayerInputComponent();
+			return;
+		}
+	}
+
+	const UDCPawnData* PawnData = PawnExtensionComponent ? PawnExtensionComponent->GetPawnData() : nullptr;
+
+	const UDCInputConfig* InputConfig = PawnData ? PawnData->InputConfig : nullptr;
+
+	// PawnData에 InputConfig가 지정되어 있으면 새 GAS 입력 경로를 사용.
+	if (InputConfig)
+	{
+		UDCInputComponent* DCInputComponent = Cast<UDCInputComponent>(PlayerInputComponent);
+
+		if (!DCInputComponent)
+		{
+			UE_LOG(LogDreamCatcher, Error,
+			       TEXT("Character [%s] has an InputConfig ""but PlayerInputComponent is not "
+				       "UDCInputComponent. Actual class: [%s]"), *GetNameSafe(this),
+			       *GetNameSafe(PlayerInputComponent));
+
+			return;
+		}
+
+		// 같은 InputComponent에 다시 Setup이 호출될 경우를 대비해 기존 Ability Binding을 먼저 제거.
+		DCInputComponent->RemoveBinds(AbilityInputBindHandles);
+
+		DCInputComponent->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Move, ETriggerEvent::Triggered, this,
+		                                   &ADreamCatcherCharacter::Move, true);
+
+		DCInputComponent->BindNativeAction(InputConfig, DCGameplayTags::InputTag_Look, ETriggerEvent::Triggered, this,
+		                                   &ADreamCatcherCharacter::Look, true);
+
+		// Jump, Aim, Dodge, Ultimate, Fire는 InputTag를 ASC에 전달.
+		DCInputComponent->BindLegacyAbilityActions(InputConfig, this,
+		                                           &ADreamCatcherCharacter::Input_AbilityInputTagPressed,
+		                                           &ADreamCatcherCharacter::Input_AbilityInputTagReleased,
+		                                           &ADreamCatcherCharacter::Input_AbilityInputTagCanceled,
+		                                           AbilityInputBindHandles);
+
+		UE_LOG(LogDreamCatcher, Log, TEXT("Character [%s] bound GAS input ""using InputConfig [%s]."),
+		       *GetNameSafe(this), *GetNameSafe(InputConfig));
+
+		// The input component and bindings now exist; allow the original InitState chain to proceed.
+		PawnExtensionComponent->SetupPlayerInputComponent();
+
+		// GAS 입력을 연결했으므로 아래 Legacy 입력까지 중복 연결하지 않고 종료.
+		return;
+	}
 
 	// Character가 플레이어에게 빙의(Possess)된 뒤 호출되어 입력을 연결.
 	UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
@@ -198,31 +575,63 @@ void ADreamCatcherCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	//조준 상태별 입력 바인딩
 	if (AimAction)
 	{
-		EnhancedInput->BindAction(
-			AimAction,
-			ETriggerEvent::Started,
-			this,
-			&ADreamCatcherCharacter::AimPressed
-		);
+		EnhancedInput->BindAction(AimAction, ETriggerEvent::Started, this, &ADreamCatcherCharacter::AimPressed);
 
-		EnhancedInput->BindAction(
-			AimAction,
-			ETriggerEvent::Completed,
-			this,
-			&ADreamCatcherCharacter::AimReleased
-		);
+		EnhancedInput->BindAction(AimAction, ETriggerEvent::Completed, this, &ADreamCatcherCharacter::AimReleased);
 
-		EnhancedInput->BindAction(
-			AimAction,
-			ETriggerEvent::Canceled,
-			this,
-			&ADreamCatcherCharacter::AimCanceled
-		);
+		EnhancedInput->BindAction(AimAction, ETriggerEvent::Canceled, this, &ADreamCatcherCharacter::AimCanceled);
 	}
 	else
 	{
 		UE_LOG(LogDreamCatcher, Warning, TEXT("AimAction is not assigned on %s"), *GetName());
 	}
+
+	PawnExtensionComponent->SetupPlayerInputComponent();
+}
+
+void ADreamCatcherCharacter::Input_AbilityInputTagPressed(FGameplayTag InputTag)
+{
+	UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent();
+
+	if (!AbilitySystemComponent)
+	{
+		UE_LOG(LogDreamCatcher, Warning,
+		       TEXT("Character [%s] cannot process pressed ""InputTag [%s] because ASC is not initialized."),
+		       *GetNameSafe(this), *InputTag.ToString());
+
+		return;
+	}
+
+	AbilitySystemComponent->AbilityInputTagPressed(InputTag);
+}
+
+void ADreamCatcherCharacter::Input_AbilityInputTagReleased(FGameplayTag InputTag)
+{
+	UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent();
+
+	if (!AbilitySystemComponent)
+	{
+		UE_LOG(LogDreamCatcher, Warning,
+		       TEXT("Character [%s] cannot process released ""InputTag [%s] because ASC is not initialized."),
+		       *GetNameSafe(this), *InputTag.ToString());
+
+		return;
+	}
+
+	AbilitySystemComponent->AbilityInputTagReleased(InputTag);
+}
+
+void ADreamCatcherCharacter::Input_AbilityInputTagCanceled(FGameplayTag InputTag)
+{
+	if (InputTag == DCGameplayTags::InputTag_Aim)
+	{
+		// 취소된 우클릭은 짧은 클릭으로 취급 X.
+		CancelAimInputAndState();
+		return;
+	}
+
+	// 다른 입력은 현재 단계의 해제 동작을 유지.
+	Input_AbilityInputTagReleased(InputTag);
 }
 
 void ADreamCatcherCharacter::Move(const FInputActionValue& Value)
@@ -246,9 +655,13 @@ void ADreamCatcherCharacter::Look(const FInputActionValue& Value)
 {
 	const FVector2D Input = Value.Get<FVector2D>();
 
-	// 마우스/패드 입력을 컨트롤러 회전에 반영.
-	AddControllerYawInput(Input.X * CurrentLookSensitivityMultiplier);
-	AddControllerPitchInput(Input.Y * CurrentLookSensitivityMultiplier);
+	// CameraMode 시스템이 활성화된 GAS 테스트 Character는 CameraMode Stack에서 계산된 감도를 사용.
+	// 기존 Character는 Legacy 감도를 유지.
+	const float LookSensitivity = GetCurrentLookSensitivityMultiplier();
+
+	AddControllerYawInput(Input.X * LookSensitivity);
+
+	AddControllerPitchInput(Input.Y * LookSensitivity);
 }
 
 void ADreamCatcherCharacter::StartJump()
@@ -281,7 +694,7 @@ void ADreamCatcherCharacter::StopPrimaryFire()
 void ADreamCatcherCharacter::Dodge()
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
-	
+
 	// 점프하거나 낙하 중이라면 여기서 종료되므로 공중 구르기는 발생하지 않음.
 	if (!Movement || !Movement->IsMovingOnGround())
 	{
@@ -317,7 +730,7 @@ void ADreamCatcherCharacter::HandleShotFired(float ShotSpreadDegrees, float Pitc
 	{
 		return;
 	}
-	
+
 	// 1단계: 카메라에서 LineTrace
 	// 3인칭 게임에서는 카메라와 총구 위치가 달라 화면 중앙의 크로스헤어가 가리키는 위치를 구함.
 	FVector ViewLocation = FollowCamera->GetComponentLocation();
@@ -346,12 +759,13 @@ void ADreamCatcherCharacter::HandleShotFired(float ShotSpreadDegrees, float Pitc
 
 	FHitResult CameraHit;
 
-	const bool bCameraBlocked = World->LineTraceSingleByChannel(CameraHit, ViewLocation, CameraTraceEnd, ECC_Visibility,TraceParams);
+	const bool bCameraBlocked = World->LineTraceSingleByChannel(CameraHit, ViewLocation, CameraTraceEnd, ECC_Visibility,
+	                                                            TraceParams);
 
 	// 카메라 Trace가 무언가를 맞혔다면 그 위치를 조준점으로 사용.
 	// 맞히지 못했다면 최대 사거리 끝을 조준점으로 사용.
 	const FVector AimPoint = bCameraBlocked ? CameraHit.ImpactPoint : CameraTraceEnd;
-	
+
 	// 2단계: 실제 총구 위치 확인
 	FVector MuzzleLocation = GetActorLocation() + GetActorForwardVector() * 100.0f;
 
@@ -381,12 +795,13 @@ void ADreamCatcherCharacter::HandleShotFired(float ShotSpreadDegrees, float Pitc
 
 	FHitResult MuzzleHit;
 
-	const bool bMuzzleBlocked = World->LineTraceSingleByChannel(MuzzleHit, MuzzleLocation, MuzzleTraceEnd, ECC_Visibility, TraceParams);
+	const bool bMuzzleBlocked = World->LineTraceSingleByChannel(MuzzleHit, MuzzleLocation, MuzzleTraceEnd,
+	                                                            ECC_Visibility, TraceParams);
 
 	const FVector FireEnd = bMuzzleBlocked ? MuzzleHit.ImpactPoint : AimPoint;
 
 	AActor* HitActor = bMuzzleBlocked ? MuzzleHit.GetActor() : nullptr;
-	
+
 	// 4단계: 데미지 적용
 	float AppliedDamage = 0.0f;
 
@@ -396,7 +811,8 @@ void ADreamCatcherCharacter::HandleShotFired(float ShotSpreadDegrees, float Pitc
 
 		if (RequestedDamage > 0.0f)
 		{
-			AppliedDamage = UGameplayStatics::ApplyPointDamage(HitActor, RequestedDamage, ShotDirection, MuzzleHit, GetController(), this, UDamageType::StaticClass());
+			AppliedDamage = UGameplayStatics::ApplyPointDamage(HitActor, RequestedDamage, ShotDirection, MuzzleHit,
+			                                                   GetController(), this, UDamageType::StaticClass());
 		}
 	}
 
@@ -426,7 +842,7 @@ void ADreamCatcherCharacter::HandleShotFired(float ShotSpreadDegrees, float Pitc
 	 * 여기서는 사운드만 연결하고,
 	 * 이후 총구 화염, 트레이서, 피격 VFX 등을 같은 이벤트에 연결.
 	 */
-	BP_OnPrimaryFireResolved(MuzzleLocation, FireEnd, HitActor,AppliedDamage);
+	BP_OnPrimaryFireResolved(MuzzleLocation, FireEnd, HitActor, AppliedDamage);
 }
 
 void ADreamCatcherCharacter::HandleDodgeRequested()
@@ -469,24 +885,66 @@ void ADreamCatcherCharacter::HandleUltimateRequested()
 	BP_OnUltimateRequested();
 }
 
-void ADreamCatcherCharacter::HandleDeath(AActor* /*DeadActor*/)
+void ADreamCatcherCharacter::OnDeathStarted(AActor*)
 {
-	// 죽는 순간 자동 연사를 끊어줌.
+	// DreamCatcher compatibility: stop the remaining legacy fire timer and persistent aim effect.
 	StopPrimaryFire();
 	CancelAimInputAndState();
+	PendingRecoil = FVector2D::ZeroVector;
 
-	// 더 이상 움직이지 못하게 막음.
-	GetCharacterMovement()->DisableMovement();
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DisableMovementAndCollision();
+	UE_LOG(LogDreamCatcher, Log, TEXT("[R3-1] Death started: [%s]."), *GetNameSafe(this));
+}
 
-	// 입력도 끊어서 죽은 뒤 조작이 남지 않게 함.
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+void ADreamCatcherCharacter::OnDeathFinished(AActor*)
+{
+	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::DestroyDueToDeath);
+	UE_LOG(LogDreamCatcher, Log, TEXT("[R3-1] Death finished: [%s]. Avatar cleanup queued."), *GetNameSafe(this));
+}
+
+// The following cleanup functions retain LyraCharacter's ordering and behavior.
+void ADreamCatcherCharacter::DisableMovementAndCollision()
+{
+	if (GetController())
 	{
-		DisableInput(PC);
+		GetController()->SetIgnoreMoveInput(true);
 	}
 
-	// 실제 사망 애니메이션, dissolve, 컷신, 카메라 연출은 BP에서 처리.
-	BP_OnDeath();
+	UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+	check(CapsuleComp);
+	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+
+	UDCCharacterMovementComponent* DCMoveComp = CastChecked<UDCCharacterMovementComponent>(GetCharacterMovement());
+	DCMoveComp->StopMovementImmediately();
+	DCMoveComp->DisableMovement();
+}
+
+void ADreamCatcherCharacter::DestroyDueToDeath()
+{
+	K2_OnDeathFinished();
+
+	UninitAndDestroy();
+}
+
+void ADreamCatcherCharacter::UninitAndDestroy()
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		DetachFromControllerPendingDestroy();
+		SetLifeSpan(0.1f);
+	}
+
+	// A replacement pawn may already own the PlayerState ASC. Never clear that pawn's actor info.
+	if (UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent())
+	{
+		if (ASC->GetAvatarActor() == this)
+		{
+			PawnExtensionComponent->UninitializeAbilitySystem();
+		}
+	}
+
+	SetActorHiddenInGame(true);
 }
 
 float ADreamCatcherCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent,
@@ -494,15 +952,61 @@ float ADreamCatcherCharacter::TakeDamage(float DamageAmount, FDamageEvent const&
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (!HealthComponent)
+	if (!HasAuthority() || !FMath::IsFinite(DamageAmount) || DamageAmount <= 0.0f ||
+		!HealthComponent || HealthComponent->IsDeadOrDying())
 	{
 		return 0.0f;
 	}
 
-	const float AppliedDamage = HealthComponent->ApplyDamage(DamageAmount, DamageCauser);
-	if (AppliedDamage > 0.0f)
+	UDCAbilitySystemComponent* TargetASC = GetDCAbilitySystemComponent();
+	if (!IsValid(TargetASC) || TargetASC->GetAvatarActor() != this ||
+		!TargetASC->IsOwnerActorAuthoritative() || !TargetASC->GetSet<UDCHealthSet>())
 	{
-		BP_OnDamaged(HealthComponent->GetCurrentHealth(), HealthComponent->GetMaxHealth(), DamageCauser);
+		return 0.0f;
+	}
+
+	if (!LegacyDamageGameplayEffectClass)
+	{
+		UE_LOG(LogDreamCatcher, Error,
+			TEXT("[R3-1] Character [%s]: assign GE_DC_Damage to LegacyDamageGameplayEffectClass for legacy enemy damage."),
+			*GetNameSafe(this));
+		return 0.0f;
+	}
+
+	// Preserve the old health component's SetByCaller bridge outside the original Lyra health component.
+	// The temporary target-as-source fallback is only for enemies without an ASC; R3-2 replaces this boundary.
+	UAbilitySystemComponent* SourceASC = DamageCauser
+		? UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(DamageCauser, true)
+		: nullptr;
+	if (!IsValid(SourceASC))
+	{
+		SourceASC = TargetASC;
+	}
+
+	FGameplayEffectContextHandle EffectContext = SourceASC->MakeEffectContext();
+	if (DamageCauser)
+	{
+		EffectContext.AddInstigator(DamageCauser, DamageCauser);
+		EffectContext.AddSourceObject(DamageCauser);
+	}
+
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(
+		LegacyDamageGameplayEffectClass, 1.0f, EffectContext);
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOG(LogDreamCatcher, Error, TEXT("[R3-1] Character [%s]: failed to create the legacy damage spec."),
+			*GetNameSafe(this));
+		return 0.0f;
+	}
+
+	SpecHandle.Data->SetSetByCallerMagnitude(DCGameplayTags::SetByCaller_Damage, DamageAmount);
+	const float PreviousHealth = HealthComponent->GetHealth();
+	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	const float AppliedDamage = FMath::Max(PreviousHealth - HealthComponent->GetHealth(), 0.0f);
+
+	if (AppliedDamage > 0.0f && !HealthComponent->IsDeadOrDying())
+	{
+		BP_OnDamaged(HealthComponent->GetHealth(), HealthComponent->GetMaxHealth(), DamageCauser);
 	}
 
 	return AppliedDamage;
@@ -516,8 +1020,7 @@ void ADreamCatcherCharacter::AimPressed()
 		return;
 	}
 
-	const EDCAimMode CurrentAimMode =
-		CombatComponent->GetAimMode();
+	const EDCAimMode CurrentAimMode = CombatComponent->GetAimMode();
 
 	// Scope 상태에서는 우클릭을 누르는 즉시 Hip으로 돌아감.
 	if (CurrentAimMode == EDCAimMode::Scope)
@@ -547,13 +1050,8 @@ void ADreamCatcherCharacter::AimPressed()
 	}
 
 	// 설정된 시간 동안 우클릭을 유지하면 Shoulder로 전환.
-	GetWorldTimerManager().SetTimer(
-		AimHoldTimerHandle,
-		this,
-		&ADreamCatcherCharacter::ActivateShoulderAim,
-		AimHoldThreshold,
-		false
-	);
+	GetWorldTimerManager().SetTimer(AimHoldTimerHandle, this, &ADreamCatcherCharacter::ActivateShoulderAim,
+	                                AimHoldThreshold, false);
 }
 
 void ADreamCatcherCharacter::AimReleased()
@@ -584,7 +1082,7 @@ void ADreamCatcherCharacter::AimReleased()
 	}
 	else if (CombatComponent->GetAimMode() == EDCAimMode::Hip)
 	{
-		// Shoulder 진입 전에 버튼을 뗐다면 짧은 클릭이므로 Scope로 전환합니다.
+		// Shoulder 진입 전에 버튼을 뗐다면 짧은 클릭이므로 Scope로 전환.
 		CombatComponent->ToggleScopeAim();
 	}
 }
@@ -612,9 +1110,17 @@ void ADreamCatcherCharacter::CancelAimInputAndState()
 	bAimInputPressed = false;
 	bShoulderAimActivated = false;
 
+	// Legacy Aim 상태 초기화.
 	if (CombatComponent)
 	{
 		CombatComponent->ClearAimState();
+	}
+
+	// GAS Aim 상태 초기화.
+	// Scope Ability는 짧은 클릭 후 끝났지만 Infinite Scope GameplayEffect는 남아 있어 명시적으로 제거해야 함.
+	if (UDCAbilitySystemComponent* AbilitySystemComponent = GetDCAbilitySystemComponent())
+	{
+		AbilitySystemComponent->CancelAimInputAndState();
 	}
 }
 
@@ -639,42 +1145,29 @@ void ADreamCatcherCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	const EDCAimMode AimMode = CombatComponent
-		                           ? CombatComponent->GetAimMode()
-		                           : EDCAimMode::Hip;
+	// 새 시스템을 사용하지 않는 기존 Character만 Legacy CameraBoom/FOV/감도 보간을 실행합니다.
+	if (!IsUsingCameraModeSystem())
+	{
+		const EDCAimMode AimMode = CombatComponent ? CombatComponent->GetAimMode() : EDCAimMode::Hip;
 
-	const FDCAimCameraProfile& Profile = GetAimCameraProfile(AimMode);
+		const FDCAimCameraProfile& Profile = GetAimCameraProfile(AimMode);
 
-	CameraBoom->TargetArmLength = FMath::FInterpTo(
-		CameraBoom->TargetArmLength,
-		Profile.TargetArmLength,
-		DeltaSeconds,
-		AimCameraBlendSpeed
-	);
+		CameraBoom->TargetArmLength =
+			FMath::FInterpTo(CameraBoom->TargetArmLength, Profile.TargetArmLength, DeltaSeconds, AimCameraBlendSpeed);
 
-	CameraBoom->SocketOffset = FMath::VInterpTo(
-		CameraBoom->SocketOffset,
-		Profile.SocketOffset,
-		DeltaSeconds,
-		AimCameraBlendSpeed
-	);
+		CameraBoom->SocketOffset =
+			FMath::VInterpTo(CameraBoom->SocketOffset, Profile.SocketOffset, DeltaSeconds, AimCameraBlendSpeed);
 
-	const float NewFieldOfView = FMath::FInterpTo(
-		FollowCamera->FieldOfView,
-		Profile.FieldOfView,
-		DeltaSeconds,
-		AimCameraBlendSpeed
-	);
+		const float NewFieldOfView =
+			FMath::FInterpTo(FollowCamera->FieldOfView, Profile.FieldOfView, DeltaSeconds, AimCameraBlendSpeed);
 
-	FollowCamera->SetFieldOfView(NewFieldOfView);
+		FollowCamera->SetFieldOfView(NewFieldOfView);
 
-	CurrentLookSensitivityMultiplier = FMath::FInterpTo(
-		CurrentLookSensitivityMultiplier,
-		Profile.LookSensitivityMultiplier,
-		DeltaSeconds,
-		AimCameraBlendSpeed
-	);
-	
+		CurrentLookSensitivityMultiplier =
+			FMath::FInterpTo(CurrentLookSensitivityMultiplier, Profile.LookSensitivityMultiplier, DeltaSeconds,
+			                 AimCameraBlendSpeed);
+	}
+
 	UpdateCameraRecoil(DeltaSeconds);
 }
 
@@ -685,19 +1178,16 @@ void ADreamCatcherCharacter::UpdateCameraRecoil(float DeltaSeconds)
 		PendingRecoil = FVector2d::ZeroVector;
 		return;
 	}
-	
+
 	if (PendingRecoil.IsNearlyZero())
 	{
 		return;
 	}
 
 	// 남아 있는 반동량의 일부만 이번 프레임에 적용, PendingRecoil은 아직 소비하지 않은 회전 입력.
-	const float ApplyAlpha = 1.0f - FMath::Exp(
-		-RecoilKickInterpSpeed * DeltaSeconds
-	);
+	const float ApplyAlpha = 1.0f - FMath::Exp(-RecoilKickInterpSpeed * DeltaSeconds);
 
-	const FVector2D AppliedRecoil =
-		PendingRecoil * ApplyAlpha;
+	const FVector2D AppliedRecoil = PendingRecoil * ApplyAlpha;
 
 	PendingRecoil -= AppliedRecoil;
 
@@ -707,8 +1197,7 @@ void ADreamCatcherCharacter::UpdateCameraRecoil(float DeltaSeconds)
 		PendingRecoil = FVector2D::ZeroVector;
 	}
 
-	FRotator NewControlRotation =
-		Controller->GetControlRotation();
+	FRotator NewControlRotation = Controller->GetControlRotation();
 
 	NewControlRotation.Pitch += AppliedRecoil.X;
 	NewControlRotation.Yaw += AppliedRecoil.Y;
@@ -723,6 +1212,69 @@ void ADreamCatcherCharacter::HandleAimModeChanged(EDCAimMode NewAimMode)
 
 void ADreamCatcherCharacter::UnPossessed()
 {
+	// 기존 Legacy 조준 입력과 Timer를 정리.
 	CancelAimInputAndState();
+
+	// 이 Character의 InputComponent가 아직 살아 있을 때 Ability 입력 바인딩 제거.
+	if (UDCInputComponent* DCInputComponent = Cast<UDCInputComponent>(InputComponent))
+	{
+		DCInputComponent->RemoveBinds(AbilityInputBindHandles);
+	}
+	else
+	{
+		AbilityInputBindHandles.Reset();
+	}
+
 	Super::UnPossessed();
+
+	// Match Lyra's controller-change path. Actual avatar teardown belongs to PawnExtension's lifetime.
+	PawnExtensionComponent->HandleControllerChanged();
+}
+
+void ADreamCatcherCharacter::ToggleCrouch()
+{
+	const UDCCharacterMovementComponent* DCMoveComp =
+		CastChecked<UDCCharacterMovementComponent>(GetCharacterMovement());
+
+	if (IsCrouched() || DCMoveComp->bWantsToCrouch)
+	{
+		UnCrouch();
+	}
+	else if (DCMoveComp->IsMovingOnGround())
+	{
+		Crouch();
+	}
+}
+
+void ADreamCatcherCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	if (UDCAbilitySystemComponent* DCASC = GetDCAbilitySystemComponent())
+	{
+		DCASC->SetLooseGameplayTagCount(DCGameplayTags::Status_Crouching, 1);
+	}
+
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+}
+
+void ADreamCatcherCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	if (UDCAbilitySystemComponent* DCASC = GetDCAbilitySystemComponent())
+	{
+		DCASC->SetLooseGameplayTagCount(DCGameplayTags::Status_Crouching, 0);
+	}
+
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+}
+
+bool ADreamCatcherCharacter::CanJumpInternal_Implementation() const
+{
+	// same as ACharacter's implementation but without the crouch check
+	return JumpIsAllowedInternal();
+}
+
+float ADreamCatcherCharacter::GetCurrentLookSensitivityMultiplier() const
+{
+	return ModeCamera && ModeCamera->IsActive()
+		       ? ModeCamera->GetCurrentLookSensitivityMultiplier()
+		       : CurrentLookSensitivityMultiplier;
 }

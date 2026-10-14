@@ -1,0 +1,91 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#pragma once
+
+#include "Styling/CoreStyle.h"
+#include "Widgets/Accessibility/SlateWidgetAccessibleTypes.h"
+#include "Widgets/DeclarativeSyntaxSupport.h"
+#include "Widgets/SLeafWidget.h"
+
+#include "SDCLyraCircumferenceMarkerWidget.generated.h"
+
+class FPaintArgs;
+class FSlateRect;
+class FSlateWindowElementList;
+class FWidgetStyle;
+struct FGeometry;
+struct FSlateBrush;
+
+USTRUCT(BlueprintType)
+struct DREAMCATCHER_API FDCLyraCircumferenceMarkerEntry
+{
+	GENERATED_BODY()
+
+	// The angle to place this marker around the circle (in degrees)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ForceUnits=deg))
+	float PositionAngle = 0.0f;
+
+	// The angle to rotate the marker image (in degrees)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ForceUnits=deg))
+	float ImageRotationAngle = 0.0f;
+};
+
+class DREAMCATCHER_API SDCLyraCircumferenceMarkerWidget : public SLeafWidget
+{
+	SLATE_BEGIN_ARGS(SDCLyraCircumferenceMarkerWidget)
+		: _MarkerBrush(FCoreStyle::Get().GetBrush("Throbber.CircleChunk"))
+		, _Radius(48.0f)
+		, _ReticleCornerOutsideSpreadRadius(false)
+	{
+	}
+		/** What each marker on the circumference looks like */
+		SLATE_ARGUMENT(const FSlateBrush*, MarkerBrush)
+		/** At which angles should a marker be drawn */
+		SLATE_ARGUMENT(TArray<FDCLyraCircumferenceMarkerEntry>, MarkerList)
+		/** The radius of the circle */
+		SLATE_ATTRIBUTE(float, Radius)
+		/** The color and opacity of the marker */
+		SLATE_ATTRIBUTE(FSlateColor, ColorAndOpacity)
+		/** DreamCatcher: explicitly forward the original UMG option to Slate. */
+		SLATE_ARGUMENT(bool, ReticleCornerOutsideSpreadRadius)
+	SLATE_END_ARGS()
+
+public:
+	void Construct(const FArguments& InArgs);
+
+	SDCLyraCircumferenceMarkerWidget();
+
+	//~SWidget interface
+	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
+	virtual FVector2D ComputeDesiredSize(float) const override;
+	virtual bool ComputeVolatility() const override { return true; }
+	//~End of SWidget interface
+
+	void SetRadius(float NewRadius);
+	void SetMarkerList(TArray<FDCLyraCircumferenceMarkerEntry>& NewMarkerList);
+	void SetReticleCornerOutsideSpreadRadius(bool bOutsideRadius);
+
+private:
+	// Read-only access for transient automation fixtures; no gameplay/debug API.
+	friend struct FDCLyraCircumferenceTestAccess;
+
+	FSlateRenderTransform GetMarkerRenderTransform(const FDCLyraCircumferenceMarkerEntry& Marker, const float BaseRadius, const float HUDScale) const;
+
+private:
+	/** What each marker on the circumference looks like */
+	const FSlateBrush* MarkerBrush;
+
+	/** Angles around the reticle center to place ReticleCornerImage icons */
+	TArray<FDCLyraCircumferenceMarkerEntry> MarkerList;
+
+	/** The radius of the circle */
+	TAttribute<float> Radius;
+
+	/** Color and opacity of the markers */
+	TAttribute<FSlateColor> ColorAndOpacity;
+	bool bColorAndOpacitySet;
+
+	/** Whether reticle corner images are placed outside the spread radius */
+	//@TODO: Make this a 0-1 float alignment instead (e.g., inside/on/outside the radius)?
+	uint8 bReticleCornerOutsideSpreadRadius : 1;
+};
