@@ -1362,13 +1362,27 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 
 ---
 
-## 0.106 최신 재개 — 2026-10-14 R14 완료 / main 병합 준비
+## 0.106 이력 — 2026-10-14 R14 완료 / main 병합 준비
 
 - 사용자가 창 크기 변경 시 UI 정상 동작을 확인하고 R14 완료 정리를 요청했다. **패키징을 제외한 현재 GAS-System의 R14 정리·검증·사용자 수용 완료**다. 2A/2B 검증과 최종 Blueprint316개 Compile 통과, 기존 경고29 및 필요한 기존 맵 호환 계층 보존을 그대로 기록한다. 모든 해상도/장치·복제/패키징까지 검증 완료로 확대하지 않는다. 패키징은 계속 보류·미검증이다.
 - 사용자는 디자이너의 병합 대상 작업이 main에 모두 커밋·푸시됐다고 확인했다. GitHub 양방향 compare와 로컬 Git에서 **main=ebb169c(10/13 22:26 KST), GAS-System=7a10c75(10/13 03:39), 공통조상50ef6ac**, main전용23/GAS전용18커밋을 확인했다. 원격 파일 응답300개 제한은 전체 분석 근거로 쓰지 않고 로컬 객체로 전 경로를 비교했다.
 - 준비 스냅샷: main변경964경로(추가891/수정60/삭제13), GAS저장변경2,211경로, 미커밋512파일(추적28/신규484, staged0). 후속 문서 추가 뒤 실행 전 목록을 갱신한다. 미커밋 R13/R14를 먼저 checkpoint에 보존해야 한다. 새 pycache1개는 커밋 제외 후보이며 삭제하지 않았다. 프로젝트/관련 플러그인 모듈 BuildId55116800 일치. Git stage/commit/checkout/merge/push0.
 - **동일 변경 경로·대소문자/파일-폴더 충돌0이어도 에셋 호환 문제는 있다.** main은 Box_1 자산13개를 Prop/Mesh/Box_1로 재배치했고 R13 의존에는 옛경로5개가 남는다. 권장안은 디자이너의 새 경로를 반영하면서 옛 Box_1 묶음13개를 GAS checkpoint 기준으로 통합 브랜치에 보존하는 것이다. 실제 적용/참조 교체는 아직 하지 않았다.
 - main의 추가/수정 LFS payload951개 약635MB가 로컬에 없으며 실제 통합 단계에서 고정 커밋의 데이터를 가져와야 한다. 이번에는 다운로드하지 않았다. 다음 제안은 **checkpoint 커밋→codex/integrate-main-20261014 통합 브랜치→main/LFS 반영＋옛 Box_1 보존→영향 검증**이다. 실제 병합 범위 승인은 아직 전이며 main 직접 커밋/push, 디자이너 원본 맵 gameplay 재조립, 패키징은 별도다. 상세는 `docs/handoffs/main-merge-preparation-2026-10-14.md`.
+
+---
+
+## 0.107 최신 재개 — 2026-10-14 통합 PR #1 / 리뷰 수정 자동검증 완료·사용자 커밋/푸시 대기
+
+- 사용자가 checkpoint 커밋과 main 병합·Box_1 옛13개 보존·통합 브랜치 publish를 직접 수행했다. 현재 브랜치는 **`integrate-main-20261014`**, 원격 PR은 **https://github.com/Shiny-Shine/DreamCatcher/pull/1**, base=`main`이다. main=`ebb169c`, 통합 HEAD=`5dfb0e6`까지 확인했다. main 최종 반영은 아직 하지 않았다.
+- 통합 검사: 디자이너 LFS951개 해시, 보존 Box_1 옛13개, 변경 Blueprint8개 Compile/Box26개 로드, 맵9개 로드 및 R13 실제 PIE 발사·조준·사망/정리 검사를 완료했다. PIE는 실패0/기존 경고15(Manny PoseAsset14＋RecastNavMesh 초기화1)다. 완료한 검사를 처음부터 반복하지 않는다.
+- 사용자가 폐기 배치라고 확인한 `Building_Samples.LevelInstance_1`→`Instances/NewMap1`, `Level_1.LevelInstance_0`→`RoadLine_IS`만 Unreal 내부 API로 제거했다. 두 맵 새 프로세스 재로드·나머지 액터 배치/부착·유효 `BPP_NewMap` 보존 및 누락 참조0을 확인했고, 사용자가 **`5dfb0e6 fix: remove obsolete level instances`로 커밋·푸시**했다. 근거 `Saved/Diagnostics/MergeValidation/integration_summary_A.json`.
+- PR 자동 리뷰의 P2 두 건을 실제 코드/로컬 Lyra 원본과 대조하고 사용자에게 차이를 설명한 뒤 **수정 승인을 받았다**. 원본에도 같은 조건문이 있다. `DCHeroComponent.cpp`는 설정 등록만 조건부로 두고 모든 로드된 기본 입력 매핑을 활성화한다. `DCLyraGameplayAbility_RangedWeapon.cpp`는 각 탄환 시작 시 결과 개수를 기록하여 해당 탄환이 결과를 추가하지 못했을 때만 끝점 결과를 보충한다. 기존 명중·퍼짐·우선순위·무기 수치·에셋/맵/Config는 유지한다.
+- 새 `Tests/DCMergeReviewTestTypes.h`와 `DCMergeReviewAutomationTests.cpp`는 임시 Hero/무기 fixture와 검사2건을 제공한다. `DreamCatcher.IntegrationReview.InputMappingRegistration`: 등록 on/off, 기존 컨텍스트 초기화, 우선순위, 설정 객체 없는 경우. `DreamCatcher.IntegrationReview.PerBulletMissResults`: 단발 명중/빗나감, 다발 전부 명중/빗나감, 명중·빗나감 혼합 시 실제 충돌 결과와 끝점 보존. 별도 프로세스의 `-DCMergeReviewIsolatedAutomation`이 필요하며 사용자 저장 설정/에셋을 변경하지 않는다.
+- **후속 빌드/검사:** 검사 CPP의 `ON_SCOPE_EXIT` 세미콜론 누락 교정 후 사용자 Development Editor/Win64 빌드가 **16:43:51 시작·9.36초 성공, DLL16:44:00/6,636,544bytes**로 확인됐다. **16:45 native 검사 결과는 성공1/실패1**이다. 탄환6조합은 성공/경고0이며, 입력 검사는 `ULocalPlayer`의 Within=Engine 규칙을 어긴 테스트 객체 생성 때문에 ensure가 발생했다. 실패를 허용하지 않고 테스트 CPP에 `Engine/Engine.h`와 Outer=`GEngine` 교정을 적용했다. 게임 코드2파일은 추가 수정하지 않았다.
+- **R13 실제 PIE 영향 회귀는16:47 성공**했다. 발사/탄약30→29, 견착/Hip 복귀, 사망/객체·장비 정리, ensure/Error0을 확인했다. 보고서 경고16(Manny14＋RecastNavMesh1＋긴 프레임의 이동 시뮬레이션 제한1)은 별도로 기록한다. 에셋/Config/사용자 저장 설정/DLL/Git index는 검사 중 유지됐으며, 의도된 변화는 테스트 CPP의 Outer 교정뿐이다. 근거 `Saved/Diagnostics/MergeValidation/pr1_review_checks_A.json`.
+- **16:50~16:51 후속 검증 완료:** 사용자 증분 빌드 **16:50:02 시작·8.97초 성공**, DLL16:50:10/6,636,544bytes, SHA256 `d5b30577e3aa9c5fc585a8a30abf96b87f979824fdff2ea835485a39f4aea099`. `MergeReviewInput_B`의 **입력 검사1건 성공/실패·보고서 경고0, Error·ensure·Fatal0, 종료0**을 확인했다. 시작 시 기존 B_LyraGameInstance script package 경고1은 별개다. 탄환 검사/PIE는 코드 불변 근거로 기존 성공 결과를 재사용했고 재실행하지 않았다.
+- **현재 다음은 사용자 짧은 화면/입력 확인 → 같은 `integrate-main-20261014`에 코드·검사·문서·필요 DLL을 커밋/푸시하여 기존 PR #1 갱신**이다. 이번 리뷰2건 수정의 자동검증은 완료했다. 원격 PR은 아직 수정 전5dfb0e6이며 main 병합은 사용자가 진행한다. 통합 맵 외형 확인·물리 입력/조작감 수용 및 패키징까지 자동검증 완료로 확대하지 않는다. Codex 빌드·패키징·Git stage/commit/push/merge·PR 댓글/리뷰 Resolve는 하지 않았다. 패키징은 계속 보류하며 디자이너 `Level_1`의 R13 gameplay 재조립은 별도 범위다. 상세는 `docs/handoffs/main-merge-preparation-2026-10-14.md` 상단을 따른다.
 
 ---
 

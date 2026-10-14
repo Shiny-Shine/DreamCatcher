@@ -1,5 +1,51 @@
 # main 병합 준비 — R14 완료 후
 
+## 최신 재개 — 통합 PR #1 / 리뷰 수정 자동검증 완료·사용자 커밋/푸시 대기
+
+2026-10-14 사용자가 GitHub Desktop에서 checkpoint → `integrate-main-20261014` 생성 → main 병합 → 옛 Box_1 보존 → publish를 직접 마쳤다. PR은 [#1](https://github.com/Shiny-Shine/DreamCatcher/pull/1), base=`main`, head=`integrate-main-20261014`다. 아래 최초 준비 기록의 ‘미실행’은 이력이며 현재 상태가 아니다.
+
+- 고정 main: `ebb169cdf2952a84644821778dc04a4fb3515f86`.
+- 사용자 checkpoint: `82bfcfcd27ef93b1c90de05a40c183b4f2fa8d5e`.
+- 사용자 통합/Box 보존: `3e8f1a5`, `8b1a76c`.
+- 사용자 폐기 배치 정리 커밋/원격 head: `5dfb0e61cca5eec81c523a667a36a8892a9a2b85`.
+- main 최종 병합·패키징은 아직 하지 않았다. 패키징은 사용자 지시로 보류한다.
+
+통합 자동검사는 디자이너 LFS951개 및 옛 Box13개 해시, 변경 BP8개 Compile, Box26개 로드, 맵9개 로드, R13 실제 PIE 발사·조준·사망/장비 정리까지 통과했다. PIE 경고15(Manny14＋RecastNavMesh 초기화1)는 기존 경계로 기록한다. `Building_Samples`의 `NewMap1`과 `Level_1`의 `RoadLine_IS`는 원격 main에도 없었고 사용자가 폐기 배치 제거를 승인했다. 정확한 LevelInstance 각1개 제거 후 새 프로세스로 누락 참조0/나머지 배치·유효 BPP_NewMap 보존을 확인했다. 근거 `Saved/Diagnostics/MergeValidation/integration_summary_A.json`; 완료한 이식·전체 Blueprint/맵 검사를 재실행하지 않는다.
+
+### 승인된 PR 리뷰 수정
+
+리뷰 [입력 매핑](https://github.com/Shiny-Shine/DreamCatcher/pull/1#discussion_r4267782549), [탄환 결과](https://github.com/Shiny-Shine/DreamCatcher/pull/1#discussion_r4267782558)를 확인했고 사용자가 수정 진행을 승인했다.
+
+1. `DCHeroComponent.cpp`: 원본의 `bRegisterWithSettings` 조건 안에 있던 `AddMappingContext`와 옵션 설정을 조건 밖으로 이동한다. 설정 등록 여부가 실제 입력 활성화까지 막지 않도록 한다. 현재 검증된 플레이어 매핑5개는 모두 true이므로 기존 경로는 동일하다.
+2. `DCLyraGameplayAbility_RangedWeapon.cpp`: 탄환 시작 시 `NumHitsBeforeBullet`을 기록하고 그 탄환의 결과가 추가되지 않았을 때만 fallback 결과를 보충한다. 앞 탄환이 이미 결과를 추가했거나 앞 탄환도 빗나갔더라도 각 탄환의 끝점이 남는다. 명중 결과 Append·중복 제거·피해·퍼짐은 변경하지 않는다. 현재 라이플의 `BulletsPerCartridge=1`은 유지한다.
+
+로컬 Lyra 원본 `Source/LyraGame/Character/LyraHeroComponent.cpp:256` 및 `Weapons/LyraGameplayAbility_RangedWeapon.cpp:426`에도 기존 조건문이 존재한다. 이번 변경은 사용자 승인한 두 예외조건의 원본 대비 보강이다.
+
+회귀 검사는 새 `Source/DreamCatcher/Tests/DCMergeReviewTestTypes.h`/`DCMergeReviewAutomationTests.cpp`의 임시 객체만 사용한다. 입력 검사는 실제 Hero 초기화와 Enhanced Input subsystem의 활성/등록/우선순위를 확인한다. 무기 검사는 실제 trace 경로와 임시 Box 충돌을 사용하며 기존 virtual trace-channel 훅으로 탄환별 명중/빗나감을 결정한다. 실제 게임 코드에 테스트용 trace 분기를 추가하지 않는다. 저장된 Blueprint·맵·설정은 변경하지 않는다.
+
+### 16:44 사용자 빌드 및 16:45~16:47 검사 결과
+
+- 첫 빌드 C2146은 검사 CPP의 `ON_SCOPE_EXIT` 뒤 세미콜론 누락이었으며 교정했다. 후속 사용자 빌드는 **16:43:51 시작·9.36초 성공**, DLL **16:44:00,6,636,544bytes,SHA256 `57733499785ce28d6ab9c4f0766cdf8f09b088d94f8ad6edde739d3d47872076`**다. BuildId55116800. 기존 DataRegistry 의존 선언 경고는 남기며 Config를 바꾸지 않았다. 사용자 빌드의 플러그인 DLL 변경은 보존한다.
+- `Saved/Automation/MergeReview_A/index.json`: **성공1/실패1**. `PerBulletMissResults`는 단발/전부 명중/전부 빗나감/혼합6조합 모두 성공, 경고0. `InputMappingRegistration`은 테스트 LocalPlayer를 GameInstance 아래 생성해 엔진 `UCLASS(Within=Engine)` 규칙 위반 ensure가 발생했다. 게임 입력 코드의 assertion 실패로 해석하지 않되, 검사 전체는 실패로 유지한다.
+- 테스트 CPP의 생성 Outer만 **`GEngine`으로 교정하고 `Engine/Engine.h`를 추가**했다. 원인 근거는 엔진 `Engine/Classes/Engine/LocalPlayer.h:168`. 게임 코드2파일/에셋/Config 수정은 추가로 없다. 이 교정본은 사용자 재빌드/실행 대기다.
+- 현재 DLL의 R13 실제 PIE 영향 회귀는 **16:47 성공/프로세스0/Error·ensure0**. 장착/발사30→29/견착/Hip 복귀/사망·Pawn·장비 정리/실패 결과를 확인했다. 기존 레시피 `r14_cleanup_pie_probe.py -DCR14Probe=Review_A` 재사용, 에셋 저장0이다. 보고서 경고16은 Manny PoseAsset14＋RecastNavMesh1＋긴 프레임 이동 시뮬레이션 제한1이며 물리 입력/시각 수용 검증은 아니다.
+- 근거 `Saved/Diagnostics/MergeValidation/pr1_review_checks_A.json`, `Saved/Automation/MergeReviewPIE_A/index.json`, `Saved/Diagnostics/R14/cleanup_pie_Review_A.json`. 보호 파일693개/에셋3788개 비교에서 의도한 테스트 CPP 교정 외 소스·Config·에셋·사용자 저장 설정·DLL·Git index 변화0이다.
+
+### 16:50~16:51 입력 검사 교정본 검증 완료
+
+- 사용자 증분 빌드 **16:50:02 시작·8.97초 성공**. DLL **16:50:10,6,636,544bytes,SHA256 `d5b30577e3aa9c5fc585a8a30abf96b87f979824fdff2ea835485a39f4aea099`**. 교정된 테스트 CPP가 실제 Compile/Link됐음을 UBT 로그에서 확인했다. 현재 증분 빌드로 DLL/PDB와 Git index의 파일 상태 정보도 갱신됐으며 staged 변경은 없다.
+- `/Engine/Maps/Entry`를 명시한 별도 unattended Editor에서 **입력 검사1건만 실행해16:51:23 성공/보고서 경고0/실패0, Error·ensure·Fatal0, 종료0**. 근거 `Saved/Automation/MergeReviewInput_B/index.json`, `Saved/Logs/MergeReviewInput-B.log`. 시작 시 기존 B_LyraGameInstance의 `/Script/LyraGame` 경고1은 검사 경고와 구분한다.
+- 탄환 검사와 R13 `Review_A` PIE는 관련 코드 불변을 확인하여 이전 성공 결과를 재사용했고 반복하지 않았다. 에셋/Config/저장 설정과 테스트 코드 외 소스의 이전 보호 기록도 유지됐다. 종합 `Saved/Diagnostics/MergeValidation/pr1_review_closeout_B.json`을 따른다.
+
+### 다음 실행 — 사용자 짧은 확인 후 기존 PR 갱신
+
+- **추가 C++ 수정·재빌드 요청은 없다.** 리뷰2건의 자동검증이 완료됐다. 사용자는 R13에서 이동·조준·발사 및 통합 맵 외형을 짧게 확인한다. 이미 확인한 전체 게임 진행·보스·메뉴를 처음부터 반복할 필요는 없다.
+- GitHub Desktop의 **`integrate-main-20261014`**에서 코드·회귀 검사·최신 문서·사용자 빌드 DLL을 함께 커밋하고 **Push origin**한다. 권장 메시지: `fix: activate input mappings and preserve per-bullet miss results`. 수정 전 원격 head는5dfb0e6이며 기존 PR #1이 갱신된다. 새 PR은 필요 없다. 현재 변경 목록은 `Saved/Diagnostics/MergeValidation/pr1_commit_candidates_B.json`에 정리한다.
+- PR의 두 리뷰가 수정 커밋을 가리키는지 확인한 뒤 사용자가 해결 표시/병합을 진행한다. Codex는 PR 댓글·리뷰 Resolve·Git stage/commit/push/merge를 실행하지 않았다. 사용자의 패키징 보류 지시는 유지한다.
+- 통합 맵의 외형·배치 확인과 PR 검토 후 사용자가 main 반영을 진행한다. 디자이너 Level_1의 기존 GameMode와 R13 테스트 맵은 유지하며 게임플레이 재배치는 별도 단계다.
+
+---
+
 ## 범위와 현재 상태
 
 2026-10-14 사용자가 창 크기 변경 시 UI 정상 동작을 확인했다. **패키징을 제외한 현재 GAS-System의 R14 정리·검증·사용자 수용을 완료**로 기록한다. 패키징은 사용자 지시로 보류·미검증이다. 기존 호환 계층을 전부 삭제했다는 의미는 아니다.

@@ -304,12 +304,12 @@ void UDCHeroComponent::InitializePlayerInput(UInputComponent* PlayerInputCompone
 							{
 								Settings->RegisterInputMappingContext(IMC);
 							}
-
-							FModifyContextOptions Options = {};
-							Options.bIgnoreAllPressedKeysUntilRelease = false;
-							// Actually add the config to the local player							
-							Subsystem->AddMappingContext(IMC, Mapping.Priority, Options);
 						}
+
+						FModifyContextOptions Options = {};
+						Options.bIgnoreAllPressedKeysUntilRelease = false;
+						// Settings registration is optional; every loaded context must still be active.
+						Subsystem->AddMappingContext(IMC, Mapping.Priority, Options);
 					}
 				}
 

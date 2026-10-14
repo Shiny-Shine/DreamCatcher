@@ -396,6 +396,7 @@ void UDCLyraGameplayAbility_RangedWeapon::TraceBulletsInCartridge(const FRangedW
 
 	for (int32 BulletIndex = 0; BulletIndex < BulletsPerCartridge; ++BulletIndex)
 	{
+		const int32 NumHitsBeforeBullet = OutHits.Num();
 		const float BaseSpreadAngle = WeaponData->GetCalculatedSpreadAngle();
 		const float SpreadAngleMultiplier = WeaponData->GetCalculatedSpreadAngleMultiplier();
 		const float ActualSpreadAngle = BaseSpreadAngle * SpreadAngleMultiplier;
@@ -430,8 +431,8 @@ void UDCLyraGameplayAbility_RangedWeapon::TraceBulletsInCartridge(const FRangedW
 			HitLocation = Impact.ImpactPoint;
 		}
 
-		// Make sure there's always an entry in OutHits so the direction can be used for tracers, etc...
-		if (OutHits.Num() == 0)
+		// Each bullet needs an entry for its tracer, even if previous bullets already added hits.
+		if (OutHits.Num() == NumHitsBeforeBullet)
 		{
 			if (!Impact.bBlockingHit)
 			{
