@@ -7,6 +7,7 @@
 > **Lyra 이식 정책 갱신:** 2026-09-10 KST
 > **작업 분담·자동화·마감 기준 갱신:** 2026-10-05 KST
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
+> **최신 재개:** 2026-10-15, 아래 **0.114** 및 `docs/handoffs/project-finish-resume-2026-10-15.md` — 복구 main 병합·디자이너 수용 완료, 다음은 메인화면·아웃게임·UI 마무리
 
 ---
 
@@ -1453,6 +1454,18 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - **22:49 새 프로세스 검증 성공**, 삭제23개 외 에셋 변화0, 끊어진 참조0/Error·ensure0, Source/Config/프로젝트/DLL/사용자 저장/Git 인덱스 변경0이다. 실사용 Pawn2개의 SKM_Manny/ABP_Mannequin_Base와 현재 입력 로드를 확인했다. Level_1 파일도 그대로이므로 기존 수용/검증을 유지하며 빌드·PIE 반복은 필요 없다.
 - 이번 묶음 완료 후 사용자가 작업 브랜치에서 검토·커밋/푸시한다. 패키징은 계속 보류·미검증이며 Codex는 빌드·패키징·Git 조작을 실행하지 않았다. 전체 프로젝트의 모든 미사용 원본/제작 자료를 제거한 것으로 확대하지 않는다.
 - 목록: `docs/handoffs/level1-residual-cleanup-2026-10-14.json`. 상세: `docs/handoffs/level1-production-cleanup-2026-10-14.md`. 근거: `Saved/Diagnostics/ResidualLegacy/{before_A.json,inspect_A.json,manifest_A.json,cleanup_Delete_A.json,cleanup_Verify_A.json,closeout_A.json}`.
+
+---
+
+## 0.114 최신 재개 — 2026-10-15 복구 main 병합·디자이너 수용 완료 및 마무리 작업 인계
+
+- 사용자 확인: `codex/restore-level1-assets-20261014`를 커밋·푸시하고 PR #2로 main에 병합했으며 디자이너 PC에서도 복구 성공. 확인한 로컬/원격 main은 **`13aa3b0f9b2c312dc303544625166d575cffb8f0`**(10월14일23:36 KST), 복구 커밋은`349048a`다. 이번 문서 작업 시작 시 작업 폴더 clean이었다.
+- `7f53325`에서 Level_1과 MI_Concrete_3의 실제 LFS payload가 Stash 충돌 문구를 포함한280/274bytes 텍스트로 바뀌었다. 승인된 두 파일만 정상본으로 복원하고 신규 디자인10개와 앞선 추가분을 유지했다. 맵/재질/신규10개 Unreal 로드, 보호479개 불변, Error/ensure0 확인 후 위 병합·디자이너 수용을 마쳤다. 이 복구를 다시 수행하지 않는다.
+- R14 및 현재 PC PIE 수용, Level_1 환경 보존/R13 흐름·Dynamic NavMesh, 정식 경로782개 이관, 승인된 테스트/레거시 및 잔여23개 정리를 완료 상태로 유지한다. 기존 플레이어·AI 이동 애니메이션·보스·HUD·ESC 메뉴·화면 크기 대응은 사용자 확인 완료다. 전체 공용 라이브러리 미사용0 또는 패키징/전체장치/온라인 검증 완료를 뜻하지 않는다.
+- 현재 실제 플레이는 **Level_1의 일반 인카운터2→보스→결과**, 자동 리스폰 없음이다. 결과/ESC의 돌아가기는 같은 Level_1 재시작이며, 메인화면 추가 후 새 목적지로 연결한다. 플레이어와 일반 봇의 PawnData/Pawn 공유 및 보스 전용 AnimBP 미지정 상태도 새 인계에 기록했다.
+- **다음은 메인화면·아웃게임 씬 추가와 UI 마무리**다. 이 요청은 현재 상태/새 채팅 인계 문서 작성이며 새 코드·Config·에셋 구현의 포괄 승인이 아니다. 원본 Lyra/CommonUI 재사용을 조사하고 화면 구성·연관 변경 범위를 먼저 설명한 뒤 승인된 묶음으로 진행한다. 빌드·패키징·화면 확인과 GitHub Desktop 커밋/푸시/병합은 사용자 담당이다. 패키징은 기존 지시대로 보류한다.
+- 디자이너의 별도 Stash 원본2개는 당시 원격404/로컬 부재였으며 확보를 확인하지 못했다. 이번 복구 성공을 그 별도 원본 회수까지 완료했다는 뜻으로 확대하지 않는다. 충돌 기록/객체ID는 복구 인계에 보존했으며 기존 Stash/백업을 건드리지 않는다. 새 단서 없이 마무리 작업을 막거나 조사부터 반복하지 않는다.
+- **새 채팅의 기준 문서:** `docs/handoffs/project-finish-resume-2026-10-15.md`. 모델/UI 경로는`docs/handoffs/designer-asset-integration-2026-10-14.md`, 복구 이력은`docs/handoffs/level1-stash-conflict-recovery-2026-10-14.md`다. 아래 오래된 R5 등의 대기 기록보다 이 최신 상태를 우선한다. 이번에는 문서만 갱신했고 빌드·PIE·에셋 변경·Git 조작을 하지 않았다.
 
 ---
 

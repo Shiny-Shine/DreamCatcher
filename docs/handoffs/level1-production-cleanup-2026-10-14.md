@@ -1,6 +1,8 @@
 # Level_1 정식 경로 전환 및 레거시 정리
 
-## 최신 — 잔여 플레이어 애니메이션·입력·블록아웃 정리 완료 (0.113)
+**2026-10-15 현재:** 정리와 후속 맵/재질 복구가 main `13aa3b0`에 병합됐고 디자이너도 복구 성공을 확인했다. 다음 작업은 [메인화면·아웃게임·UI 마무리 인계](project-finish-resume-2026-10-15.md)를 따른다. 아래 빌드/PIE/커밋 대기는 각 작업 당시의 이력이며, 완료한 검증을 반복하지 않는다.
+
+## 이력 — 잔여 플레이어 애니메이션·입력·블록아웃 정리 완료 (0.113)
 
 사용자가 남은 레거시 여부를 확인하고 추가 정리를 승인했다. 0.112는 당시 지정한 정리 묶음의 완료였으며 프로젝트 전체의 미사용 에셋이 0이라는 뜻이 아니다. 최신 참조를 다시 읽고 다음 **23개**를 Unreal 내부 API로 제거했다.
 
@@ -104,10 +106,8 @@
 - Nav 갱신 A는 ExecutePythonScript 자동 종료로 저장 전 끝났다. B/C는 저장/환경 보존만 통과했고 AsyncLoadLock(0x20)으로 생성은 수행되지 않았다. D는 저장 전용 프로세스에만 `bWaitForAsyncLoadingBeforeBuildingNavigationAutomatically=False`를 적용하고 에셋 준비 후 RebuildNavigation을 실행했다. AgentRadius35/AgentHeight144/Dynamic/볼륨은 유지했고, 영구 Config는 바꾸지 않았다.
 - PIE Cleanup_A/B는 실패 이력으로 보존한다. 최종 **Cleanup_C는 위 프로세스 옵션 없이 일반 프로젝트 설정으로** 모든 이동·전투·복귀를 통과했다. 따라서 Nav 저장만으로 이동 성공을 주장하지 않는다.
 
-## 다음 — 사용자 검토·커밋
+## 현재 — 정리와 복구 병합 완료
 
-1. 사용자 최종 Level_1 확인은 완료됐다. 추가 빌드나 같은 검증을 반복할 필요는 없다.
-2. 사용자가 GitHub Desktop에서 작업 브랜치의 변경을 검토·커밋/푸시한다. 정식 경로 및 삭제 JSON 목록을 검토 기준으로 사용하며 main 직접 커밋을 피한다. 이번 완료 기록은 Codex의 Git 작업 승인이 아니다.
-3. 패키징은 별도 보류 상태를 유지한다. 후속 기능 작업은 새 변경 범위를 정한 뒤 진행한다.
+사용자 최종 Level_1 확인, 정리 커밋, 후속 복구 PR #2 main 병합과 디자이너 수용이 모두 완료됐다. 추가 빌드나 같은 검증을 반복할 필요는 없다. 패키징은 보류 상태를 유지하며 후속 메인화면·아웃게임·UI 작업은 새 인계에서 범위를 정한 뒤 진행한다.
 
 패키징은 사용자 지시대로 계속 보류·미검증이다. 보호된 기준 게임 DLL SHA256은 `d5b30577e3aa9c5fc585a8a30abf96b87f979824fdff2ea835485a39f4aea099`다. 복구/검증/정적 검사 근거는 `promotion_recovery_A.json`, `retirement_recovery_A.json`, `retirement_Delete_G.json`, `production_verify_A.json`, `feature_paths_B.json`, `navigation_refresh_D.json`, `pie_Cleanup_C.json`, `native_cleanup_A.json`, `editor_tools_cleanup_A.json`에 있다.
