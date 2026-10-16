@@ -88,6 +88,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "ControlFlows",
+			"Enabled": true
+		},
+		{
 			"Name": "CommonLoadingScreen",
 			"Enabled": true
 		},

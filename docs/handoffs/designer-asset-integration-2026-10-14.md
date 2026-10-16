@@ -1,5 +1,7 @@
 # DreamCatcher 디자이너 에셋 통합 안내
 
+**2026-10-16 후속 0.123:** 현재 Pawn은 SKM_HARU, 보이는 무기는 B_Rifle의 **SMGVisual → SM_GUN_SMG**다. 실제/미리보기/픽업 표시를 교체했고 HARU의 Lyra 무기 본과 가상 본3개는 유지했다. [SMG 편집 위치와 총구·미리보기 안내](smg-visual-2026-10-16.md), [HARU 무기 본·재임포트 안내](haru-weapon-socket-2026-10-16.md)를 따른다. 아래 Manny 표는 초기 연결 기준이며 전체 HARU 리타깃 완료를 의미하지 않는다.
+
 2026-10-14 정식 경로 정리와 사용자 PIE 확인을 마친 `Level_1` 기준이다. 캐릭터·무기·보스의 모델, 재질, 애니메이션을 현재 게임플레이에 연결할 때 사용할 에셋과 수정 위치를 정리한다.
 
 **현재 플레이어와 일반 적은 같은 Pawn을 사용한다.** 공용 Pawn의 메시를 바꾸면 양쪽 외형이 함께 바뀐다. 서로 다른 모델을 사용할 경우 모델 제작과 함께 플레이어/적별 외형 적용 경로를 개발 담당자와 분리해야 한다. 보스는 별도 Pawn이다.
@@ -13,7 +15,8 @@
 | 플레이어와 일반 적의 공통 외형 | `/Game/DreamCatcher/Blueprints/Player/BP_DC_LyraInventoryPawn` | Components의 `Mesh (CharacterMesh0)` → Skeletal Mesh Asset, Materials, Anim Class, 상대 Transform. 현재 양쪽에 공통 적용된다. |
 | 공통 캐릭터 기반 | `/Game/DreamCatcher/Blueprints/Player/BP_DC_RiflePawn` | 위 Pawn의 부모. 입력·장비·체력·카메라 등 공통 구성이 있으므로 외형 교체는 먼저 실제 자식 Pawn에서 적용한다. 부모 수정은 자식의 override 여부도 확인한다. |
 | 보스 외형 | `/Game/DreamCatcher/Blueprints/AI/Boss/BP_DC_Boss` | `Mesh (CharacterMesh0)`의 메시·재질·Anim Class·상대 Transform. 일반 적/플레이어와 분리돼 있다. |
-| 손에 든 라이플 외형 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/B_Rifle` | 상속된 `SkeletalMesh` 컴포넌트의 메시·재질·Anim Class. 현재 장비로 생성되는 무기 액터다. |
+| 손에 든 무기 외형 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/B_Rifle` | **SMGVisual** 컴포넌트의 Static Mesh·재질·상대 Transform. 상속된 SkeletalMesh는 숨겨진 내부 드라이버이므로 외형 수정 대상으로 쓰지 않는다. |
+| 총구·탄피 배출 기준점 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/SK_Rifle_SMGSocketDriver` | Mesh Socket의 Muzzle/ShellEject. SMGVisual의 위치·크기를 바꾸면 미리보기와 함께 재정렬한다. 내부 드라이버는 새 디자인 메시로 재임포트하지 않는다. |
 | 무기를 손에 붙이는 위치 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/WID_Rifle` | Class Defaults → `ActorsToSpawn`의 `AttachSocket`, `AttachTransform`. 캐릭터 메시를 기준으로 부착한다. |
 | 라이플 장착 중 캐릭터 동작 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/B_WeaponInstance_Rifle` | `EquippedAnimSet`, 장착 몽타주 등 캐릭터 애니메이션 연결. 무기 자체의 기계 동작은 별도 AnimBP다. |
 | 무기 픽업 표시 | `/Game/DreamCatcher/Lyra/AI/ShooterCore/Weapons/Rifle/WeaponPickupData_Rifle` | `DisplayMesh`, `WeaponMeshOffset`, `WeaponMeshScale`. 손에 든 모델과 별도인 Static Mesh 표시다. 픽업을 배치·사용하는 경우 함께 맞춘다. |

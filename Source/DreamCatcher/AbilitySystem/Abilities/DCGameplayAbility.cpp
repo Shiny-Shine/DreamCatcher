@@ -18,6 +18,10 @@
 #include "Physics/PhysicalMaterialWithTags.h"
 #include "GameFramework/PlayerState.h"
 #include "Camera/DCCameraMode.h"
+#include "Animation/AnimMontage.h"
+#include "Animation/Skeleton.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCGameplayAbility)
 
@@ -54,6 +58,24 @@ UDCAbilitySystemComponent* UDCGameplayAbility::GetDCAbilitySystemComponentFromAc
 	return (CurrentActorInfo
 		        ? Cast<UDCAbilitySystemComponent>(CurrentActorInfo->AbilitySystemComponent.Get())
 		        : nullptr);
+}
+
+UAnimMontage* UDCGameplayAbility::GetMontageForAvatarSkeleton(UAnimMontage* SourceMontage) const
+{
+	const ADreamCatcherCharacter* Character = GetDCCharacterFromActorInfo();
+	const USkeletalMesh* Mesh = Character && Character->GetMesh() ? Character->GetMesh()->GetSkeletalMeshAsset() : nullptr;
+	const USkeleton* Skeleton = Mesh ? Mesh->GetSkeleton() : nullptr;
+	if (SourceMontage && Skeleton)
+	{
+		for (const FDCAbilitySkeletonMontageOverride& Override : SkeletonMontageOverrides)
+		{
+			if (Override.TargetSkeleton == Skeleton && Override.SourceMontage == SourceMontage && Override.ReplacementMontage)
+			{
+				return Override.ReplacementMontage;
+			}
+		}
+	}
+	return SourceMontage;
 }
 
 ADreamCatcherPlayerController* UDCGameplayAbility::GetDCPlayerControllerFromActorInfo() const

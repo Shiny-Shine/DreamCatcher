@@ -25,6 +25,7 @@ class UDCAbilitySystemComponent;
 class UDCCameraMode;
 class UDCHeroComponent;
 class UObject;
+class USkeleton;
 struct FFrame;
 struct FGameplayAbilityActorInfo;
 struct FGameplayEffectSpec;
@@ -92,6 +93,22 @@ public:
 	TObjectPtr<UAnimMontage> FailureMontage = nullptr;
 };
 
+/** Asset-authored montage alternatives for a specific avatar skeleton. */
+USTRUCT(BlueprintType)
+struct FDCAbilitySkeletonMontageOverride
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animation)
+	TObjectPtr<USkeleton> TargetSkeleton = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animation)
+	TObjectPtr<UAnimMontage> SourceMontage = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animation)
+	TObjectPtr<UAnimMontage> ReplacementMontage = nullptr;
+};
+
 /**
  * UDCGameplayAbility
  *
@@ -121,6 +138,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DC|Ability")
 	UE_API UDCHeroComponent* GetHeroComponentFromActorInfo() const;
+
+	/** Resolve before creating the montage task so playback and cancellation use the same asset. */
+	UFUNCTION(BlueprintPure, Category = "DC|Animation")
+	UE_API UAnimMontage* GetMontageForAvatarSkeleton(UAnimMontage* SourceMontage) const;
 
 	EDCAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
 	EDCAbilityActivationGroup GetActivationGroup() const { return ActivationGroup; }
@@ -189,6 +210,10 @@ protected:
 	UE_API void K2_OnPawnAvatarSet();
 
 protected:
+
+	// Opt-in: abilities without authored alternatives keep their original montage assets.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DC|Animation")
+	TArray<FDCAbilitySkeletonMontageOverride> SkeletonMontageOverrides;
 
 	// Defines how this ability is meant to activate.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "DC|Ability Activation")

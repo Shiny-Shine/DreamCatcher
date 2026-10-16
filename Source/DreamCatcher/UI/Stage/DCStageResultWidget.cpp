@@ -68,7 +68,7 @@ TSharedRef<SWidget> UDCStageResultWidget::RebuildWidget()
 			return Button;
 		};
 		RetryButton = AddButton(TEXT("RetryButton"), LOCTEXT("Retry", "다시 시작"));
-		ExitButton = AddButton(TEXT("ExitButton"), LOCTEXT("Return", "돌아가기"));
+		ExitButton = AddButton(TEXT("ExitButton"), LOCTEXT("ReturnToMenu", "메인화면으로"));
 		RetryButton->OnClicked.AddUniqueDynamic(this, &ThisClass::RetryClicked);
 		ExitButton->OnClicked.AddUniqueDynamic(this, &ThisClass::ExitClicked);
 	}

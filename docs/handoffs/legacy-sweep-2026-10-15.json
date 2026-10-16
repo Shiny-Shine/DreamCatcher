@@ -1,0 +1,476 @@
+{
+  "date": "2026-10-15",
+  "base_commit": "819ac1947cf8abda15e70135c271fe646533177c",
+  "status": "approved_legacy_bundle_removed_and_verified",
+  "inspected_package_count": 3712,
+  "asset_file_count": 3714,
+  "native_type_paths": 177,
+  "retired_native_class_names": 50,
+  "delete": [
+    "/Game/DreamCatcher/Audio/SFX/Weapons/SC_SMG_Fire_Placeholder",
+    "/Game/DreamCatcher/Audio/SFX/Weapons/SW_SMG_Fire_Placeholder",
+    "/Game/DreamCatcher/Blueprints/Weapons/B_DC_Rifle",
+    "/Game/DreamCatcher/Lyra/UI/Shared/Equipment/Diagnostics/BP_QuickSlotInputSource",
+    "/Game/LevelPrototyping/Interactable/Door/BP_DoorFrame",
+    "/Game/LevelPrototyping/Interactable/Door/Meshes/SM_Door",
+    "/Game/LevelPrototyping/Interactable/Door/Meshes/SM_DoorFrame_Corner",
+    "/Game/LevelPrototyping/Interactable/Door/Meshes/SM_DoorFrame_Edge",
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Materials/MI_GlowNT",
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Materials/M_GradientGlow",
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Materials/M_SimpleGlow",
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Meshes/SM_CircularBand",
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Meshes/SM_CircularGlow",
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/NS_JumpPad",
+    "/Game/LevelPrototyping/Interactable/JumpPad/BP_JumpPad",
+    "/Game/LevelPrototyping/Interactable/Target/Assets/SM_TargetBaseMesh",
+    "/Game/LevelPrototyping/Interactable/Target/BP_WobbleTarget",
+    "/Game/LevelPrototyping/Materials/MF_ProcGrid",
+    "/Game/LevelPrototyping/Materials/MI_DefaultColorway",
+    "/Game/LevelPrototyping/Materials/MI_PrototypeGrid_Gray",
+    "/Game/LevelPrototyping/Materials/MI_PrototypeGrid_Gray_02",
+    "/Game/LevelPrototyping/Materials/MI_PrototypeGrid_Gray_Round",
+    "/Game/LevelPrototyping/Materials/MI_PrototypeGrid_TopDark",
+    "/Game/LevelPrototyping/Materials/M_FlatCol",
+    "/Game/LevelPrototyping/Materials/M_PrototypeGrid",
+    "/Game/LevelPrototyping/Meshes/SM_ChamferCube",
+    "/Game/LevelPrototyping/Meshes/SM_Cube",
+    "/Game/LevelPrototyping/Meshes/SM_Cylinder",
+    "/Game/LevelPrototyping/Meshes/SM_Plane",
+    "/Game/LevelPrototyping/Meshes/SM_QuarterCylinder",
+    "/Game/LevelPrototyping/Meshes/SM_QuarterCylinderOuter",
+    "/Game/LevelPrototyping/Meshes/SM_Ramp",
+    "/Game/LevelPrototyping/Textures/T_GridChecker_A"
+  ],
+  "reasons": {
+    "orphan_rifle": "Removed DCWeaponActor parent, no references.",
+    "audio": "Unused pre-GAS temporary firing SoundCue/Wave from 2026-08-12.",
+    "quickslot": "Migration-only graph source Pawn; current input actions remain referenced and retained.",
+    "prototype": "29 initial UE LevelPrototyping assets, isolated as a complete group; no project or text consumers."
+  },
+  "recovery": {
+    "/Game/DreamCatcher/Audio/SFX/Weapons/SC_SMG_Fire_Placeholder": {
+      "file": "Content/DreamCatcher/Audio/SFX/Weapons/SC_SMG_Fire_Placeholder.uasset",
+      "sha256": "b43920a0bc90e1b7458eb57d6f29b83bd1837aa2850dac0f051cb971388aad5d",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/DreamCatcher/Audio/SFX/Weapons/SW_SMG_Fire_Placeholder": {
+      "file": "Content/DreamCatcher/Audio/SFX/Weapons/SW_SMG_Fire_Placeholder.uasset",
+      "sha256": "dd02560e39a1ebdb73522730794b933df022cdb232699b71e8355f80874d6935",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/DreamCatcher/Blueprints/Weapons/B_DC_Rifle": {
+      "file": "Content/DreamCatcher/Blueprints/Weapons/B_DC_Rifle.uasset",
+      "sha256": "93b0dd491377e98e4d3fd10435fe4074cc42cd310c127f23d6f7f7cee31bac2f",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/DreamCatcher/Lyra/UI/Shared/Equipment/Diagnostics/BP_QuickSlotInputSource": {
+      "file": "Content/DreamCatcher/Lyra/UI/Shared/Equipment/Diagnostics/BP_QuickSlotInputSource.uasset",
+      "sha256": "7809b05c1a5b90e474189e769f34b527227342fac8f59d65cec20f0d2c97717c",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/Door/BP_DoorFrame": {
+      "file": "Content/LevelPrototyping/Interactable/Door/BP_DoorFrame.uasset",
+      "sha256": "4386d7d71b8d5241fd8150aa47900711eb0d8bd069c00de25fce07f011d698fa",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/Door/Meshes/SM_Door": {
+      "file": "Content/LevelPrototyping/Interactable/Door/Meshes/SM_Door.uasset",
+      "sha256": "fa98c4fc5083393e085d7b44d0b67a7e830922e2601a439167916616bbc29993",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/Door/Meshes/SM_DoorFrame_Corner": {
+      "file": "Content/LevelPrototyping/Interactable/Door/Meshes/SM_DoorFrame_Corner.uasset",
+      "sha256": "383dea9555e76303d60d0011fae6651a4be07c24033c0aceeecd137c954ee3fc",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/Door/Meshes/SM_DoorFrame_Edge": {
+      "file": "Content/LevelPrototyping/Interactable/Door/Meshes/SM_DoorFrame_Edge.uasset",
+      "sha256": "26eb76a2ce36be334bf0770561475a9e06be928e9ca75b4a31f5df3debb36592",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Materials/MI_GlowNT": {
+      "file": "Content/LevelPrototyping/Interactable/JumpPad/Assets/Materials/MI_GlowNT.uasset",
+      "sha256": "af3c35209f4775e7782c22769444ac63cf9cd3eaf88ea3ee2a366fcf8bb58295",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Materials/M_GradientGlow": {
+      "file": "Content/LevelPrototyping/Interactable/JumpPad/Assets/Materials/M_GradientGlow.uasset",
+      "sha256": "c1b29ad29c2eac3dba6dd6a90aed9de8c6147a13b6288a42bd73fe14b78970a8",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Materials/M_SimpleGlow": {
+      "file": "Content/LevelPrototyping/Interactable/JumpPad/Assets/Materials/M_SimpleGlow.uasset",
+      "sha256": "e6098242541b34be6aba19ea1fbfa35107f891e8f55d30d4061aa11b065b8bd8",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Meshes/SM_CircularBand": {
+      "file": "Content/LevelPrototyping/Interactable/JumpPad/Assets/Meshes/SM_CircularBand.uasset",
+      "sha256": "97fbe3da2d907279dcbfbbf285e1b111ceb8d5f4a1c9d6bd48fcb8defc86842b",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/Meshes/SM_CircularGlow": {
+      "file": "Content/LevelPrototyping/Interactable/JumpPad/Assets/Meshes/SM_CircularGlow.uasset",
+      "sha256": "6ddb27bf7020f4980d3f8435cb0928fb48b32c1ab3ea24bac7e253435081bf6b",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/JumpPad/Assets/NS_JumpPad": {
+      "file": "Content/LevelPrototyping/Interactable/JumpPad/Assets/NS_JumpPad.uasset",
+      "sha256": "2e76849cbb139160e5e73c226fe6aaa66a63fbf75cbd1213f871cca65e409817",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/JumpPad/BP_JumpPad": {
+      "file": "Content/LevelPrototyping/Interactable/JumpPad/BP_JumpPad.uasset",
+      "sha256": "42ba8262f07355cdf36e33977f3bb415810390cf210b75573d766bd819cf8401",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/Target/Assets/SM_TargetBaseMesh": {
+      "file": "Content/LevelPrototyping/Interactable/Target/Assets/SM_TargetBaseMesh.uasset",
+      "sha256": "378ace355b8f5e71a12e459d9f8cf4958626884142fec34be8630db6d8412cad",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Interactable/Target/BP_WobbleTarget": {
+      "file": "Content/LevelPrototyping/Interactable/Target/BP_WobbleTarget.uasset",
+      "sha256": "8bd8784bf03cb945d63deb2c4c22261a9a9ea2af1f84766805ca92ec7b521ab3",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Materials/MF_ProcGrid": {
+      "file": "Content/LevelPrototyping/Materials/MF_ProcGrid.uasset",
+      "sha256": "e5ee13abdb241d9811f6c1bcc0a607d229fa7adc5f46bfd5a9d5fedbfa279683",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Materials/MI_DefaultColorway": {
+      "file": "Content/LevelPrototyping/Materials/MI_DefaultColorway.uasset",
+      "sha256": "22e8ff06b634197c7b02d09d702a1e05160680dc654efb5b6c12dbb348e9c4d1",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Materials/MI_PrototypeGrid_Gray": {
+      "file": "Content/LevelPrototyping/Materials/MI_PrototypeGrid_Gray.uasset",
+      "sha256": "ae445420c5037b608c40d49b34161fcb8ef09441f935f9c8824112d987ca99eb",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Materials/MI_PrototypeGrid_Gray_02": {
+      "file": "Content/LevelPrototyping/Materials/MI_PrototypeGrid_Gray_02.uasset",
+      "sha256": "93540ebbd853b453680fefe4af73e88aff54601d7d5c849ecbfb5637b5228451",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Materials/MI_PrototypeGrid_Gray_Round": {
+      "file": "Content/LevelPrototyping/Materials/MI_PrototypeGrid_Gray_Round.uasset",
+      "sha256": "470614557d0e0ef0325a2fc028edd18392aa302945e588c9a5c1b2506d0acaaf",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Materials/MI_PrototypeGrid_TopDark": {
+      "file": "Content/LevelPrototyping/Materials/MI_PrototypeGrid_TopDark.uasset",
+      "sha256": "a7331cb90255e72ee9db11b6599ac768d15e4b7f201f76a39b505a74c237978f",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Materials/M_FlatCol": {
+      "file": "Content/LevelPrototyping/Materials/M_FlatCol.uasset",
+      "sha256": "41dbbda4b463a224c29ee01765e1f52a8ae63f2f94f1440ee267fe7b1a481585",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Materials/M_PrototypeGrid": {
+      "file": "Content/LevelPrototyping/Materials/M_PrototypeGrid.uasset",
+      "sha256": "bf8625ad5917cee705867038d8a590b25465e6b5d5818a738a584e515d7cbdfc",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Meshes/SM_ChamferCube": {
+      "file": "Content/LevelPrototyping/Meshes/SM_ChamferCube.uasset",
+      "sha256": "b20a3ae9668ec599db519af3f84b67952d0e31ac4427b80ee812232edde91f53",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Meshes/SM_Cube": {
+      "file": "Content/LevelPrototyping/Meshes/SM_Cube.uasset",
+      "sha256": "4680317a8c87f983e077f6c0a6b93ffaa0ba4dbddbc810960d4553e6ad380a89",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Meshes/SM_Cylinder": {
+      "file": "Content/LevelPrototyping/Meshes/SM_Cylinder.uasset",
+      "sha256": "76aaa3c2b812ff790fb57ae7736b748e4e1556afbb13466fd787d4bacd2c7dfe",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Meshes/SM_Plane": {
+      "file": "Content/LevelPrototyping/Meshes/SM_Plane.uasset",
+      "sha256": "39ab83dc57a9a27a80476711610f72e81c0685a05d4aa95413b3e4e7f6c4a3f2",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Meshes/SM_QuarterCylinder": {
+      "file": "Content/LevelPrototyping/Meshes/SM_QuarterCylinder.uasset",
+      "sha256": "4087b3f85753d9ccbced7d00d42208dad4d21185f24a97b0c86db31be867b733",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Meshes/SM_QuarterCylinderOuter": {
+      "file": "Content/LevelPrototyping/Meshes/SM_QuarterCylinderOuter.uasset",
+      "sha256": "ab58a5224da57452f367c9d55ea4976466138fc2cb8ec9e2fa92748c86a07f11",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Meshes/SM_Ramp": {
+      "file": "Content/LevelPrototyping/Meshes/SM_Ramp.uasset",
+      "sha256": "e5b472deb37a9956b9112dccee3d09498a456baeacc574db8c5d725463b73597",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    },
+    "/Game/LevelPrototyping/Textures/T_GridChecker_A": {
+      "file": "Content/LevelPrototyping/Textures/T_GridChecker_A.uasset",
+      "sha256": "980253a6304a98c403c619cff5fc90d0e84c159603d89b01ff981ac8e4bef669",
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+    }
+  },
+  "preserve": {
+    "frontend": "All current staged/unstaged menu work",
+    "live_gameplay": "Player, weapon, AI, boss, maps, input, settings and source",
+    "original_libraries": "Lyra assets and character animation source libraries; unreferenced alone does not imply obsolete gameplay.",
+    "redirects": "51 designer/vendor path compatibility redirectors; no mass fixup or designer map resave.",
+    "tests": "Four /Game/Tests/Equipment fixtures plus current C++ regression tests",
+    "signature": "Approved signature ability foundation, future implementation point",
+    "compatibility": "Runtime PawnExtension/Hero/loadout teardown APIs, active Config redirects and Struct_UIMessaging"
+  },
+  "historical_types_resolved_by_actual_load": {
+    "/Game/Characters/Heroes/PhysMat_Player": {
+      "cls": "/Script/DreamCatcher.DCPhysicalMaterialWithTags"
+    },
+    "/Game/Characters/Heroes/PhysMat_Player_WeakSpot": {
+      "cls": "/Script/DreamCatcher.DCPhysicalMaterialWithTags"
+    },
+    "/Game/BlockingStarterPack/Blueprints/Decals/Class/BlockingDecalMaterialParameters_Struct": {
+      "cls": "/Script/CoreUObject.UserDefinedStruct"
+    },
+    "/Game/BlockingStarterPack/Blueprints/Interactions/Types/ReplicatedPressedButton_Struct": {
+      "cls": "/Script/CoreUObject.UserDefinedStruct"
+    },
+    "/Game/B_LyraGameInstance": {
+      "cls": "/Script/Engine.Blueprint",
+      "resolved_parent": "/Script/DreamCatcher.DCLyraGameInstance"
+    },
+    "/Game/BlockingStarterPack/Blueprints/AutomaticDoor/DoorParts_Struct": {
+      "cls": "/Script/CoreUObject.UserDefinedStruct"
+    }
+  },
+  "ignored_vendor_files_outside_registry": [
+    "Content/BlockingStarterPack/Maps/Blocking_ExempleMap.umap",
+    "Content/BlockingStarterPack/Maps/Props_AssetMap.umap"
+  ],
+  "remaining_parent_failures": 0,
+  "stale_package_refs": 0,
+  "stale_binary_path_literals": 0,
+  "unexpected_asset_changes": 0,
+  "protected_file_count": 663,
+  "git_index_unchanged": false,
+  "cpp_changed": false,
+  "cpp_build": false,
+  "PIE": false,
+  "staged_or_committed": false,
+  "evidence": "Saved/Diagnostics/LegacySweep; Saved/Logs/LegacySweep-Verify_A.log",
+  "git_index_entries_unchanged": true,
+  "git_index_metadata_changed": true,
+  "deleted_count": 33,
+  "followup_animation_cleanup": {
+    "complete": true,
+    "date": "2026-10-15",
+    "deleted": [
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump"
+    ],
+    "template_identical": true,
+    "external_refs": 0,
+    "source_or_binary_literal_refs": 0,
+    "missing_fields": [
+      "AnimSequenceLevelSequenceLink.PathToLevelSequence",
+      "PreviewSkeletalMesh"
+    ],
+    "resolution": "Unused unchanged UE default template sequences removed using Unreal Editor APIs; no current animation links changed.",
+    "new_package_count": 3674,
+    "missing_project_dependencies": {},
+    "current_animation_loads": [
+      "/Game/Characters/Heroes/Mannequin/Animations/ABP_Mannequin_Base",
+      "/Game/Characters/Heroes/Mannequin/Animations/Locomotion/Rifle/ABP_RifleAnimLayers",
+      "/Game/Characters/Heroes/Mannequin/Animations/Locomotion/Rifle/MM_Rifle_Idle_Hipfire",
+      "/Game/Weapons/Rifle/Animations/AM_MM_Rifle_Fire",
+      "/Game/Weapons/Rifle/Animations/AM_MM_Rifle_Reload"
+    ],
+    "protected_data_files": 663,
+    "index_entries_preserved": true,
+    "extra_asset_changes": 0,
+    "cpp_build": false,
+    "PIE": false,
+    "recovery": {
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01": {
+        "file": "Content/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01.uasset",
+        "sha256": "f796113f17c91eca7e48ef57bbadc4fc36245a86b127e75a34ca4771500639ed",
+        "bytes": 757637,
+        "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Attack\\MM_Attack_01.uasset",
+        "template_identical": true,
+        "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+      },
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02": {
+        "file": "Content/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02.uasset",
+        "sha256": "fb3c74b8e32fb5a88c6d659cae8717294af85d4eaa7f684b2a36c36d245559dc",
+        "bytes": 661409,
+        "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Attack\\MM_Attack_02.uasset",
+        "template_identical": true,
+        "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+      },
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03": {
+        "file": "Content/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03.uasset",
+        "sha256": "1c66016fc3bd386453ac7fb1229a5f0644c6bd5f98ead29f6e6a1be80632ba1f",
+        "bytes": 1036132,
+        "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Attack\\MM_Attack_03.uasset",
+        "template_identical": true,
+        "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+      },
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack": {
+        "file": "Content/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack.uasset",
+        "sha256": "5d9b0fc6892519095cb6930aba5c0dd063acf647612a06e0f2f7e19c463223ee",
+        "bytes": 1057890,
+        "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Attack\\MM_ChargedAttack.uasset",
+        "template_identical": true,
+        "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+      },
+      "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump": {
+        "file": "Content/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump.uasset",
+        "sha256": "e29af6dc13219cb813097e596c143d964a18c118caca138015574009e50859c0",
+        "bytes": 409179,
+        "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Jump\\MM_WallJump.uasset",
+        "template_identical": true,
+        "source_commit": "819ac1947cf8abda15e70135c271fe646533177c"
+      }
+    },
+    "evidence": "Saved/Diagnostics/LegacyAnimationLinks; Saved/Logs/LegacyAnimationLinks-Verify_A.log",
+    "superseded_by_user_restore": true
+  },
+  "remaining_package_count": 3679,
+  "restored_for_future_use": {
+    "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack": {
+      "file": "Content/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack.uasset",
+      "sha256": "5d9b0fc6892519095cb6930aba5c0dd063acf647612a06e0f2f7e19c463223ee",
+      "bytes": 1057890,
+      "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Attack\\MM_ChargedAttack.uasset",
+      "template_identical": true,
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c",
+      "current_sha256_after_metadata_repair": "f196882f9f808266fc0c1640645f6ee2738345f6dc19a95b74cf6001637518d1"
+    },
+    "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03": {
+      "file": "Content/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03.uasset",
+      "sha256": "1c66016fc3bd386453ac7fb1229a5f0644c6bd5f98ead29f6e6a1be80632ba1f",
+      "bytes": 1036132,
+      "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Attack\\MM_Attack_03.uasset",
+      "template_identical": true,
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c",
+      "current_sha256_after_metadata_repair": "56adeac032085e0895a7d6207f799fe70c612cad8c34c1ab3d31a99386d295b7"
+    },
+    "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01": {
+      "file": "Content/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01.uasset",
+      "sha256": "f796113f17c91eca7e48ef57bbadc4fc36245a86b127e75a34ca4771500639ed",
+      "bytes": 757637,
+      "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Attack\\MM_Attack_01.uasset",
+      "template_identical": true,
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c",
+      "current_sha256_after_metadata_repair": "d8dacf5745bff4e8e32f89fbd2b0da10f9de0af56e33a98f0797823229bababc"
+    },
+    "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02": {
+      "file": "Content/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02.uasset",
+      "sha256": "fb3c74b8e32fb5a88c6d659cae8717294af85d4eaa7f684b2a36c36d245559dc",
+      "bytes": 661409,
+      "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Attack\\MM_Attack_02.uasset",
+      "template_identical": true,
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c",
+      "current_sha256_after_metadata_repair": "a8bca2394b1edff6b4821b50d6c85077742a6dfa5e4da131b6947103167e1d57"
+    },
+    "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump": {
+      "file": "Content/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump.uasset",
+      "sha256": "e29af6dc13219cb813097e596c143d964a18c118caca138015574009e50859c0",
+      "bytes": 409179,
+      "template": "E:\\Epic Games\\UE_5.8\\Templates\\TemplateResources\\High\\Characters\\Content\\Mannequins\\Anims\\Unarmed\\Jump\\MM_WallJump.uasset",
+      "template_identical": true,
+      "source_commit": "819ac1947cf8abda15e70135c271fe646533177c",
+      "current_sha256_after_metadata_repair": "f87f28fbc7a42443e1344d409cba3d9cb2b80d1998423cf7c644c2dca23ca091"
+    }
+  },
+  "animation_restore": {
+    "complete": true,
+    "restored": [
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump"
+    ],
+    "exact_original_hashes": true,
+    "other_33_still_deleted": true,
+    "other_assets_unchanged": true,
+    "protected_files_unchanged": true,
+    "index_entries_unchanged": true,
+    "asset_resaves": 0,
+    "cpp_build": false,
+    "PIE": false,
+    "editor_metadata_links_repaired": false,
+    "followed_by_editor_metadata_repair": true
+  },
+  "resolved_library_metadata_issues": {
+    "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01": [
+      "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_Attack_01",
+      "/Game/Characters/Mannequins/Meshes/SKM_Manny"
+    ],
+    "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02": [
+      "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_Attack_02",
+      "/Game/Characters/Mannequins/Meshes/SKM_Manny"
+    ],
+    "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03": [
+      "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_Attack_03",
+      "/Game/Characters/Mannequins/Meshes/SKM_Manny"
+    ],
+    "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack": [
+      "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_ChargedAttack",
+      "/Game/Characters/Mannequins/Meshes/SKM_Manny"
+    ],
+    "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump": [
+      "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_Attack_01",
+      "/Game/Characters/Mannequins/Meshes/SKM_Manny"
+    ]
+  },
+  "remaining_library_metadata_issues": {},
+  "animation_metadata_repair": {
+    "complete": true,
+    "assets": [
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump"
+    ],
+    "preview_mesh": "/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple",
+    "removed_editor_links": {
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01": "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_Attack_01",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02": "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_Attack_02",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03": "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_Attack_03",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack": "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_ChargedAttack",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump": "/Game/Characters/Mannequins/Animations/EditableAnimations/LS_Attack_01"
+    },
+    "original_sequences_recovered": false,
+    "motion_model_hashes_preserved": true,
+    "all_other_exported_properties_preserved": true,
+    "notifies_curves_skeleton_preserved": true,
+    "fresh_reload_verified": true,
+    "missing_target_dependencies": 0,
+    "protected_files_unchanged": true,
+    "index_entries_unchanged": true,
+    "current_sha256": {
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01": "d8dacf5745bff4e8e32f89fbd2b0da10f9de0af56e33a98f0797823229bababc",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02": "a8bca2394b1edff6b4821b50d6c85077742a6dfa5e4da131b6947103167e1d57",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03": "56adeac032085e0895a7d6207f799fe70c612cad8c34c1ab3d31a99386d295b7",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack": "f196882f9f808266fc0c1640645f6ee2738345f6dc19a95b74cf6001637518d1",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump": "f87f28fbc7a42443e1344d409cba3d9cb2b80d1998423cf7c644c2dca23ca091"
+    },
+    "original_recovery_sha256": {
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_01": "f796113f17c91eca7e48ef57bbadc4fc36245a86b127e75a34ca4771500639ed",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_02": "fb3c74b8e32fb5a88c6d659cae8717294af85d4eaa7f684b2a36c36d245559dc",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_Attack_03": "1c66016fc3bd386453ac7fb1229a5f0644c6bd5f98ead29f6e6a1be80632ba1f",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Attack/MM_ChargedAttack": "5d9b0fc6892519095cb6930aba5c0dd063acf647612a06e0f2f7e19c463223ee",
+      "/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_WallJump": "e29af6dc13219cb813097e596c143d964a18c118caca138015574009e50859c0"
+    },
+    "cpp_build": false,
+    "PIE": false,
+    "evidence": "Saved/Diagnostics/AnimationMetadataRepair/save_B.json and verify_B.json"
+  }
+}

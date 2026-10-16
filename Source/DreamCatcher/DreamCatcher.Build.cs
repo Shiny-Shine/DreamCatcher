@@ -53,6 +53,8 @@ public class DreamCatcher : ModuleRules
 		if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.Add("MessageLog");
+			// Narrow editor repair for the HARU dash montage/profile connection.
+			PrivateDependencyModuleNames.AddRange(new[] { "UnrealEd", "BlueprintGraph" });
 		}
 
 		PublicIncludePaths.AddRange(new string[] {
@@ -64,6 +66,8 @@ public class DreamCatcher : ModuleRules
 		PublicDependencyModuleNames.AddRange(new[] { "GameSettings", "NetworkReplayStreaming", "PropertyPath", "DataRegistry" });
 		PrivateDependencyModuleNames.AddRange(new[] { "PlatformDLC", "RHI", "RenderCore" });
 		PrivateDependencyModuleNames.Add("NetCore");
+		// Original Lyra Frontend flow; used only by the separate 2D menu Experience.
+		PublicDependencyModuleNames.Add("ControlFlows");
 		// Original GameInstance parent required by the imported weapon audio Blueprint.
 		PrivateDependencyModuleNames.AddRange(new[] { "CoreOnline", "DTLSHandlerComponent" });
 

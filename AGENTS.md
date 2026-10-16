@@ -7,7 +7,7 @@
 > **Lyra 이식 정책 갱신:** 2026-09-10 KST
 > **작업 분담·자동화·마감 기준 갱신:** 2026-10-05 KST
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
-> **최신 재개:** 2026-10-15, 아래 **0.114** 및 `docs/handoffs/project-finish-resume-2026-10-15.md` — 복구 main 병합·디자이너 수용 완료, 다음은 메인화면·아웃게임·UI 마무리
+> **최신 재개:** 2026-10-16, 아래 **0.124** 및 `docs/handoffs/haru-dash-blend-fix-2026-10-16.md` — 첫 대시 BoneContainer ensure 재현·HARU용 Blend Out 프로필/몽타주 분리 수정, 사용자 빌드·저장/재로드·첫/반복 대시 PIE 통과. 사용자 새 에디터 첫 대시 확인 대기. 0.123 SMG·0.122 무기 본·0.120 보존/정리·0.116 메뉴 후속은 유지
 
 ---
 
@@ -1466,6 +1466,104 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - **다음은 메인화면·아웃게임 씬 추가와 UI 마무리**다. 이 요청은 현재 상태/새 채팅 인계 문서 작성이며 새 코드·Config·에셋 구현의 포괄 승인이 아니다. 원본 Lyra/CommonUI 재사용을 조사하고 화면 구성·연관 변경 범위를 먼저 설명한 뒤 승인된 묶음으로 진행한다. 빌드·패키징·화면 확인과 GitHub Desktop 커밋/푸시/병합은 사용자 담당이다. 패키징은 기존 지시대로 보류한다.
 - 디자이너의 별도 Stash 원본2개는 당시 원격404/로컬 부재였으며 확보를 확인하지 못했다. 이번 복구 성공을 그 별도 원본 회수까지 완료했다는 뜻으로 확대하지 않는다. 충돌 기록/객체ID는 복구 인계에 보존했으며 기존 Stash/백업을 건드리지 않는다. 새 단서 없이 마무리 작업을 막거나 조사부터 반복하지 않는다.
 - **새 채팅의 기준 문서:** `docs/handoffs/project-finish-resume-2026-10-15.md`. 모델/UI 경로는`docs/handoffs/designer-asset-integration-2026-10-14.md`, 복구 이력은`docs/handoffs/level1-stash-conflict-recovery-2026-10-14.md`다. 아래 오래된 R5 등의 대기 기록보다 이 최신 상태를 우선한다. 이번에는 문서만 갱신했고 빌드·PIE·에셋 변경·Git 조작을 하지 않았다.
+
+---
+
+## 0.115 최신 재개 — 2026-10-15 승인된 2D 메인메뉴 코드 준비 / 사용자 빌드 대기
+
+- 사용자가 첨부 UI 초안처럼 **2D 카드·버튼 방식**을 지정하고 3D 배경/이동 로비를 제외했다. 이어 **프리 모드는 우선 건너뛰고 진행**하도록 승인했다. 첫 범위는 스토리 카드·설정·종료와 `메뉴→Level_1→결과/ESC→메뉴`다. 별도 타이틀 미정으로 모드 선택을 실행 첫 화면으로 사용하는 가정을 안내했다.
+- 로컬 main은 `819ac19`이며 작업 시작 전부터 `Level_1.umap`에 미커밋 변경이 있었다. 기존 맵/전투/AI/보스/디자인 에셋을 수정하거나 이전 이식·복구 검증을 반복하지 않았다. Git 작업도 하지 않았다.
+- 원본 Frontend 에셋6개를 Unreal 내부 API로 읽어 실제 그래프/설정/의존성을 확인했다(저장/명시적Compile0, 대상6파일 해시 불변). 원본 선택 화면의 온라인 로그인/세션 경로를 확인했으며, 기존 CommonUI·버튼·설정/확인창을 재사용하는 DreamCatcher 카드 화면을 작성한다. 원본 이식 불가 판정이 아니다.
+- 원본 FrontendState/메뉴 성능 Action4파일과 별도 메뉴 GameMode·화면·카드6파일, 검사2파일을 추가했다. ControlFlows 플러그인/모듈을 연결하고 기존 결과 복귀 버튼 문구를 `메인화면으로`로 바꿨다. 메뉴는 전투 PawnData/PlayerState 생성 경로를 사용하지 않으며, 스토리 시작은 다음tick 이동·중복 차단·이동 실패 재시도를 처리한다. **UHT/C++ 빌드와 신규 검사2건 실행 전**이다.
+- `Scripts/Editor/frontend_menu_setup.py`는 신규7개 생성→새 프로세스 재로드→기존 Level1 GameMode.ReturnMap 및 시작 맵/Cook/로딩 표시 연결을 분리한다. 현재는 **스크립트만 준비**했고 실제 에셋/DefaultEngine.ini/DefaultGame.ini는 변경하지 않았다. 엔진 기본 UMGToolSet의 저장 없는 임시 위젯 생성/Compile API 확인만 통과했다. 메뉴·PIE·화면 완료가 아니다.
+- UI는 편집 가능한 UMG 트리로 만들며 카드 Artwork는 미지정 상태로 시작한다. 초안의 전체 이미지를 자르거나 최종 아트로 이식한 것은 아니다. 다음은 사용자 Development Editor/Win64 빌드→새 DLL 검사·에셋7개 생성/재로드/연결→변경 영향 왕복 확인이다. 빌드·패키징·화면 확인과 GitHub Desktop 작업은 사용자 담당이다.
+- 상세 경로·원본 대비 차이·미완료 항목은 `docs/handoffs/frontend-menu-2026-10-15.md`를 따른다. 0.114의 R14/Level_1/복구 완료 상태는 유지한다.
+
+---
+
+## 0.116 최신 재개 — 2026-10-15 2D 메뉴 에셋·진입/복귀·탄약 보완 PIE 통과 / 사용자 화면 확인 대기
+
+- 사용자 증분 빌드 성공을 확인했다(DLL10월15일18:26:28KST,5,848,576bytes, SHA256 `dd465a67a2a6c8211f7a20dde16ca0cfd9682cb854fc9330c33fdca095a9b429`). 새 native검사2건 성공/실패·보고서경고0. Codex의 C++ 빌드/패키징 실행은 없다.
+- 승인된 신규 메뉴7개를 Unreal 내부 API로 생성/Compile/저장하고 별도 프로세스 재로드를 통과했다. 메인화면은 `/Game/DreamCatcher/Maps/L_DC_FrontEnd`, 스토리 카드·설정·종료 구성이다. 프리 모드와 3D 배경/이동 로비는 추가하지 않았다. 카드 Artwork는 미지정으로, 최종 디자인 완성이 아니다.
+- `BP_DC_Level1GameMode.ReturnMap`과 `GameDefaultMap`을 새 메뉴로 연결하고 Cook목록에 메뉴를 추가했다. `EditorStartupMap`은 Level_1 유지, 결과 재시작은 Level_1 새 판이다. 현재는 실제 메인화면 복귀가 연결돼 있으므로 과거의 “돌아가기=Level_1 재시작”을 최신 상태로 해석하지 않는다.
+- 초기 실제 PIE B에서 재진입 중 `W_AmmoCounter_Rifle.InventoryInstance` Accessed None2건이 발생했다. 사용자에게 기존 HUD1개 변경 범위를 설명하고 **추가 승인을 받은 뒤**, 해당 위젯의 Tick/무기 초기화 앞에 유효성 분기2개만 추가했다. 기존 노드/수치/나머지 핀/위젯 기본값 보존과 별도 재로드/Compile 통과. 무기·전투 C++는 변경하지 않았다.
+- 보완 후 `Saved/Diagnostics/Frontend/pie_C.json`은 **complete=true, Error0/ensure0/실패0**이다. 메뉴/설정/종료 취소→스토리 진입→ESC 복귀→재진입→결과 재시작→결과 메뉴 복귀를 실제 PIE에서 확인했고 3회 진입의 탄약 Bar/Glow도 인벤토리30/30과 일치했다. 결과는 `FailStage()`로 유도했으며 기존 전투/보스 전체 검증을 반복한 것은 아니다. 물리 입력·화면/최종 아트·패키징 수용은 사용자 담당이다.
+- 기존 사용자 미커밋 Level_1 파일은 SHA256 `c075fae64f043905b7adcd853d03682a0908bd7b014b4d96a7ddf7eae78e42a7`로 전후 불변이다. PIE의 보호 파일과 사용자 SaveGames도 불변. 직접 Git 변경 명령·커밋·푸시·병합은 실행하지 않았다. 신규 위젯/BP6개가 staged 상태인 것은 별도 기록했으며 임의로 되돌리지 않았다. 후속 에셋 스크립트는 `-SCCProvider=None`과 실제 비활성 상태를 요구한다.
+- **별도 미완료:** CommonLoadingScreen은 기존 진단 전용 조건 때문에 일반 PIE/패키징에서 관리자를 생성하지 않는다. 로딩 위젯/Config는 준비됐으나 일반 실행 표시 활성화는 미완료로 기록했다. 메뉴 왕복과 구분하며, 필요 시 플러그인 활성 경로 변경안·사용자 빌드를 별도로 진행한다. 다른 진단 조건까지 일괄 해제하지 않는다.
+- 다음은 사용자가 `L_DC_FrontEnd`를 열고 새 화면·클릭/키보드·설정/복귀를 확인하는 단계다. 상세 근거와 실패 이력, 정확한 에셋/스크립트 경로는 `docs/handoffs/frontend-menu-2026-10-15.md`에 있다. 이미 완료한 R14/Level_1/복구는 반복하지 않는다.
+
+---
+
+## 0.117 최신 재개 — 2026-10-15 전체 부모·참조 조사와 누락 레거시33개 정리 완료
+
+- 사용자 요청으로 B_DC_Rifle을 포함한 잔여 레거시 전체를 조사했다. 앞선 정리에서 부모 DCWeaponActor만 삭제하고 BP를 남긴 누락을 인정한다. 현재 메뉴·플레이어·맵 미커밋 변경과 staged6개를 보호한 상태로 조사/삭제했다.
+- 등록 패키지3,712개, native타입경로177개, 제거한 native클래스명50개와 전체 에셋파일3,714개 문자열을 확인했다. 실제 제거된 부모를 참조하는 BP는 B_DC_Rifle1개였다. 과거 폐기 경로/목록 재등장0. 원본 타입 태그6개는 실제 로드로 현재 클래스/구조체에 정상 대응함을 확인했다.
+- 삭제: 구형 B_DC_Rifle1＋임시 발사음2＋이식용 BP_QuickSlotInputSource1＋미사용 초기 LevelPrototyping29 = **33개**. 외부 참조/실행 경로 문자열0, Git LFS 원본33개 복구 가능 상태를 확인하고 Unreal 내부 API로 삭제했다. 새 프로세스의 잔여3,679개 에셋에서 삭제 대상 참조0/제거된 부모 참조0, 실제 라이플/플레이어/메뉴7개 로드 성공이다.
+- 지정 대상 외 에셋 변화0, 보호 데이터파일663개 및 기존 Git staged내용 불변, Error/ensure/Fatal0. 최종 Git 조회 단계의 인덱스 메타데이터 변경은 별도 대조해 전체 경로/blob/mode와 staged6개 payload가 유지됨을 확인했다. C++/Config/DLL·Level_1·Frontend 맵·현재 메뉴 작업은 그대로이며 빌드/패키징/PIE 재실행 및 Git stage/commit/push/merge는 하지 않았다. 추가 빌드는 필요 없다.
+- 현재 사용하는 초기화/장비/조준 호환 API와 Config 참조, 회귀 fixture4개·C++검사, 시그니처 확장점, 원본 Lyra/캐릭터 및 디자이너 자료를 유지했다. 유효한 경로 호환 Redirector51개는 보존했다. 원본 모션5개의 미사용 편집소스/메시 경로 누락은 별도 보존 목록에 남겼으며 전체 미사용 라이브러리0으로 확대하지 않는다.
+- 상세 삭제/보존/주의 목록과 근거: `docs/handoffs/legacy-sweep-2026-10-15.md` 및 동일명JSON. 후속 메뉴 작업의 화면 확인 대기·로딩 표시 미완료는 0.116 및`docs/handoffs/frontend-menu-2026-10-15.md`를 따른다. 이번 정리를 다시 시작하지 않는다.
+
+---
+
+## 0.118 최신 재개 — 2026-10-15 원본 애니메이션 누락 경로 조사와 미사용5개 추가 정리
+
+- 사용자 승인으로 0.117 보존 목록의 Attack4개/MM_WallJump1개를 추가 조사했다. 모두 최초 커밋부터 변경이 없고 설치된 UE5.8 기본 템플릿과 해시가 동일하다. 실제 로드/export에서 누락 경로는 편집용 `AnimSequenceLevelSequenceLink.PathToLevelSequence`와 `PreviewSkeletalMesh`임을 확인했다. Skeleton/모션 자체는 정상이며 현재 플레이의 필수 연결이 아니었다.
+- 최신 에셋 외부 참조0, 코드·설정·스크립트의 경로/에셋명 소비0, 다른 바이너리 에셋의 경로 문자열0을 확인했다. 승인대로 미사용 템플릿5개만 Unreal 내부 API로 삭제했다. 정상 원본 템플릿과 Git LFS 복구 payload를 사전 확인했으며 활성 애니메이션/공유 Skeleton/캐릭터/디자인 데이터는 보존했다.
+- 새 프로세스의 등록 패키지3,674개에서 `/Game`·`/DCStageUI` 누락 패키지 의존성과 삭제 대상 참조0. 현재 AnimBP/라이플 레이어/대기/발사/재장전5개 로드 성공, 대상 외 에셋 및 보호 데이터663개 변화0/Error·ensure·Fatal0, 기존 Git staged 항목 내용 불변이다. 빌드·패키징·PIE·Git stage/commit/push/merge는 하지 않았다.
+- **누적 삭제33＋5＝38개**이며 0.117의 애니메이션 누락 경로 보존5건도 해결됐다. 정확한 삭제/복구/검증 기록은`docs/handoffs/legacy-sweep-2026-10-15.md`와 동일명JSON, 로컬 근거는`Saved/Diagnostics/LegacyAnimationLinks`다. 전체 미사용 디자인 라이브러리0이라는 뜻으로 확대하지 않는다. 추가 빌드 없이 기존0.116 메뉴 화면 수용/로딩 표시 후속을 이어간다.
+
+---
+
+## 0.119 최신 재개 — 2026-10-15 사용자 요청으로 애니메이션5개 복원·보존
+
+- 사용자가 향후 필요할 수 있으므로 방금 삭제한 원본 애니메이션5개를 복원하라고 요청했다. `MM_Attack_01/02/03`, `MM_ChargedAttack`, `MM_WallJump`를 삭제 전 커밋819ac19의 원래 경로/내용으로 복원했고 모든 SHA256이 일치했다. **사용자 지시 없이 이5개를 다시 미사용 레거시로 삭제하지 않는다.**
+- 앞선 B_DC_Rifle 등33개 삭제와 현재 메뉴/맵/디자이너 변경을 유지했다. 다른 에셋·보호 데이터663개·Git staged 항목 내용은 불변이며 코드/Config/에셋 재저장·빌드·PIE·커밋/푸시는 하지 않았다. 원본과 바이트 단위로 같아 완료된 로드 검사를 반복하지 않았다.
+- 편집용 Level Sequence/프리뷰 메시 누락 참조는 원본 그대로 보존했다. 향후 실제 사용 시 필요한 연결을 점검하며,0.118의 “누적38개 삭제/누락 의존성0”은 삭제 당시 이력이다. 현재 정리 대상은33개 삭제＋5개 복원/보존으로 구분한다.
+- 최신 목록은`docs/handoffs/legacy-sweep-2026-10-15.md`와 동일명JSON, 복원 근거는`Saved/Diagnostics/LegacyAnimationLinks/restore_A.json`이다.0.116의 메뉴 사용자 수용 대기/일반 로딩 표시 미완료 상태는 유지한다.
+
+---
+
+## 0.120 최신 재개 — 2026-10-15 보존 애니메이션5개 편집 연결 보완 완료
+
+- 사용자가 누락 참조를 지금 수정할 수 있는지 요청했다. 같은 Skeleton의 SKM_Manny_Simple을5개 애니메이션의 Preview Skeletal Mesh로 연결했다. 원본 제작 Level Sequence는 프로젝트/설치 템플릿에서 찾지 못해 존재하지 않는 편집용 AnimSequenceLevelSequenceLink만 제거했다. 제작 시퀀스 자체를 복구하거나 애니메이션을 새로 bake하지 않았다.
+- Unreal 내부 API 저장 후 새 프로세스 검증을 마쳤다. 허용한 PreviewSkeletalMesh/LevelSequence 링크 변경만 제외한 전체 export와 AnimationSequencerDataModel/다른 AssetUserData가 변경 전후·재로드에서 동일해 모션 키·커브·노티파이·Skeleton·설정을 보존했다. 해당5개 옛 누락 경로 참조0, 최종 Save_B/Verify_B Error·ensure·Fatal0, 대상 외 에셋/보호 데이터/staged 내용 불변이다.
+- Save_A는 보호 Notifies 직접 조회가 불가능해 저장 전 중단했고 에셋 변경0이었다. 전체 export 비교로 보완한 B가 최종 성공 근거다. 원본 Git LFS payload와 초기 export는 유지했다. C++/Config 수정·빌드·PIE·커밋/푸시는 하지 않았다.
+- 현재 상태는 **앞선33개 삭제 유지＋애니메이션5개 보존/편집 참조 보완**이다.5개를 추가 지시 없이 다시 삭제하지 않는다. 문서는`docs/handoffs/legacy-sweep-2026-10-15.md`와 동일명JSON, 근거는`Saved/Diagnostics/AnimationMetadataRepair/{save_B.json,verify_B.json,closeout_B.json}`이다. 추가 빌드 없이0.116 메뉴 사용자 수용/로딩 표시 후속을 이어간다.
+
+---
+
+## 0.121 최신 재개 — 2026-10-16 HARU weapon_r 소켓 손 부착 오프셋 교정
+
+- 사용자가 HARU hand_r 아래 weapon_r 소켓과 기존 WID_Rifle Yaw−90°를 고려한 수정을 요청했다. 사용자 직전 생성본은 HARU Skeleton에 이름/부모가 정상이고 변환이0인 소켓1개였다. 원본 Manny의 weapon_r은 hand_r 자식 본이며 그 레퍼런스 포즈 오프셋을 기준으로 삼았다.
+- 삭제·재생성 시도는 에디터 SET 명령 제한으로 저장 전 중단(파일 변화0)됐다. 제한을 우회하지 않고 지원되는 소켓 부모/로컬 변환 API로 기존 항목을 다시 설정했다. **소켓 객체를 삭제·재생성한 것이 아니다.** 변경은 HARU Skeleton1개이며 메시/다른 Skeleton 데이터/WID/사용자 작업/staged 내용은 보존했다.
+- weapon_r 부모hand_r, 상대위치(-1.163383,1.317055,-0.519517)cm, 회전(Pitch15.808370,Yaw−8.517089,Roll−11.617612)°, 크기1이다. WID_Rifle의 Yaw−90°는 유지했고 원본 손 기준 최종 라이플 변환과 일치하도록 확인했다.
+- 저장/새 프로세스 재로드, 소켓 밖 export 일치, 실제 B_Rifle을 쓰는 임시 Editor 월드의 부착·캐릭터 이동/회전 추종 검사를 통과했다. 최종 Error/ensure/Fatal0. **PIE·시각 수용 및 HARU 애니메이션 리타깃 검증은 수행하지 않았다.** 손가락/왼손 정밀 위치는 사용자 화면 확인을 따른다.
+- C++/Config 변경·빌드·패키징·Git 커밋/푸시는 하지 않았고 추가 빌드는 필요 없다. 상세는`docs/handoffs/haru-weapon-socket-2026-10-16.md`, 근거는`Saved/Diagnostics/HaruSocketRepair/{save_D.json,verify_D.json,closeout_D.json}`다.0.120의33개 삭제/애니메이션5개 보존·참조 보완과0.116의 메뉴 화면 수용/일반 로딩 표시 대기는 유지한다.
+
+## 0.122 최신 재개 — 2026-10-16 HARU Lyra 무기 본·가상 본·미리보기 복원
+
+- 사용자가 실제 총 위치가 크게 틀어진 것을 확인했다. 0.121은 원본 레퍼런스 포즈만 복사한 고정 소켓이라 실제 라이플 애니메이션의 weapon_r 트랙을 재현하지 못했다. 해당 수정을 최종 해결로 재사용하지 않는다.
+- HARU 메시/Skeleton2개에 원본 weapon_r 본과 가상 본3개·weapon_r_muzzle을 연결했다. 새 무기 본의 기준 회전에는 HARU의 손 축 차이를 반영하고 기존118개 본/모델/웨이트/재질/모프 목록·커브 메타데이터는 유지했다. WID_Rifle·B_Rifle·Pawn·맵·공용 AnimBP·원본 애니메이션은 불변이다.
+- 잘못 연결된 SM_GUN_SMG 미리보기를 실제 SK_Rifle로 바꾸고, weapon_r_preview 소켓에 WID의−90°를 반영했다. SMG 에셋은 삭제하지 않았다. 실제 무기와 미리보기의 부착 Transform이 같다.
+- 제한된 에디터 명령 CPP1개 `Editor/DCHaruRifleRigRepair.cpp`는 사용자 빌드 완료(DLL03:02:56 KST). 자체 에셋 저장은 하지 않고 unattended/전용 플래그/정확한 HARU 구조를 요구한다. Codex는 빌드/패키징을 실행하지 않았다.
+- 저장/새 프로세스 재로드, 애니메이션6개×Raw/Compressed×2시점=24건씩 통과. 실제 Level_1 PIE J의 대기·이동8개 표본(최대속도600cm/s)에서 무기 본 애니메이션·라이플 부착·미리보기 일치와 파일/사용자 SaveGames 불변을 확인했다. 엔진 Error/ensure0, 확인 PNG도 수집했다. 사용자 화면 수용, 손가락 접촉 및 전체 리타깃 검증은 미완료다.
+- 복구본과 검사 근거는 `Saved/Diagnostics/HaruSocketRepair/grip_*` 및 위 인계 문서. 새 FBX 재임포트 시 weapon_r 본을 유지해야 한다. 기존0.120 보존/정리와0.116 메뉴 후속은 그대로다.
+
+## 0.123 최신 재개 — 2026-10-16 실제 무기와 미리보기 SMG 외형 교체
+
+- 사용자 명시 승인 범위는 실제 플레이와 메시 에디터 미리보기 모두 SM_GUN_SMG로 교체다. B_Rifle에 SMGVisual을 추가하고 원본 크기50%, Yaw90°, 위치(0,−0.5,−6)cm로 손 기준을 맞췄다. WID의weapon_r/Yaw−90°와0.122의HARU 무기 본·가상 본은 유지한다.
+- 기존 스켈레탈 컴포넌트는 표시하지 않고 원본 AnimBP·발사/재장전 소켓 계약을 유지한다. 별도 SK_Rifle_SMGSocketDriver의 Mesh Socket3개만 SMG 총구·탄피 위치에 맞췄다. 공용 원본 SK_Rifle과 디자이너 SM_GUN_SMG 파일은 보존했다.
+- HARU의weapon_r_preview를 실제 SMG의 최종 부착 Transform과 일치시켰고 픽업 DisplayMesh/Scale/Offset도 교체했다. 변경 에셋은 기존3＋신규1이다. 스태틱 모델 자체의 탄창/노리쇠 애니메이션은 없고 캐릭터 재장전·무기 성능은 유지한다.
+- 기존 에디터 보조 CPP1개 추가분은 사용자 빌드 완료(DLL03:33:04 KST). 저장/재로드와 무기 그래프·HARU 본·픽업 게임플레이 데이터 보존을 확인했다. 최종 내부 메시 Visible=False 저장본의 실제 PIE F에서도30→29→30발과 발사 이펙트·이동·총구 일치가 통과했다(Error/ensure0, 에셋/사용자 SaveGames 불변). 확인 PNG와 그립/크기 사용자 수용은 인계 문서를 따른다.
+- 상세 편집 위치와 증거는`docs/handoffs/smg-visual-2026-10-16.md`. 사용자 그립/크기/화면 수용은 별도이며 현재 맵에는 해당 픽업 스포너가 없어 실제 획득 연출 검증으로 확대하지 않는다. 기존 메뉴·레거시 보존 결정은 그대로다.
+
+## 0.124 최신 재개 — 2026-10-16 HARU 첫 대시 Blend Out 본 인덱스 오류 수정
+
+- 사용자 첫 PIE의 BoneContainer.h616 ensure를 실제 대시에서 재현했다. 원본 FastFeet49개 항목 중 HARU에 없는38개 본이 Blend Out의 FillBoneScalesArray에서 잘못된 compact-pose 인덱스로 전달된다. 진단 ensure 상태 초기화 후 반복 대시에서도 재현돼, 첫 실행만 조용해지는 현상은 오류 보고 제한과 구분했다.
+- HARU Skeleton에 실제11개 본의0.5 값을 유지한 FastFeet_Haru, HARU 전용 몽타주 사본4개를 만들었다. GA_Hero_Dash에 스켈레톤별 대안4개와 순수 선택 노드1개만 추가해 HARU에서만 사용한다. Manny와 다른 캐릭터는 원본을 유지한다. 대시 속도/거리/시간/방어 기본값과 기존 실행 핀107개는 불변이다.
+- DCGameplayAbility.h/.cpp의 선택 함수·설정 배열 및 에디터 보조 CPP/Editor 모듈 의존성은 사용자 빌드 완료(DLL17:26:34 KST). 기존2＋신규4개 에셋 적용 후 원본 모션/곡선/노티파이·기존 HARU 데이터·대시 기본값의 저장/재로드 비교가 통과했다.
+- 새 프로세스 PIE E1에서 첫 실제 대시·ensure 상태 초기화 후 반복·HARU4방향 재생/Blend Out·Manny 원본 선택/재생을 통과했다. 최종 Error/ensure0, 에셋/사용자 SaveGames 불변이다. 검사 중 피해 면역과 일시적 Manny 메시 전환을 사용했고 HARU로 복원했다. 사용자 새 에디터 첫 대시 화면 확인과 멀티플레이/패키징은 별도다.
+- 자세한 원인·수정 범위·복구/검사 기록은`docs/handoffs/haru-dash-blend-fix-2026-10-16.md`. 이전 SMG/그립 편집·메뉴 후속·레거시 보존 결정은 유지한다. 엔진 검사 비활성화나 원본 FastFeet 삭제는 하지 않았다.
 
 ---
 
