@@ -7,7 +7,7 @@
 > **Lyra 이식 정책 갱신:** 2026-09-10 KST
 > **작업 분담·자동화·마감 기준 갱신:** 2026-10-05 KST
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
-> **최신 재개:** 2026-10-16, 아래 **0.124** 및 `docs/handoffs/haru-dash-blend-fix-2026-10-16.md` — 첫 대시 BoneContainer ensure 재현·HARU용 Blend Out 프로필/몽타주 분리 수정, 사용자 빌드·저장/재로드·첫/반복 대시 PIE 통과. 사용자 새 에디터 첫 대시 확인 대기. 0.123 SMG·0.122 무기 본·0.120 보존/정리·0.116 메뉴 후속은 유지
+> **최신 재개:** 2026-10-16, 아래 **0.125** 및 `docs/handoffs/level1-merge-recovery-2026-10-16.md` — Level_1 Stash 충돌 복구: 디자이너 건물14개 추가/2개 높이 수정과 기존 재질 해제1개를 모두 보존. 원본/LFS/Stash 보존, 저장·재로드·실제 플레이 진입/AI 이동/메뉴 복귀 통과. 사용자 화면 확인·복구 커밋/푸시가 다음. 0.124 대시·0.123 SMG·0.122 무기 본·0.120 보존/정리·0.116 메뉴 후속은 유지
 
 ---
 
@@ -1564,6 +1564,16 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - DCGameplayAbility.h/.cpp의 선택 함수·설정 배열 및 에디터 보조 CPP/Editor 모듈 의존성은 사용자 빌드 완료(DLL17:26:34 KST). 기존2＋신규4개 에셋 적용 후 원본 모션/곡선/노티파이·기존 HARU 데이터·대시 기본값의 저장/재로드 비교가 통과했다.
 - 새 프로세스 PIE E1에서 첫 실제 대시·ensure 상태 초기화 후 반복·HARU4방향 재생/Blend Out·Manny 원본 선택/재생을 통과했다. 최종 Error/ensure0, 에셋/사용자 SaveGames 불변이다. 검사 중 피해 면역과 일시적 Manny 메시 전환을 사용했고 HARU로 복원했다. 사용자 새 에디터 첫 대시 화면 확인과 멀티플레이/패키징은 별도다.
 - 자세한 원인·수정 범위·복구/검사 기록은`docs/handoffs/haru-dash-blend-fix-2026-10-16.md`. 이전 SMG/그립 편집·메뉴 후속·레거시 보존 결정은 유지한다. 엔진 검사 비활성화나 원본 FastFeet 삭제는 하지 않았다.
+
+---
+
+## 0.125 최신 재개 — 2026-10-16 Level_1 디자이너 배치와 Stash 변경 통합 복구
+
+- 사용자 승인: 두 맵을 비교해 디자이너 배치와 기존 작업을 모두 유지하고 원본 두 개·Stash를 보존한다. 시작 HEAD/origin/main `1055f87`의 Level_1은 충돌 문구280bytes가 LFS payload로 커밋돼 있었고, 작업 인덱스도 해당 맵만 UU였다.
+- 공통 기준819ac19/디자이너461577c/Stash d02c1c9를 Unreal에서 각각 비교했다. 디자이너는 건물14개 추가와 Building_26/27 높이 변경, Stash는 StaticMeshActor_4440의 잘못된 M_CalcDivergence OverrideMaterials(0) 해제1개다. 변경은 겹치지 않으며 나머지 게임플레이 액터 설정은 같다. Stash의 다른94개 변경은 이미 HEAD에 반영돼 있었다.
+- 디자이너 맵을 Git으로 복원하고 Unreal 내부 API로 재질 항목1개만 반영해 Level_1만 저장했다. 저장 전후 액터5080개 상태 보존과 별도 프로세스의 전체 내보낸 액터5084개 기대값 일치를 확인했다. 생성형 자식 GUID/ISM 지연 경계 캐시와 실제 배치 데이터를 구분했다. 내보내기의 임시 부착 변경이 저장되지 않도록 비교·저장 프로세스를 분리했다.
+- 실제 PIE F에서 HARU·장비·HUD·첫 인카운터 시작, AI의 완전 경로 요청/671.27cm 이동, 메인화면 복귀/AI 정리를 통과했다. 최종 Error/ensure/Fatal0, 다른 에셋·Source/Config/DLL·사용자 SaveGames 불변. 전체 전투/대시 검사를 반복하지 않았고 물리 입력·새 디자인 화면 수용은 사용자 확인으로 남긴다.
+- 원본 두 개와 공통 기준의 실제 LFS 해시를 보존했고 refs/codex-recovery/level1-20261016 아래4개 복구 참조를 추가했다. Stash d02c1c9는 그대로이며 재적용할 필요가 없다. 복구 맵 하나만 Git 충돌 해결 표시하고 커밋/푸시·빌드/패키징은 사용자에게 남긴다. 상세와 최종 해시는`docs/handoffs/level1-merge-recovery-2026-10-16.md`를 따른다.
 
 ---
 
