@@ -21,6 +21,20 @@ EDataValidationResult UDCLyraExperienceDefinition::IsDataValid(FDataValidationCo
 {
 	EDataValidationResult Result = CombineDataValidationResults(Super::IsDataValid(Context), EDataValidationResult::Valid);
 
+	if (bUseRoleBasedBaseDamage)
+	{
+		if (!FMath::IsFinite(PlayerBaseDamage) || PlayerBaseDamage < 0.0f)
+		{
+			Context.AddError(LOCTEXT("InvalidPlayerBaseDamage", "Player Base Damage must be finite and at least zero."));
+			Result = EDataValidationResult::Invalid;
+		}
+		if (!FMath::IsFinite(EnemyBaseDamage) || EnemyBaseDamage < 0.0f)
+		{
+			Context.AddError(LOCTEXT("InvalidEnemyBaseDamage", "Enemy Base Damage must be finite and at least zero."));
+			Result = EDataValidationResult::Invalid;
+		}
+	}
+
 	int32 EntryIndex = 0;
 	for (const UGameFeatureAction* Action : Actions)
 	{

@@ -20,4 +20,12 @@ protected:
 	virtual void PostInitializeComponents() override;
 private:
 	void OnExperienceLoaded(const UDCLyraExperienceDefinition* CurrentExperience);
+	bool InitializeRoleBaseDamage(const UDCLyraExperienceDefinition* CurrentExperience);
+
+	// The PlayerState and its ASC survive Pawn replacement. Do not reset combat progression on respawn.
+	bool bRoleBaseDamageInitialized = false;
+
+#if WITH_DEV_AUTOMATION_TESTS
+	friend struct FDCBaseDamageTestAccess;
+#endif
 };
