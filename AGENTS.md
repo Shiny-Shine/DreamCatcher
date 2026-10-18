@@ -7,7 +7,7 @@
 > **Lyra 이식 정책 갱신:** 2026-09-10 KST
 > **작업 분담·자동화·마감 기준 갱신:** 2026-10-05 KST
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
-> **최신 재개:** 2026-10-16, 아래 **0.125** 및 `docs/handoffs/level1-merge-recovery-2026-10-16.md` — Level_1 Stash 충돌 복구: 디자이너 건물14개 추가/2개 높이 수정과 기존 재질 해제1개를 모두 보존. 원본/LFS/Stash 보존, 저장·재로드·실제 플레이 진입/AI 이동/메뉴 복귀 통과. 사용자 화면 확인·복구 커밋/푸시가 다음. 0.124 대시·0.123 SMG·0.122 무기 본·0.120 보존/정리·0.116 메뉴 후속은 유지
+> **최신 재개:** 2026-10-18, 아래 **0.130** 및 `docs/handoffs/smg-magazine-2026-10-18.md` — GUN_Magazine을 B_Rifle의 기본 StaticMeshComponent로 원본 Magazine 본에 연결. **저장·재로드·실제 PIE646표본의 본 추종/원본 재장전·발사/대시·외형 캡처 검증 완료. 변경 에셋 B_Rifle1개, C++/DLL 변경·추가 빌드 없음.**0.129 자체 그립 기능 제거와 HARU/SMG 본체/Level_1 유지
 
 ---
 
@@ -1574,6 +1574,49 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - 디자이너 맵을 Git으로 복원하고 Unreal 내부 API로 재질 항목1개만 반영해 Level_1만 저장했다. 저장 전후 액터5080개 상태 보존과 별도 프로세스의 전체 내보낸 액터5084개 기대값 일치를 확인했다. 생성형 자식 GUID/ISM 지연 경계 캐시와 실제 배치 데이터를 구분했다. 내보내기의 임시 부착 변경이 저장되지 않도록 비교·저장 프로세스를 분리했다.
 - 실제 PIE F에서 HARU·장비·HUD·첫 인카운터 시작, AI의 완전 경로 요청/671.27cm 이동, 메인화면 복귀/AI 정리를 통과했다. 최종 Error/ensure/Fatal0, 다른 에셋·Source/Config/DLL·사용자 SaveGames 불변. 전체 전투/대시 검사를 반복하지 않았고 물리 입력·새 디자인 화면 수용은 사용자 확인으로 남긴다.
 - 원본 두 개와 공통 기준의 실제 LFS 해시를 보존했고 refs/codex-recovery/level1-20261016 아래4개 복구 참조를 추가했다. Stash d02c1c9는 그대로이며 재적용할 필요가 없다. 복구 맵 하나만 Git 충돌 해결 표시하고 커밋/푸시·빌드/패키징은 사용자에게 남긴다. 상세와 최종 해시는`docs/handoffs/level1-merge-recovery-2026-10-16.md`를 따른다.
+
+---
+
+## 0.130 최신 재개 — 2026-10-18 SMG 탄창 외형 연결 / 원본 Magazine 재장전 유지
+
+- 사용자 지정 `/Game/DreamCatcher/DreamCatcher_ENV/Prop/Gun_Magazine/GUN_Magazine`을 B_Rifle의 새 엔진 기본 StaticMeshComponent **SMGMagazineVisual**에 연결했다. 부모는 기존 숨겨진 SkeletalMesh, Parent Socket은 원본 **Magazine** 본이다. 바뀐 에셋은 B_Rifle1개이고 C++/Config/DLL 변경·빌드·패키징·Git 커밋/푸시는 없다.
+- 원본 드라이버 본·ABP_Weap_Rifle/무기 재장전 몽타주·캐릭터 재장전·탄약 처리·게임플레이 그래프를 유지했다. 탄창은 원본 본의 이동/회전/스케일을 직접 따른다. 메시 원본/피벗/재질은 보존하고 SMG 삽입구에 맞춘 상대 위치 약(-0.364458,0.000012,-2.650894), 회전(Roll0,Pitch-2.96619,Yaw0), Scale0.5를 사용한다. 편집 위치는 B_Rifle→SMGMagazineVisual이다.
+- Python의 보호된 Parent Socket 속성 때문에 기본 컴포넌트/Transform을 준비한 뒤 네이티브 에디터를 사용했다. computer-use의 팝업 입력 문제가 있어 사용자가 Magazine 선택·Compile/Save·에디터 종료를 확인했다. 새 C++ 보조 기능이나 자체 편집 UI는 추가하지 않았다.
+- Saved/Diagnostics/SMGMagazine20261018의 verify_G2는 재로드/Compile/실제 액터 부착·기존 그래프/설정 보존을, pie_I는 실제 Level_1의646표본에서 탄창의 위치/회전/크기 추종과 원본 AM_Weap_Rifle_Reload·탄약30→29→30·대시/부착 유지를 확인했다. 위치 오차 최대8.14e-10cm, 회전/크기 오차0, Error/ensure0, SaveGames 불변. Automation은 기존 NavMesh/종료·검사 deprecation 경고 포함 성공1/실패0이다.
+- presentation_H/magazine_H.png에서 저장된 무기 외형을 확인했고 새 맵 저장0이다. closeout_J에서 보호23개·복구 LFS·DLL·Git index/HEAD 보존과 검사 프로세스 종료를 확인했다. **추가 빌드·동일 검사 반복 불필요.** 사용자 손 접촉/미술적 수용·온라인/패키징은 별도다. HARU의 기존 소켓 Preview Asset은 SMG 단일 메시라 탄창 컴포넌트를 표시하지 않으며 이번에 수정하지 않았다.0.129 기능 제거를 유지한다. 상세는 `docs/handoffs/smg-magazine-2026-10-18.md`를 따른다.
+
+## 0.129 이력 — 2026-10-17 자체 SMG 그립 편집 기능 제거 / 새 DLL·PIE 검증 완료
+
+- 사용자가 자체 미리보기/그립 편집 기능이 필요 없다고 명시해 제거를 승인했고 에디터 저장·종료를 확인했다. **에셋/소스 제거와 사용자 재빌드·새 DLL·짧은 실제 PIE 검증 완료**다. 사용자 빌드는15:47:48 KST DLL 갱신/51.73초 성공, 크기5,879,808바이트. Codex는 빌드·패키징·커밋/푸시를 실행하지 않았다.
+- 공용 ABP_ItemAnimLayersBase의 native 부모를 원래 UAnimInstance로 돌리고 추가 Modify Bone1개/Getter2개를 삭제했다. 기존 오른손 IK 출력→왼손 IK 입력과 사용자 공용 Effector(5,-0.5,-6)를 유지한다. 라이플 레이어2개의 공유 설정 참조도 제거했다. 전체 그래프 핀/기존 애니메이션 노드·기본값을 비교하고 이3개만 저장했다.
+- L_HaruSMGGripPreview, BP_HaruSMGGripPreview, ABP_HaruSMGGripPreview, DA_HaruSMGGrip4개를 별도 재로드/외부 참조0 확인 후 Unreal API로 삭제했다. Animation/Grip5파일＋Editor 설정 CPP＋전용 검사 CPP7개, 최초 생성 스크립트, Build.cs의 추가 에디터 의존성2개도 제거했다.0.128 사용 안내는 과거 이력이며 다시 생성하지 않는다.
+- 삭제 전 사용자 DA 값은 위치(-4,-2.5,0), 회전(Pitch0,Yaw-3.5,Roll5)로 기록했다. 이 추가 보정은 제거되어 원래 공용 IK 자세로 돌아간다. 최신 weapon_r_preview 등 원래 Unreal의 소켓/미리보기와 HARU 리깅·0.127 가중치·실제 SMG/WID/총구·몽타주·Level_1·Config는 유지했다. 무기 소켓 값의 실사용 동기화는 별도 미실행이다.
+- 복구 LFS/소스·제거 근거는 Saved/Diagnostics/SMGGripRemoval20261017의 baseline_A, memory_B5, save_C, delete_D, verify_E2, closeout_F다. 후속 verify_G에서 새 DLL의 전용 native 클래스3개 부재·기존 AnimBP3개 로드/컴파일·Game/GameFeature 잔여 참조0을 확인했다. pie_H에서 원래 라이플 레이어·SMG 장착·발사30→29/재장전30·원본 대시/부착 유지가 통과했다. Error/ensure0, 에셋 저장0, SaveGames 불변이다. Automation은 NavMesh/종료/검사 속성 deprecation 경고를 포함한 성공1/실패0이며 경고0은 아니다.
+- closeout_I에서 보호12개/복구 원본·Git index/HEAD 보존과 검사 프로세스 종료를 확인했다. **추가 빌드·같은 자동 검사 반복은 불필요**하며 사용자 물리 입력·미술적 수용은 별도로 기록한다. 상세 삭제 목록·복구·검증 한계는 `docs/handoffs/smg-grip-removal-2026-10-17.md`를 따른다.
+
+## 0.128 이력 — 2026-10-17 HARU SMG 그립 편집 환경 / 이후0.129에서 사용자 요청으로 제거
+
+- 사용자 승인 범위의 코드7파일·Build.cs 에디터 의존성, 신규4/기존3개 에셋을 저장했다. 사용자 빌드는03:04:26 KST/71.89초, 에디터 자동 갱신 보완은04:04:39 KST/6.05초 성공이다. C++ 계산 검사1건, 저장·새 프로세스 재로드와 실제 Level_1 PIE가 통과했다. **다음은 사용자 그립 조정·화면 수용이며 추가 빌드 불필요**다. Codex는 빌드·패키징·커밋/푸시를 실행하지 않았다.
+- `/Game/Developers/SMGGrip/L_HaruSMGGripPreview`에서 액터의 LeftHandTarget을 W/E로 이동·회전한다. Preview Aiming (ADS)로 자세를 전환하고 Apply Grip to Game Settings→Save All로 `/Game/DreamCatcher/Animations/Haru/Grip/DA_HaruSMGGrip`에 반영한다. Reload Saved Grip은 현재 공유 DA 값으로 되돌린다. 같은 HARU/SMG인 플레이어·일반 AI에 적용된다. 고정 자세 편집기이며 전체 플레이 시뮬레이터는 아니다.
+- 공용 ABP_ItemAnimLayersBase native 부모를 UAnimInstance 하위 타입으로 확장하고 왼손 IK 앞 표준 Modify Bone1개/Getter2개만 추가했다. 라이플 레이어2개가 공유 설정을 지정한다. 사용자 기존 Effector(5,-0.5,-6)·HandIK_Left_Alpha/커브는 유지하며 초기 보정은 항등이다. 재장전/대시와 몽타주 블렌드 아웃 동안 새 보정만0으로 한다. 원래 팔 길이 제한도 유지한다.
+- `Saved/Diagnostics/SMGGripEditor20261017/pie_X.json`의 실제 PIE에서 초기 경로 동일성·공유 값의 왼손 반영·오른손/무기/기타 본 보존·HARU/보이는 SMG 조건·재장전/대시 블렌드 아웃이 통과했다. Error/ensure0, 에셋 저장0, SaveGames 불변. 두 번째 빌드는 PreviewActor.cpp의 전용 Editor Tick만 바꿨고 게임 검사를 반복하지 않았다. `preview_Y.json`은 자동 갱신·Apply/Undo/Redo/Reload·대기/ADS 전환, `final_AA.json`은 최종 맵 재로드/초기 시점과 자세 전환 중 편집값 보존에 성공했다. 사용자 물리 입력·미술적 수용은 별도다.
+- 원본 공용 BP 사용자 수정본 SHA10b9acef…35a40은 Git LFS 객체로 보존했다(`original_lfs_G.json`). 계획했던 복제 Backup BP는 컴파일 제약으로 저장하지 않았다. 기존 HARU/스켈레톤/가중치·무기·Level_1·애니메이션/몽타주·Config/uproject와 Git index/HEAD는 보존한다. 최초 생성용 `Scripts/Editor/smg_grip_editor_setup.py`는 현재 상태에서 재실행하지 않는다. 상세 경로·검증 근거·편집/복구 방법은 `docs/handoffs/smg-grip-preview-2026-10-17.md`를 따른다. 완료된0.127 가중치·GAS/맵 검증을 반복하지 않는다.
+
+## 0.127 이력 — 2026-10-17 HARU 근육 가중치 전이 적용 / 사용자 화면 수용 대기
+
+- 사용자가 HARU 사본에 원본 Lyra 가중치를 전이·검증 후 실사용에 적용하고 얼굴·머리카락·손가락·장비 연결을 보존하도록 승인했다. 실제 원본과 일치를 확인한 Manny의 표면 가중치를 사용했다. 단순 전체 전이는 소매/코트의 큰 변형으로 거부했고, 관절별 기존 비율·영향 슬롯·CC 비틀림 연결을 보존하며 근육 보정만 전이했다. 원본과 먼 의상은 거리 기반 혼합으로 원래 가중치를 더 남긴다. 구체적 수치·근거는 새 인계를 따른다.
+- 실사용 `/Game/DreamCatcher/Main_Charcher/Haru/SKM_HARU`의21,999정점 중2,917정점에 새 근육 본35개 가중치를 연결했다. 보호18,656정점의16비트 가중치는 정확히 일치한다. 얼굴 모프 목록·재질·PhysicsAsset·Skeleton/Post Process·실제208＋가상3개 본·기존 부모/기준 자세와 형상은 유지했다. 원본에 가중치가 있던 새 본56개 중 비틀림16개는 기존 CC 연결, 손목4개는 손 보호, upperarm_in_r은 보호/기존 슬롯 우선 조건상 추가 가중치0이다. 모든 본에 강제로 가중치를 넣은 것이 아니다.
+- 최종 사본N→실제 PIE O의9자세/18표본 비교→보존 사본 생성 및 실사용 저장P→별도 프로세스 재로드/실제 PIE Q를 통과했다. 보호 표면 변형·기존 본 변환 차이0, 정의한 기준의 신규 심한 늘어짐/면 붕괴0, Error/ensure0. 실제 원본 대시 활성/Blend Out도 통과하고 게임 화면을 확인했다. 사용자 물리 입력·미술적 수용과 모든 애니메이션/표정/패키징 검증은 별도다.
+- 적용 전/검증 사본은 `/Game/Developers/Codex/HaruWeightTransfer/`의 `SKM_Haru_BeforeWeightTransfer`, `SKM_Haru_LyraWeights_Candidate`다. 원본 복구는 Unreal SkinWeightModifier로 가중치만 수행하며 맵/리깅을 되돌리지 않는다. 이번에는 C++/Config/원본 리깅/맵·Git index를 변경하지 않았고 추가 빌드 불필요. 소스 FBX는 갱신하지 않았으므로 과거 FBX 재임포트는 새 본과 가중치를 소실시킬 수 있다.
+- 최종 SHA256 `e7467b197b7cd74e08ac25c00638f54998d837d66b5544aae8aca85be3c77348`. 상세·검증 한계·실패 후보·재개 근거: `docs/handoffs/haru-lyra-weight-transfer-2026-10-17.md`. 사용자는 Level_1에서 어깨/팔꿈치/무릎과 손가락/SMG 접촉을 확인하면 된다. 기존 GAS/R14/맵 통합 검증은 반복하지 않는다.
+
+## 0.126 이력 — 2026-10-16 HARU 전체 Lyra 본·보정 구동 적용
+
+- 사용자가 HARU에 없는38개 다리 보정 본을 포함해 Lyra 누락 본 전체 추가와 원본 리깅 재사용을 승인했다. 작업 전 실제119개＋가상3개에서89개를 추가해 실제208개＋가상3개가 됐다. 원본 Manny/Quinn 실제161개＋가상3개의 누락은0개며 기존119개 본의 부모/기준 자세는 유지했다.
+- 실제 Lyra 프로젝트와 현재 이식본의 Manny/Quinn 전체 본·기준 변환·가중치, 원본 Control Rig176개 노드/핀/연결, Pose Driver14개 설정 일치를 확인했다. HARU 고유47개 본과 기존119개 본은 보존한다. 피부 가중치가 있는 cc_base 비틀림16개에는 원본 구동을 신체 구간 위치/기준 회전 오프셋을 반영해 연결한다. 체형이 다른 Manny의 피부 가중치를 무작정 복사하지 않는다.
+- 원본176노드＋HARU 회전 제약16개 사본과 원본14개 Pose Driver를 유지한 Post Process 사본을 연결했다. 기존 HARU Mesh/Skeleton/GA_Hero_Dash3개와 신규 Rig/Post Process2개만 저장했다. 기존 형상·전체 가중치·모프 이름/재질/소켓/프로필·가상 본과 원본 그래프 보존을 별도 재로드에서 확인했다. 신규 근육 보정 본 전체의 HARU 피부 가중치를 새로 제작한 것은 아니다.
+- SkeletonModifier 이후 메모리 메시의 가상 본 목록 갱신 문제를 공식 PostLoad와 같은 RebuildRefSkeleton 호출로 해결했다. `Editor/DCHaruLyraRigRepair.cpp`1개는 에디터/정확한 HARU208＋3/전용 플래그를 검사하고 저장하지 않는다. 사용자 Development Editor/Win64 빌드19:27:12 KST 성공, DLL5,879,808bytes 확인. Build.cs·런타임 플레이 코드 변경0이다.
+- 최종 PIE P에서 대기/ADS/앉기/걷기/재장전5종의 주 관절/weapon_r 회전차0°·위치차 부동소수 오차 수준, 기존 중간 비틀림 본8개 실제 구동을 확인했다. 원본 GAS 전방 대시와 나머지3방향 몽타주 Blend Out이 통과했다. GA_Hero_Dash의 HARU override4개를 해제했고 이전 전용 사본/프로필은 보존했다. 저장/재로드/최종PIE Error·ensure·Fatal0, 다른 에셋·맵·Config·SaveGames·Git 인덱스/HEAD 불변이다. 사용자 화면 수용·전체애니메이션/온라인/패키징은 별도이며 상세는`docs/handoffs/haru-lyra-full-rig-2026-10-16.md`를 따른다.
 
 ---
 

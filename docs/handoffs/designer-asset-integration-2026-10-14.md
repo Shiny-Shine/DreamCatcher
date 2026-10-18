@@ -1,5 +1,13 @@
 # DreamCatcher 디자이너 에셋 통합 안내
 
+**2026-10-18 후속0.130:** 실제 탄창은 **B_Rifle → SMGMagazineVisual → GUN_Magazine**이다. 기존 SkeletalMesh의 **Magazine** 본에 붙어 원본 재장전 움직임을 따른다. 위치/회전/크기는 이 기본 컴포넌트에서 편집한다. 저장·실제 PIE 검증 완료, 추가 빌드 불필요. [탄창 연결 안내](smg-magazine-2026-10-18.md)를 참고한다. HARU 소켓의 SMG 단일 메시 미리보기에는 이 별도 컴포넌트가 표시되지 않는다.
+
+**2026-10-17 후속 0.129:** 사용자 요청으로 자체 SMG 그립 조정 맵·공유 설정·보정 코드를 제거했고 사용자 재빌드·새 DLL·실제 PIE 검증을 마쳤다. 원래 `SKM_HARU` 메시 에디터의 **weapon_r_preview 소켓/Preview Asset**은 유지한다. 소켓 미리보기 값은 실제 B_Rifle 외형에 자동 반영되지 않으며 실제 변경 시 총구도 함께 맞춘다. 상세 범위는 [제거 인계](smg-grip-removal-2026-10-17.md)를 따른다.
+
+**2026-10-17 후속 0.127:** 실사용 SKM_HARU에 Lyra 근육 보정 가중치를 전이했다(35본·2,917정점). 얼굴/머리카락/손가락/장비의 보호 가중치와 기존 CC 비틀림 연결은 유지한다. 조정할 때 같은 메시의 Skin/Edit Weights를 사용하며, 적용 전/검증 사본은 `/Game/Developers/Codex/HaruWeightTransfer/`에 있다. 소스 FBX는 새 본/가중치를 포함하도록 별도로 갱신해야 한다. [가중치 전이와 검증·복구 안내](haru-lyra-weight-transfer-2026-10-17.md)를 따른다.
+
+**2026-10-16 후속 0.126:** SKM_HARU에 누락 Lyra 본89개를 추가해 실제208개＋가상3개가 됐다. Asset Details의 Post Process Anim Blueprint는 `/Game/DreamCatcher/Animations/Haru/Rig/ABP_Haru_LyraPostProcess`이며 연결된 `CR_Haru_LyraProcedural`은 원본＋HARU 비틀림 연결 사본이다. 기존 얼굴 모프·가중치·weapon_r/SMG 부착은 보존했다. 소스 FBX는 수정하지 않았으므로 재임포트 시 새 본을 포함한 리깅을 유지해야 한다. [전체 리깅과 검증 범위](haru-lyra-full-rig-2026-10-16.md)를 따른다.
+
 **2026-10-16 후속 0.123:** 현재 Pawn은 SKM_HARU, 보이는 무기는 B_Rifle의 **SMGVisual → SM_GUN_SMG**다. 실제/미리보기/픽업 표시를 교체했고 HARU의 Lyra 무기 본과 가상 본3개는 유지했다. [SMG 편집 위치와 총구·미리보기 안내](smg-visual-2026-10-16.md), [HARU 무기 본·재임포트 안내](haru-weapon-socket-2026-10-16.md)를 따른다. 아래 Manny 표는 초기 연결 기준이며 전체 HARU 리타깃 완료를 의미하지 않는다.
 
 2026-10-14 정식 경로 정리와 사용자 PIE 확인을 마친 `Level_1` 기준이다. 캐릭터·무기·보스의 모델, 재질, 애니메이션을 현재 게임플레이에 연결할 때 사용할 에셋과 수정 위치를 정리한다.
@@ -16,6 +24,8 @@
 | 공통 캐릭터 기반 | `/Game/DreamCatcher/Blueprints/Player/BP_DC_RiflePawn` | 위 Pawn의 부모. 입력·장비·체력·카메라 등 공통 구성이 있으므로 외형 교체는 먼저 실제 자식 Pawn에서 적용한다. 부모 수정은 자식의 override 여부도 확인한다. |
 | 보스 외형 | `/Game/DreamCatcher/Blueprints/AI/Boss/BP_DC_Boss` | `Mesh (CharacterMesh0)`의 메시·재질·Anim Class·상대 Transform. 일반 적/플레이어와 분리돼 있다. |
 | 손에 든 무기 외형 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/B_Rifle` | **SMGVisual** 컴포넌트의 Static Mesh·재질·상대 Transform. 상속된 SkeletalMesh는 숨겨진 내부 드라이버이므로 외형 수정 대상으로 쓰지 않는다. |
+| 탄창 외형·삽입 위치 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/B_Rifle` | **SMGMagazineVisual**의 메시·재질·Transform. 부모 SkeletalMesh와 Parent Socket **Magazine**을 유지한다. 본체만 움직이면 탄창 맞춤도 별도로 확인한다. |
+| HARU 메시 에디터의 무기 미리보기 | `/Game/DreamCatcher/Main_Charcher/Haru/SKM_HARU` | Skeleton Tree의 **weapon_r_preview** 소켓. 원래 Add Preview Asset 기능이며, 소켓 편집만으로 실제 무기 외형이 자동 변경되지는 않는다. |
 | 총구·탄피 배출 기준점 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/SK_Rifle_SMGSocketDriver` | Mesh Socket의 Muzzle/ShellEject. SMGVisual의 위치·크기를 바꾸면 미리보기와 함께 재정렬한다. 내부 드라이버는 새 디자인 메시로 재임포트하지 않는다. |
 | 무기를 손에 붙이는 위치 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/WID_Rifle` | Class Defaults → `ActorsToSpawn`의 `AttachSocket`, `AttachTransform`. 캐릭터 메시를 기준으로 부착한다. |
 | 라이플 장착 중 캐릭터 동작 | `/Game/DreamCatcher/Lyra/Weapons/Rifle/B_WeaponInstance_Rifle` | `EquippedAnimSet`, 장착 몽타주 등 캐릭터 애니메이션 연결. 무기 자체의 기계 동작은 별도 AnimBP다. |
