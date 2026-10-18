@@ -1,5 +1,46 @@
 # DreamCatcher GAS·Lyra 전환 명세
 
+## 최신 작업 절차 — 2026-10-19 / AGENTS 0.137
+
+이후 모든 작업은 [AGENTS.md](../../AGENTS.md)의 **0.4·0.137**을 따른다. 요구사항을 TODO와 이해한 동작으로 보고해 사용자의 수정과 **1차 승인**을 받은 뒤, 항목별 상세 검토·변경 범위·검증 방법·에이전트 분담을 다시 제시한다. **사용자가 최종 확인한 항목만 서브에이전트가 작성**한다. 동시 활동 서브에이전트는 하위 재위임까지 합산해 **최대3개, 보통2개 이하·작은 작업1개**로 운영하며 부모 조율자는 수에 포함하지 않는다. **상호 소통·중간 결과 전달이 거의 필요 없는 독립 작업만 병렬 처리**하고, 같은 파일·에셋 수정·공통 API/설계 미확정·선행 결과 의존 작업은 순차 처리한다. 미래 작업을 기다리기만 하는 에이전트는 미리 만들지 않는다.
+
+담당 결과를 회수하면 즉시 사용 가능한 종료 수단으로 정리하고 실행 상태를 확인한다. 현재 도구에는 세션 완전 종료 기능이 없고 `interrupt_agent`는 현재 실행 중단이므로, 완료 상태 확인 후 불필요한 호출·대기를 중단하고 한계를 보고한다. 완료·중단을 세션 완전 종료로 표현하거나 완료 세션의 존재만으로 지속 토큰 사용을 단정하지 않는다. 루트 에이전트는 결과를 통합·검증해 TODO별 완료·미완료·사용자 확인 사항으로 보고한다.
+
+사용자의 C++ 빌드·패키징·화면·소리·조작감 확인과 GitHub Desktop 커밋·푸시·병합 담당은 유지한다. 0.134 운영 규칙 반영 당시의 승인은 `AGENTS.md`와 이 명세 2개 문서에 한정됐다. 이후 BaseDamage는 아래 0.135 묶음으로 별도 1차·최종 승인됐으며, 피격 피드백 인계 문서 수정은 계속 제외한다.
+
+### 최신 TODO — 개체별 BaseDamage 조절 / 적용·재로드·자동 검사·실제 사격·재진입 검증 완료 / AGENTS 0.136
+
+- [x] TODO 1차 승인과 상세 1~5번 최종 승인: Editor 역할별 설정, 초기화 연결, 적의 라이플 보정 제외, 관련 검사, 서브에이전트 분담·문서 기록.
+- [x] 코드·검사·에셋 스크립트 작성·정적 통합 검토: `DCLyraExperienceDefinition.h/.cpp`에 `bUseRoleBasedBaseDamage=false`, `PlayerBaseDamage=0`, `EnemyBaseDamage=12`를 **Combat|Damage** 범주에 추가했다. `DCLyraExperiencePlayerState.h/.cpp`에서 서버의 플레이어·일반 적 초기화에 기존 `CombatSet.BaseDamage`를 연결하고 반복 적용·태그 누적을 방지하도록 작성했다. 보스의 기존 경로는 보존한다.
+- [x] 사용자 **Development Editor/Win64 빌드** 확인. DLL은 **2026-10-18 23:27:27 KST** 갱신됐으며 Codex는 빌드·패키징을 실행하지 않았다.
+- [x] 새 DLL의 `DataValidation`·`Initialization` native 검사 2개 성공.
+- [x] `/Game/DreamCatcher/Experiences/B_DC_StageUIExperience`의 **Class Defaults → Combat → Damage**에서 역할별 설정 사용을 켜고 **Player Base Damage=0 / Enemy Base Damage=12**를 저장했다. 다른 Experience의 native 기본 사용 안 함은 유지한다.
+- [x] `/Game/Weapons/Rifle/GE_Damage_RifleAuto`의 기존 **Executions → Calculation Modifiers → Source Tags → Ignore Tags**에 `Gameplay.Damage.IgnoreWeaponBonus`만 추가했다. 이 native 태그는 일반 적에게만 부여한다. Source BaseDamage snapshot·Additive ScalableFloat **12**, 나머지 태그/조건/참조·Cue와 `DCLyraDamageExecution`은 보존한다.
+- [x] 위 2개 에셋 적용 후 별도 프로세스 verify 성공. 전체 CDO·보호 파일 일치, verify 저장0이다.
+- [x] 저장된 실제 GE의 `SavedRifleExecution` 성공. native 검사는 합계3개 성공·실패0·경고0이다.
+- [x] 실제 PIE `defaults_B`·`equal8_A`·`zero_enemy_A` 3모드 사격 성공. 아래 표의 피해 및 매 사격 탄약1개 소비를 확인했다. `defaults_B`는 원본 `FailStage → RequestRestartStage`로 Level_1을 재시작한 뒤 새 실제 PlayerState·적의0/12·태그와 비누적도 확인했다. 검사용 수치는 메모리에서 복원했고 저장 설정은 사용=True·플레이어0·적12, 파일은 그대로다.
+- [ ] 사용자 Editor 수치·화면·소리·조작감 확인. 패키징·네트워크 복제 검증은 이번 자동 검사 완료에 포함하지 않는다.
+
+적용된 계산은 플레이어 **`(BaseDamage + 12) × 거리 배율 × 약점 배율`**, 일반 적 **`BaseDamage × 거리 배율 × 약점 배율`**이다. 제외하는 것은 일반 적의 라이플 고정 보정 `+12`이며, 기존 Lyra 무기·피해 계산과 거리·약점·팀/면역·피격 피드백은 유지한다. **Editor 수정 위치는 `/Game/DreamCatcher/Experiences/B_DC_StageUIExperience` → Class Defaults → Combat → Damage → Player Base Damage / Enemy Base Damage**다. 현재 역할별 설정 사용은 켜져 있다. 플레이어 입력값에는 라이플12가 더해지고 적 입력값은 그대로 사용된 뒤 거리·약점 배율이 적용된다. **Compile·Save 후 PIE를 다시 시작**하면 새 플레이와 적 초기화에 반영되며 C++ 재빌드는 필요 없다.
+
+| 실제 PIE 모드 | 플레이어/적 입력 BaseDamage | 플레이어 몸통/머리 피해 | 적 몸통/머리 피해 |
+|---|---|---|---|
+| defaults_B | 0 / 12 | 12 / 18 | 12 / 18 |
+| equal8_A | 8 / 8 | 20 / 30 | 8 / 12 |
+| zero_enemy_A | 8 / 0 | 20 / 30 | 0 / 0 |
+
+에이전트 A는 위 C++ 4개, B는 전용 자동 검사 CPP 1개·실제 사격 스크립트 1개, C는 `Scripts/Editor/base_damage_setup.py`와 AGENTS·이 명세를 담당하고 부모가 통합·실행 순서를 조율한다. 에셋 저장은 같은 최종 승인 범위의 두 에셋만 Unreal 내부 API로 순차 처리했다. 초기 apply A/B/C는 각각 enum Python 변환·nested struct setter·nested export 형식 차이로 중단했으며, B의 Experience 1개 외에 GE 저장은 없었다. Python API 접근만 보완한 apply D는 GE만 저장해 성공했고, verify A는 저장0으로 재로드를 통과했다. journal의 SHA·CDO 증거로 Experience는 재저장하지 않았고 native C++·Config 수정이나 추가 빌드는 없다.
+
+현재는 **native3개·에셋 적용·재로드·실제 사격 PIE3모드·defaults의 실제 재진입까지 자동 검증 완료**다. 각 최종 PIE는 프로세스 종료0·후처리 complete=true·Engine Error/ensure/Fatal0이며 Automation은 **SuccessWithWarnings**다. 기존 NavMesh origin 정렬 재생성과 시작 시 CrowdManager RecastNavMesh 미발견 경고가 defaults에서4개(진입2회), 다른 모드에서각2개 남는다. 초기 defaults_A는 검사 기록 함수 인자 충돌로 실제 사격 전에 실패했으며 Python만 보완한 defaults_B가 통과했다. 초기 실패/중단을 성공으로 세지 않고 무경고로 과장하지 않는다.
+
+최종 근거는 `Saved/Diagnostics/BaseDamage20261018/final_result_A.json`, `assets_A/state.json`, `pie_defaults_B.json`·`pie_equal8_A.json`·`pie_zero_enemy_A.json`과 `Saved/Automation/BaseDamageNative_A`·`BaseDamageRifle_A`·각 PIE 보고서다. 빌드 후 기준 게임 에셋 변경은 정확히2개이며 예상 밖 변경0이다. 런타임/검사 C++5개·Config·DLL·`DCLyraDamageExecution`·기존 NumberPop native 파일, HARU·SMG·탄창·Level_1·보스·사용자 ABP 및 미승인 인계 문서·Git HEAD/index를 보존했다. **추가 C++ 빌드는 필요 없으며 사용자 Editor 수치 확인으로 이어간다.** 화면·소리·조작감 수용, 패키징·복제 완료를 뜻하지 않고0.133의 사용자 화면/소리 수용 대기도 유지한다.
+
+## 후속 피드백 — 2026-10-18 약점 판정/원본 피격 Cue 적용·실제 사격 통과 / AGENTS 0.133
+
+사용자 빌드 후 HARU/보스의 실제 Physics Asset에 원본 일반/약점 재질을 연결하고 기존 도형·본·제약을 보존했다. 누락된 피격/숫자 리소스48개와 보스 PA 사본1개를 추가했으며 DCStageUI에 플레이어 Controller용 NumberPop 항목1개를 연결했다. 새 피격 MetaSound5개는 기존 공유 RandomStereo의 내부 클래스 식별자에 맞게 의존 참조만 보완했다. 기존 공유220개·HARU Mesh/Skeleton·SMG/탄창·Level_1은 유지한다.
+
+재로드/Compile/참조 검사를 통과했고 실제 PIE Q에서 **HARU·보스 모두 몸12/머리18, 빗나감0, 각1발 소비**, 실제 명중 위치의 NumberPop 생성4회를 확인했다. 최종 Error/ensure/Fatal0이며 Automation은 기존 경고를 포함한 성공1/실패0이다. **사용자 화면·소리·물리 입력 수용은 남아 있다.** raw Niagara 치명타 배열은 소비 전 직접 포착하지 않았으며 원본 코드/그래프 연결과 실제 숫자 시스템 실행을 구분한다. 추가 C++ 빌드 없이 사용자 Editor 확인으로 이어간다. [적용 범위·근거·확인 항목](../handoffs/hit-zones-and-damage-feedback-2026-10-18.md)을 따른다.
+
 ## 최신 보완 — 2026-10-15 보존 애니메이션5개 편집용 누락 참조 수정 / AGENTS 0.120
 
 복원한5개는 동일 Skeleton의 SKM_Manny_Simple을 미리보기 메시로 지정하고, 원본 제작 시퀀스를 찾을 수 없는 LevelSequence 편집 링크만 해제했다. 전체 export와 모션 데이터 모델을 변경 전후/새 프로세스에서 비교해 모션·커브·노티파이·기타 설정이 그대로임을 확인했다. 해당 누락 경로 참조0, 다른 에셋/현재 작업/staged 내용 불변이며 추가 빌드는 필요 없다. 상태는33개 삭제 유지＋5개 보존/편집 연결 보완이다. [상세 기록](../handoffs/legacy-sweep-2026-10-15.md)을 따른다.
@@ -44,7 +85,7 @@ R14, Level_1의 R13 흐름·NavMesh 전환, 정식 경로 이관·레거시 정�
 - 적용 방식: 이식 가능한 Lyra C++·Blueprint·데이터·시각 에셋을 최대한 원본 재사용하고, DreamCatcher 연결에 필요한 부분만 최소 수정
 - 에셋 정책: Unreal Editor의 Migrate로 필요한 의존성을 함께 이전하고, 원본 레이아웃·애니메이션·머티리얼·곡선을 우선 보존
 - 코드 정책: C++도 필요한 범위의 원본 이식을 우선하며, 재구현은 원본 재사용이 부적합한 이유를 확인한 경우에 한정
-- 진행 방식: 변경안·원본 대비 차이 제시 → 연관된 코드·에셋 작업 묶음 승인 → Codex 처리·자동 검사 → 사용자 C++ 빌드·패키징 및 짧은 플레이 확인
+- 진행 방식: TODO·이해한 동작 보고 → 1차 승인 → 항목별 상세 검토·분담 보고 → 항목별 최종 확인 → 서브에이전트 작성 → 결과 회수·실행 상태 확인·정리 → 부모 통합 검증·TODO별 결과 보고. 동시 활동 서브에이전트 최대3개(하위 재위임 합산·부모 제외), 보통2개 이하·작은 작업1개이며 소통·중간 결과 전달이 거의 필요 없는 독립 작업만 병렬 처리한다. 상세는 [AGENTS.md](../../AGENTS.md) 0.4·0.137을 따른다
 - 직접 수정 권한: Unreal 내부 에셋 자동화는 사용자가 허용했다. 코드·Config는 승인된 작업 묶음 범위만 수정하며, 문서만 갱신하라는 요청은 문서만 수행한다. C++ 빌드·패키징은 사용자 담당이다
 - 새 실행 계획: 이 문서의 `R0~R14`를 사용. 과거 `0~12단계`는 기존 기능 구현 이력으로 별도 보존
 
@@ -98,6 +139,8 @@ C++/DLL 변경·빌드·패키징은 없으며 기존 테스트 맵·레거시 �
 ## 2026-10-05 승인 — 자동화 운영 및 마감 기준
 
 과거의 한 단계씩 수동으로 구현하는 방식에서, 사용자 작업을 줄이는 **승인된 기능 묶음 + Unreal 내부 자동화** 방식으로 전환한다. 원본 최대 재사용 정책과 변경 전 근거 설명 의무는 바뀌지 않는다.
+
+승인 단계와 서브에이전트 분담·결과 회수 후 정리는 상단의 2026-10-19 최신 작업 절차가 아래 운영 이력보다 우선한다.
 
 ### 역할과 권한
 

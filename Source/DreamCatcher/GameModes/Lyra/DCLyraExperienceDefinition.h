@@ -42,6 +42,18 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category=Gameplay)
 	TObjectPtr<const UDCPawnData> DefaultPawnData;
 
+	/** Opt in to separate initial combat attributes for human players and player bots. */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage")
+	bool bUseRoleBasedBaseDamage = false;
+
+	/** Initial player CombatSet.BaseDamage. The weapon's execution modifier still applies. */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage", meta = (EditCondition = "bUseRoleBasedBaseDamage", EditConditionHides, ClampMin = "0.0", UIMin = "0.0"))
+	float PlayerBaseDamage = 0.0f;
+
+	/** Initial player-bot CombatSet.BaseDamage. Rifle bonus is excluded by its source-tag condition. */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage", meta = (EditCondition = "bUseRoleBasedBaseDamage", EditConditionHides, ClampMin = "0.0", UIMin = "0.0"))
+	float EnemyBaseDamage = 12.0f;
+
 	// List of actions to perform as this experience is loaded/activated/deactivated/unloaded
 	UPROPERTY(EditDefaultsOnly, Instanced, Category="Actions")
 	TArray<TObjectPtr<UGameFeatureAction>> Actions;
