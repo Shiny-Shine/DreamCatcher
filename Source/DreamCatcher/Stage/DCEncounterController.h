@@ -36,6 +36,8 @@ public:
 	bool HasEncounterFailure() const { return bFailed; }
 	UFUNCTION(BlueprintPure, Category="Encounter")
 	int32 GetRemainingSpawnerCount() const { return PendingSpawners.Num(); }
+	UFUNCTION(BlueprintPure, Category="Encounter|Mission")
+	void GetMissionEnemyProgress(int32& OutDefeated, int32& OutTotal) const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -78,4 +80,7 @@ private:
 	bool bEndingPlay = false;
 	bool bAborted = false;
 	FTimerHandle StartTimerHandle;
+#if WITH_DEV_AUTOMATION_TESTS
+	friend struct FDCMissionTestAccess;
+#endif
 };

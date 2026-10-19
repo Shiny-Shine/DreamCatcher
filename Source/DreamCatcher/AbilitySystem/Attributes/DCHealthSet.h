@@ -42,6 +42,8 @@ public:
 
 	DC_ATTRIBUTE_ACCESSORS(UDCHealthSet, Health);
 	DC_ATTRIBUTE_ACCESSORS(UDCHealthSet, MaxHealth);
+	DC_ATTRIBUTE_ACCESSORS(UDCHealthSet, Armor);
+	DC_ATTRIBUTE_ACCESSORS(UDCHealthSet, MaxArmor);
 	DC_ATTRIBUTE_ACCESSORS(UDCHealthSet, Healing);
 	DC_ATTRIBUTE_ACCESSORS(UDCHealthSet, Damage);
 
@@ -50,6 +52,9 @@ public:
 
 	// Delegate when max health changes
 	mutable FDCAttributeEvent OnMaxHealthChanged;
+
+	mutable FDCAttributeEvent OnArmorChanged;
+	mutable FDCAttributeEvent OnMaxArmorChanged;
 
 	// Delegate to broadcast when the health attribute reaches zero
 	mutable FDCAttributeEvent OnOutOfHealth;
@@ -64,6 +69,12 @@ protected:
 
 	UFUNCTION()
 	UE_API void OnRep_MaxHealth(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	UE_API void OnRep_Armor(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	UE_API void OnRep_MaxArmor(const FGameplayAttributeData& OldValue);
 
 	UE_API virtual bool PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data) override;
 	UE_API virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
@@ -83,6 +94,18 @@ private:
 	// The current max health attribute.  Max health is an attribute since gameplay effects can modify it.
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxHealth, Category = "Lyra|Health", Meta = (AllowPrivateAccess = true))
 	FGameplayAttributeData MaxHealth;
+
+	// Zero by default for every ASC. The approved human experience opts in separately.
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_Armor, Category="Lyra|Armor", Meta=(AllowPrivateAccess=true))
+	FGameplayAttributeData Armor;
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_MaxArmor, Category="Lyra|Armor", Meta=(AllowPrivateAccess=true))
+	FGameplayAttributeData MaxArmor;
+
+	// Native armor events wait until a damage transaction or max clamp is complete.
+	bool bDeferringArmorEvents = false;
+	bool bHandlingArmorReplication = false;
+	uint64 OutOfHealthNotificationSerial = 0;
 
 	// Used to track when the health reaches 0.
 	bool bOutOfHealth;

@@ -21,11 +21,15 @@ protected:
 private:
 	void OnExperienceLoaded(const UDCLyraExperienceDefinition* CurrentExperience);
 	bool InitializeRoleBaseDamage(const UDCLyraExperienceDefinition* CurrentExperience);
+	bool InitializePlayerStatus(const UDCLyraExperienceDefinition* CurrentExperience);
 
 	// The PlayerState and its ASC survive Pawn replacement. Do not reset combat progression on respawn.
 	bool bRoleBaseDamageInitialized = false;
+	// A replacement Pawn reuses these attributes; only a new PlayerState starts a new run.
+	bool bPlayerStatusInitialized = false;
 
 #if WITH_DEV_AUTOMATION_TESTS
 	friend struct FDCBaseDamageTestAccess;
+	friend struct FDCArmorTestAccess;
 #endif
 };

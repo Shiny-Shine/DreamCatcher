@@ -2,6 +2,7 @@
 #include "DCLyraExperiencePlayerState.h"
 
 #include "AbilitySystem/Attributes/DCCombatSet.h"
+#include "AbilitySystem/Attributes/DCHealthSet.h"
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "Character/DCPawnData.h"
 #include "DCLogChannels.h"
@@ -47,6 +48,10 @@ void ADCLyraExperiencePlayerState::OnExperienceLoaded(const UDCLyraExperienceDef
 		{
 			// Set attributes and source tags before SetPawnData grants abilities and signals ability readiness.
 			if (!InitializeRoleBaseDamage(CurrentExperience))
+			{
+				return;
+			}
+			if (!InitializePlayerStatus(CurrentExperience))
 			{
 				return;
 			}
@@ -125,5 +130,72 @@ bool ADCLyraExperiencePlayerState::InitializeRoleBaseDamage(const UDCLyraExperie
 	UE_LOG(LogDC, Log, TEXT("Role BaseDamage initialized for [%s]: Role=%s BaseDamage=%.2f IgnoreWeaponBonus=%s Experience=%s."),
 		*GetNameSafe(this), bPlayerBot ? TEXT("Enemy") : TEXT("Player"), InitialBaseDamage,
 		bPlayerBot ? TEXT("true") : TEXT("false"), *GetNameSafe(CurrentExperience));
+	return true;
+}
+
+bool ADCLyraExperiencePlayerState::InitializePlayerStatus(const UDCLyraExperienceDefinition* CurrentExperience)
+{
+	if (bPlayerStatusInitialized)
+	{
+		return true;
+	}
+	if (!IsValid(CurrentExperience))
+	{
+		UE_LOG(LogDC, Error, TEXT("Cannot initialize player status for [%s]: no valid Experience."), *GetNameSafe(this));
+		return false;
+	}
+	if (!CurrentExperience->bUsePlayerStatusDefaults)
+	{
+		return true;
+	}
+	if (!HasAuthority())
+	{
+		UE_LOG(LogDC, Error, TEXT("Cannot initialize player status for [%s] on non-authority."), *GetNameSafe(this));
+		return false;
+	}
+
+	const AController* OwningController = GetOwningController();
+	if (!IsValid(OwningController))
+	{
+		UE_LOG(LogDC, Error, TEXT("Cannot initialize player status for [%s]: no valid owning controller."), *GetNameSafe(this));
+		return false;
+	}
+	if (OwningController->IsA<ADCLyraPlayerBotController>() || !OwningController->IsA<APlayerController>())
+	{
+		// Bots and other AI retain their existing HP and the native zero-armor defaults.
+		return true;
+	}
+
+	const float InitialMaxHealth = CurrentExperience->PlayerMaxHealth;
+	const float InitialMaxArmor = CurrentExperience->PlayerMaxArmor;
+	const float InitialArmor = CurrentExperience->PlayerInitialArmor;
+	if (!FMath::IsFinite(InitialMaxHealth) || InitialMaxHealth < 1.0f ||
+		!FMath::IsFinite(InitialMaxArmor) || InitialMaxArmor < 0.0f ||
+		!FMath::IsFinite(InitialArmor) || InitialArmor < 0.0f || InitialArmor > InitialMaxArmor)
+	{
+		UE_LOG(LogDC, Error, TEXT("Cannot initialize player status for [%s]: Experience [%s] requires finite MaxHealth >= 1, MaxArmor >= 0 and InitialArmor within [0, MaxArmor]."),
+			*GetNameSafe(this), *GetNameSafe(CurrentExperience));
+		return false;
+	}
+
+	UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent();
+	const UDCHealthSet* PlayerHealthSet = GetHealthSet();
+	if (!IsValid(ASC) || !IsValid(PlayerHealthSet) || ASC->GetSet<UDCHealthSet>() != PlayerHealthSet)
+	{
+		UE_LOG(LogDC, Error, TEXT("Cannot initialize player status for [%s]: its HealthSet is not registered with its ASC."), *GetNameSafe(this));
+		return false;
+	}
+
+	// Set maxima before their current attributes so the normal HealthSet clamps
+	// use the Experience limits. No new ASC/AttributeSet or Pawn-local armor copy.
+	ASC->SetNumericAttributeBase(UDCHealthSet::GetMaxHealthAttribute(), InitialMaxHealth);
+	ASC->SetNumericAttributeBase(UDCHealthSet::GetHealthAttribute(), InitialMaxHealth);
+	ASC->SetNumericAttributeBase(UDCHealthSet::GetMaxArmorAttribute(), InitialMaxArmor);
+	ASC->SetNumericAttributeBase(UDCHealthSet::GetArmorAttribute(), InitialArmor);
+	bPlayerStatusInitialized = true;
+	ForceNetUpdate();
+
+	UE_LOG(LogDC, Log, TEXT("Player status initialized for [%s]: Health=%.2f/%.2f Armor=%.2f/%.2f Experience=%s."),
+		*GetNameSafe(this), InitialMaxHealth, InitialMaxHealth, InitialArmor, InitialMaxArmor, *GetNameSafe(CurrentExperience));
 	return true;
 }

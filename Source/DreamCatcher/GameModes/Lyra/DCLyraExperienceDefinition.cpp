@@ -35,6 +35,26 @@ EDataValidationResult UDCLyraExperienceDefinition::IsDataValid(FDataValidationCo
 		}
 	}
 
+	if (bUsePlayerStatusDefaults)
+	{
+		if (!FMath::IsFinite(PlayerMaxHealth) || PlayerMaxHealth < 1.0f)
+		{
+			Context.AddError(LOCTEXT("InvalidPlayerMaxHealth", "Player Max Health must be finite and at least one."));
+			Result = EDataValidationResult::Invalid;
+		}
+		if (!FMath::IsFinite(PlayerMaxArmor) || PlayerMaxArmor < 0.0f)
+		{
+			Context.AddError(LOCTEXT("InvalidPlayerMaxArmor", "Player Max Armor must be finite and at least zero."));
+			Result = EDataValidationResult::Invalid;
+		}
+		if (!FMath::IsFinite(PlayerInitialArmor) || PlayerInitialArmor < 0.0f ||
+			!FMath::IsFinite(PlayerMaxArmor) || PlayerInitialArmor > PlayerMaxArmor)
+		{
+			Context.AddError(LOCTEXT("InvalidPlayerInitialArmor", "Player Initial Armor must be finite and between zero and Player Max Armor."));
+			Result = EDataValidationResult::Invalid;
+		}
+	}
+
 	int32 EntryIndex = 0;
 	for (const UGameFeatureAction* Action : Actions)
 	{
