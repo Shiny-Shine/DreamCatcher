@@ -38,6 +38,11 @@ int32 ADCEnemySpawner::GetPendingLyraCleanupCount() const
 	return Count;
 }
 
+int32 ADCEnemySpawner::GetPlannedEnemyCount() const
+{
+	return GASEnemyClass || LyraBotControllerClass ? FMath::Max(0, SpawnCount) : 0;
+}
+
 void ADCEnemySpawner::BeginPlay()
 {
 	Super::BeginPlay();
@@ -418,6 +423,9 @@ void ADCEnemySpawner::UnbindEnemy(AActor* Enemy)
 void ADCEnemySpawner::ConsumeEnemyDeath(AActor* Enemy)
 {
 	if (bEndingPlay || !Enemy || LivingEnemies.Remove(TWeakObjectPtr<AActor>(Enemy)) == 0) { return; }
+	// Presentation counter only: duplicate death, destruction and abort cleanup
+	// never reach this successful living-enemy removal guard.
+	if (DefeatedCount < MAX_int32) { ++DefeatedCount; }
 	// Retain Lyra DeathFinished/OnDestroyed bindings after counting the kill.
 	if (!LyraEnemies.Contains(Enemy) && !OwnedGASNPCs.Contains(Enemy)) { UnbindEnemy(Enemy); }
 	if (!bIsActive || bSpawnFailed || bSpawningEnemy) { return; }

@@ -54,6 +54,19 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage", meta = (EditCondition = "bUseRoleBasedBaseDamage", EditConditionHides, ClampMin = "0.0", UIMin = "0.0"))
 	float EnemyBaseDamage = 12.0f;
 
+	/** Initialize the existing human PlayerState HealthSet once for this run. */
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerStatus")
+	bool bUsePlayerStatusDefaults = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerStatus", meta = (EditCondition = "bUsePlayerStatusDefaults", EditConditionHides, ClampMin = "1.0", UIMin = "1.0"))
+	float PlayerMaxHealth = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerStatus", meta = (EditCondition = "bUsePlayerStatusDefaults", EditConditionHides, ClampMin = "0.0", UIMin = "0.0"))
+	float PlayerMaxArmor = 150.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerStatus", meta = (EditCondition = "bUsePlayerStatusDefaults", EditConditionHides, ClampMin = "0.0", UIMin = "0.0"))
+	float PlayerInitialArmor = 150.0f;
+
 	// List of actions to perform as this experience is loaded/activated/deactivated/unloaded
 	UPROPERTY(EditDefaultsOnly, Instanced, Category="Actions")
 	TArray<TObjectPtr<UGameFeatureAction>> Actions;

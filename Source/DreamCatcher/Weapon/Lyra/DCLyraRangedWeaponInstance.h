@@ -30,6 +30,7 @@ public:
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
 
 	void UpdateDebugVisualization();
 #endif
@@ -191,6 +192,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Weapon Config")
 	TMap<FGameplayTag, float> MaterialDamageMultiplier;
 
+	/** Does not change BaseDamage, distance falloff, teams or physical-material attenuation. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon Config|Damage", meta=(ClampMin="0.0", ClampMax="1.0"))
+	float DamageToArmorRatio = .8f;
+
 private:
 	// Time since this weapon was last fired (relative to world time)
 	double LastFireTime = 0.0;
@@ -229,6 +234,7 @@ public:
 	//~IDCAbilitySourceInterface interface
 	virtual float GetDistanceAttenuation(float Distance, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr) const override;
 	virtual float GetPhysicalMaterialAttenuation(const UPhysicalMaterial* PhysicalMaterial, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr) const override;
+	virtual float GetDamageToArmorRatio() const override;
 	//~End of IDCAbilitySourceInterface interface
 
 private:

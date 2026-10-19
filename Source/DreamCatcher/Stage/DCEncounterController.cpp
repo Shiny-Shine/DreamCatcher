@@ -8,6 +8,22 @@ ADCEncounterController::ADCEncounterController()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
+void ADCEncounterController::GetMissionEnemyProgress(int32& OutDefeated, int32& OutTotal) const
+{
+	int64 Defeated = 0, Total = 0;
+	TSet<const ADCEnemySpawner*> Seen;
+	for (const ADCEnemySpawner* Spawner : Spawners)
+	{
+		if (!IsValid(Spawner) || Spawner->IsActorBeingDestroyed() || Spawner->GetWorld() != GetWorld() || Seen.Contains(Spawner)) { continue; }
+		Seen.Add(Spawner);
+		const int32 SpawnerTotal = Spawner->GetPlannedEnemyCount();
+		Total += SpawnerTotal;
+		Defeated += FMath::Clamp(Spawner->GetDefeatedCount(), 0, SpawnerTotal);
+	}
+	OutTotal = static_cast<int32>(FMath::Min<int64>(Total, MAX_int32));
+	OutDefeated = static_cast<int32>(FMath::Clamp<int64>(Defeated, 0, OutTotal));
+}
+
 void ADCEncounterController::BeginPlay()
 {
 	Super::BeginPlay();

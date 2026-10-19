@@ -77,6 +77,8 @@ void UDCLyraHealthComponent::InitializeWithAbilitySystem(UDCAbilitySystemCompone
 	// Register to listen for attribute changes.
 	HealthSet->OnHealthChanged.AddUObject(this, &ThisClass::HandleHealthChanged);
 	HealthSet->OnMaxHealthChanged.AddUObject(this, &ThisClass::HandleMaxHealthChanged);
+	HealthSet->OnArmorChanged.AddUObject(this, &ThisClass::HandleArmorChanged);
+	HealthSet->OnMaxArmorChanged.AddUObject(this, &ThisClass::HandleMaxArmorChanged);
 	HealthSet->OnOutOfHealth.AddUObject(this, &ThisClass::HandleOutOfHealth);
 
 	// TEMP: Reset attributes to default values.  Eventually this will be driven by a spread sheet.
@@ -84,8 +86,12 @@ void UDCLyraHealthComponent::InitializeWithAbilitySystem(UDCAbilitySystemCompone
 
 	ClearGameplayTags();
 
+	const float InitialArmor = GetArmor(), InitialMaxArmor = GetMaxArmor();
 	OnHealthChanged.Broadcast(this, HealthSet->GetHealth(), HealthSet->GetHealth(), nullptr);
 	OnMaxHealthChanged.Broadcast(this, HealthSet->GetHealth(), HealthSet->GetHealth(), nullptr);
+	// Armor belongs to the ASC and survives Pawn replacement. Never refill it here.
+	OnArmorChanged.Broadcast(this, InitialArmor, InitialArmor, nullptr);
+	OnMaxArmorChanged.Broadcast(this, InitialMaxArmor, InitialMaxArmor, nullptr);
 }
 
 void UDCLyraHealthComponent::UninitializeFromAbilitySystem()
@@ -96,6 +102,8 @@ void UDCLyraHealthComponent::UninitializeFromAbilitySystem()
 	{
 		HealthSet->OnHealthChanged.RemoveAll(this);
 		HealthSet->OnMaxHealthChanged.RemoveAll(this);
+		HealthSet->OnArmorChanged.RemoveAll(this);
+		HealthSet->OnMaxArmorChanged.RemoveAll(this);
 		HealthSet->OnOutOfHealth.RemoveAll(this);
 	}
 
@@ -138,6 +146,33 @@ float UDCLyraHealthComponent::GetHealthNormalized() const
 void UDCLyraHealthComponent::HandleHealthChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
 {
 	OnHealthChanged.Broadcast(this, OldValue, NewValue, DamageInstigator);
+}
+
+float UDCLyraHealthComponent::GetArmor() const
+{
+	return HealthSet ? HealthSet->GetArmor() : 0.f;
+}
+
+float UDCLyraHealthComponent::GetMaxArmor() const
+{
+	return HealthSet ? HealthSet->GetMaxArmor() : 0.f;
+}
+
+float UDCLyraHealthComponent::GetArmorNormalized() const
+{
+	const float Current = GetArmor(), Maximum = GetMaxArmor();
+	return FMath::IsFinite(Current) && FMath::IsFinite(Maximum) && Maximum > 0.f
+		? FMath::Clamp(Current / Maximum, 0.f, 1.f) : 0.f;
+}
+
+void UDCLyraHealthComponent::HandleArmorChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
+{
+	OnArmorChanged.Broadcast(this, OldValue, NewValue, DamageInstigator);
+}
+
+void UDCLyraHealthComponent::HandleMaxArmorChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)
+{
+	OnMaxArmorChanged.Broadcast(this, OldValue, NewValue, DamageInstigator);
 }
 
 void UDCLyraHealthComponent::HandleMaxHealthChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue)

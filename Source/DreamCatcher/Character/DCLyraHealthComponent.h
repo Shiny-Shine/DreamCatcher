@@ -71,6 +71,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Lyra|Health")
 	UE_API float GetHealthNormalized() const;
 
+	UFUNCTION(BlueprintPure, Category="Lyra|Armor")
+	UE_API float GetArmor() const;
+
+	UFUNCTION(BlueprintPure, Category="Lyra|Armor")
+	UE_API float GetMaxArmor() const;
+
+	UFUNCTION(BlueprintPure, Category="Lyra|Armor")
+	UE_API float GetArmorNormalized() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Lyra|Health")
 	EDCLyraDeathState GetDeathState() const { return DeathState; }
 
@@ -96,6 +105,12 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FDCLyraHealth_AttributeChanged OnMaxHealthChanged;
 
+	UPROPERTY(BlueprintAssignable)
+	FDCLyraHealth_AttributeChanged OnArmorChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FDCLyraHealth_AttributeChanged OnMaxArmorChanged;
+
 	// Delegate fired when the death sequence has started.
 	UPROPERTY(BlueprintAssignable)
 	FDCLyraHealth_DeathEvent OnDeathStarted;
@@ -112,6 +127,8 @@ protected:
 
 	UE_API virtual void HandleHealthChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
 	UE_API virtual void HandleMaxHealthChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
+	UE_API virtual void HandleArmorChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
+	UE_API virtual void HandleMaxArmorChanged(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
 	UE_API virtual void HandleOutOfHealth(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, float DamageMagnitude, float OldValue, float NewValue);
 
 	UFUNCTION()

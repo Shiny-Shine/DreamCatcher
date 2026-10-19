@@ -153,8 +153,7 @@ void UDCBossPhaseComponent::RefreshHUD()
 	}
 	if (HUD)
 	{
-		HUD->SetBossStatus(B->GetBossData()->DisplayName, B->GetHealthComponent()->GetHealth(),
-			B->GetHealthComponent()->GetMaxHealth(), Phase, State == EDCBossRunState::Transitioning);
+		HUD->SetBossStatus(B->GetBossData(), B->GetHealthComponent()->GetHealth(), B->GetHealthComponent()->GetMaxHealth());
 	}
 }
 

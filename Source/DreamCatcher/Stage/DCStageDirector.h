@@ -2,10 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "UI/Stage/DCMissionListData.h"
 #include "DCStageDirector.generated.h"
 
 class ADCEncounterController;
 class ADCStageDirector;
+class USceneComponent;
 
 UENUM(BlueprintType)
 enum class EDCStageRunState : uint8
@@ -23,6 +25,16 @@ enum class EDCStagePhaseType : uint8
 	Encounter,
 	BossEncounter,
 	Complete
+};
+
+USTRUCT(BlueprintType)
+struct FDCMissionTargetBinding
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mission")
+	FName TargetKey;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mission")
+	TObjectPtr<AActor> TargetActor = nullptr;
 };
 
 USTRUCT(BlueprintType)
@@ -44,11 +56,18 @@ struct FDCStagePhaseDefinition
 	// Encounter/BossEncounter 단계일 때 사용할 전투 컨트롤러.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stage")
 	TObjectPtr<ADCEncounterController> Encounter = nullptr;
+	/** Optional presentation data; never changes phase completion rules. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stage|Mission")
+	TObjectPtr<UDCMissionListData> MissionList = nullptr;
+	/** Level actor bindings live on this placed director, not the reusable data asset. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Stage|Mission", meta=(TitleProperty="TargetKey"))
+	TArray<FDCMissionTargetBinding> MissionTargets;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FDCStagePhaseStartedSignature, ADCStageDirector*, Director,
 	int32, PhaseIndex, const FText&, PhaseTitle, EDCStagePhaseType, PhaseType);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCStageEndedSignature, ADCStageDirector*, Director, bool, bSucceeded);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDCMissionPhaseCompletedSignature, ADCStageDirector*, const FDCMissionTransitionSnapshot&);
 
 UCLASS()
 class DREAMCATCHER_API ADCStageDirector : public AActor
@@ -66,10 +85,27 @@ public:
 	EDCStageRunState GetRunState() const { return RunState; }
 	UFUNCTION(BlueprintPure, Category="Stage")
 	int32 GetCurrentPhaseIndex() const { return CurrentPhaseIndex; }
+	UFUNCTION(BlueprintPure, Category="Stage|Mission")
+	UDCMissionListData* GetCurrentMissionList() const;
+	UFUNCTION(BlueprintPure, Category="Stage|Mission")
+	TArray<FDCMissionProgress> GetMissionProgress() const;
+	UFUNCTION(BlueprintPure, Category="Stage|Mission")
+	USceneComponent* GetTrackedMissionTargetComponent() const;
+	/** Read-only authoring diagnostics; never participates in ValidatePhases. */
+	UFUNCTION(BlueprintPure, Category="Stage|Mission")
+	bool ValidateMissionBindings(TArray<FText>& OutErrors) const;
+	UFUNCTION(BlueprintCallable, Category="Stage|Mission")
+	bool SetTrackedMission(FName MissionId);
+	UFUNCTION(BlueprintCallable, Category="Stage|Mission")
+	bool UpdateExternalMissionProgress(FName MissionId, int32 CurrentCount);
+	UFUNCTION(BlueprintCallable, Category="Stage|Mission")
+	bool SetExternalMissionCompleted(FName MissionId, bool bCompleted);
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FDCStagePhaseStartedSignature OnStagePhaseStarted;
 	UPROPERTY(BlueprintAssignable, Category="Events")
 	FDCStageEndedSignature OnStageEnded;
+	/** Receivers copy the final phase view; this director retains no presentation history. */
+	FDCMissionPhaseCompletedSignature OnMissionPhaseCompleted;
 
 protected:
 	virtual void BeginPlay() override;
@@ -101,6 +137,8 @@ private:
 	void UnbindCurrentEncounter();
 	void AbortEncounters();
 	bool ValidatePhases() const;
+	void ResetRuntimeMissions() const;
+	void ReconcileRuntimeMissions() const;
 
 	UFUNCTION()
 	void HandleEncounterCompleted(ADCEncounterController* CompletedEncounter);
@@ -115,7 +153,13 @@ private:
 	bool bAdvanceQueued = false;
 	bool bEndingPlay = false;
 	FTimerHandle PhaseTimerHandle;
+	// Presentation state only. Never written into MissionList or phase bindings.
+	mutable TWeakObjectPtr<UDCMissionListData> RuntimeMissionList;
+	mutable TMap<FName, int32> ExternalMissionCounts;
+	mutable FName TrackedMissionId;
+	mutable bool bMissionContextInitialized = false;
 #if WITH_DEV_AUTOMATION_TESTS
 	friend struct FDCStageFlowTestAccess;
+	friend struct FDCMissionTestAccess;
 #endif
 };

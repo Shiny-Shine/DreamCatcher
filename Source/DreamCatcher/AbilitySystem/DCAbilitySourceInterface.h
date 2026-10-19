@@ -33,4 +33,7 @@ class IDCAbilitySourceInterface
 	virtual float GetDistanceAttenuation(float Distance, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr) const = 0;
 
 	virtual float GetPhysicalMaterialAttenuation(const UPhysicalMaterial* PhysicalMaterial, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr) const = 0;
+
+	/** Fraction of normal damage assigned to armor while the target still has armor. */
+	virtual float GetDamageToArmorRatio() const { return .8f; }
 };

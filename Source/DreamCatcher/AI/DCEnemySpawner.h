@@ -35,6 +35,11 @@ public:
 	int32 GetAliveCount() const { return LivingEnemies.Num(); }
 	UFUNCTION(BlueprintPure, Category="Spawner")
 	int32 GetSpawnedCount() const { return SpawnedCount; }
+	UFUNCTION(BlueprintPure, Category="Spawner|Mission")
+	int32 GetDefeatedCount() const { return DefeatedCount; }
+	/** Includes not-yet-spawned enemies; an unconfigured optional spawner plans zero. */
+	UFUNCTION(BlueprintPure, Category="Spawner|Mission")
+	int32 GetPlannedEnemyCount() const;
 	UFUNCTION(BlueprintPure, Category="Spawner")
 	bool IsSpawnerCleared() const { return bIsCleared; }
 	UFUNCTION(BlueprintPure, Category="Spawner")
@@ -108,6 +113,7 @@ private:
 	void HandleLyraControllerDestroyed(AActor* Controller);
 
 	int32 SpawnedCount = 0;
+	int32 DefeatedCount = 0;
 	TSet<TWeakObjectPtr<AActor>> LivingEnemies;
 	// Death consumes LivingEnemies; ownership survives until the original Pawn cleanup ends.
 	TMap<TWeakObjectPtr<AActor>, TWeakObjectPtr<ADCLyraPlayerBotController>> LyraEnemies;
@@ -124,5 +130,6 @@ private:
 	FTimerHandle SpawnTimerHandle;
 #if WITH_DEV_AUTOMATION_TESTS
 	friend struct FDCLyraFiniteSpawnerTestAccess;
+	friend struct FDCMissionTestAccess;
 #endif
 };

@@ -12,6 +12,10 @@
 #include "Physics/PhysicalMaterialWithTags.h"
 #include "Weapon/Lyra/DCLyraWeaponInstance.h"
 
+#if WITH_EDITOR
+#include "Misc/DataValidation.h"
+#endif
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCLyraRangedWeaponInstance)
 
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Lyra_Weapon_SteadyAimingCamera, "Lyra.Weapon.SteadyAimingCamera");
@@ -37,6 +41,17 @@ void UDCLyraRangedWeaponInstance::PostEditChangeProperty(struct FPropertyChanged
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	UpdateDebugVisualization();
+}
+
+EDataValidationResult UDCLyraRangedWeaponInstance::IsDataValid(FDataValidationContext& Context) const
+{
+	const EDataValidationResult Result = Super::IsDataValid(Context);
+	if (!FMath::IsFinite(DamageToArmorRatio) || DamageToArmorRatio < 0.f || DamageToArmorRatio > 1.f)
+	{
+		Context.AddError(NSLOCTEXT("DCArmor", "InvalidWeaponRatio", "DamageToArmorRatio must be finite and between 0 and 1; runtime uses 0.8 for an invalid value."));
+		return EDataValidationResult::Invalid;
+	}
+	return Result == EDataValidationResult::Invalid ? Result : EDataValidationResult::Valid;
 }
 
 void UDCLyraRangedWeaponInstance::UpdateDebugVisualization()
@@ -130,6 +145,12 @@ float UDCLyraRangedWeaponInstance::GetDistanceAttenuation(float Distance, const 
 {
 	const FRichCurve* Curve = DistanceDamageFalloff.GetRichCurveConst();
 	return Curve->HasAnyData() ? Curve->Eval(Distance) : 1.0f;
+}
+
+float UDCLyraRangedWeaponInstance::GetDamageToArmorRatio() const
+{
+	return FMath::IsFinite(DamageToArmorRatio) && DamageToArmorRatio >= 0.f && DamageToArmorRatio <= 1.f
+		? DamageToArmorRatio : .8f;
 }
 
 float UDCLyraRangedWeaponInstance::GetPhysicalMaterialAttenuation(const UPhysicalMaterial* PhysicalMaterial, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags) const
