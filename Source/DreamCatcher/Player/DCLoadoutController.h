@@ -37,6 +37,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Loadout")
 	TSubclassOf<UDCInventoryItemDefinition> StartingRifle;
 
+	/** Optional second-slot item; the rifle remains the initially active weapon. */
+	UPROPERTY(EditDefaultsOnly, Category="Loadout")
+	TSubclassOf<UDCInventoryItemDefinition> StartingPistol;
+
 	/** Optional standalone reticle host; the production Experience supplies its own HUD. */
 	UPROPERTY(EditDefaultsOnly, Category="Loadout|UI")
 	TSubclassOf<UDCLyraWeaponUserInterface> WeaponReticleHostClass;
@@ -60,6 +64,7 @@ private:
 	bool bWeaponReticleHostCreationFailed = false;
 	bool bWeaponReticleHostEndingPlay = false;
 	UPROPERTY(Transient) TObjectPtr<UDCInventoryItemInstance> GrantedRifle;
+	UPROPERTY(Transient) TObjectPtr<UDCInventoryItemInstance> GrantedPistol;
 	TWeakObjectPtr<UDCPawnExtensionComponent> BoundPawnExtension;
 	FTimerHandle EquipTimer;
 	int32 RemainingReadinessChecks = 0;

@@ -52,7 +52,7 @@ void ADCRifleIntegrationController::OnPossess(APawn* InPawn)
 
 void ADCRifleIntegrationController::EquipIntegrationRifle()
 {
-	if (!HasAuthority() || GrantedRifle || !GetWorld()) { return; }
+	if (!HasAuthority() || bClearingLoadout || GrantedRifle || GrantedPistol || !GetWorld()) { return; }
 	GetWorldTimerManager().ClearTimer(EquipTimer);
 	if (!StartingRifle)
 	{
@@ -85,23 +85,54 @@ void ADCRifleIntegrationController::TryEquipWhenReady()
 	GetWorldTimerManager().ClearTimer(EquipTimer);
 	if (ASC->HasMatchingGameplayTag(DCGameplayTags::Status_Death)) { return; }
 	const UDCPawnData* PawnData = Extension->GetPawnData();
-	if (!PawnData
+	const TArray<UDCInventoryItemInstance*> Slots = RifleQuickBar->GetSlots();
+	if (!PawnData || GrantedRifle || GrantedPistol
 		|| !Equipment->GetEquipmentInstancesOfType(UDCLyraEquipmentInstance::StaticClass()).IsEmpty()
-		|| RifleQuickBar->GetSlots()[0] != nullptr)
+		|| Slots[0] != nullptr
+		|| (StartingPistol && (!Slots.IsValidIndex(1) || Slots[1] != nullptr)))
 	{
-		UE_LOG(LogDCRifleIntegration, Error, TEXT("[R5-R6] Refusing duplicate loadout. PawnData, empty equipment and an empty slot 0 are required."));
+		UE_LOG(LogDCRifleIntegration, Error, TEXT("[R5-R6] Refusing duplicate loadout. PawnData, empty equipment and empty configured starting slots are required."));
 		return;
 	}
 	GrantedRifle = RifleInventory->AddItemDefinition(StartingRifle, 1);
 	if (!GrantedRifle)
 	{
 		UE_LOG(LogDCRifleIntegration, Error, TEXT("[R5-R6] Inventory item grant failed."));
+		ClearIntegrationRifle();
 		return;
 	}
+	if (StartingPistol)
+	{
+		GrantedPistol = RifleInventory->AddItemDefinition(StartingPistol, 1);
+		if (!GrantedPistol)
+		{
+			UE_LOG(LogDCRifleIntegration, Error, TEXT("[R5-R6] Pistol inventory item grant failed; removing the granted loadout."));
+			ClearIntegrationRifle();
+			return;
+		}
+	}
 	RifleQuickBar->AddItemToSlot(0, GrantedRifle);
+	if (!GrantedRifle || RifleQuickBar->GetSlots()[0] != GrantedRifle)
+	{
+		UE_LOG(LogDCRifleIntegration, Error, TEXT("[R5-R6] Rifle slot insertion failed; removing the granted loadout."));
+		ClearIntegrationRifle();
+		return;
+	}
+	if (StartingPistol)
+	{
+		RifleQuickBar->AddItemToSlot(1, GrantedPistol);
+		const TArray<UDCInventoryItemInstance*> UpdatedSlots = RifleQuickBar->GetSlots();
+		if (!GrantedPistol || !UpdatedSlots.IsValidIndex(1) || UpdatedSlots[1] != GrantedPistol)
+		{
+			UE_LOG(LogDCRifleIntegration, Error, TEXT("[R5-R6] Pistol slot insertion failed; removing the granted loadout."));
+			ClearIntegrationRifle();
+			return;
+		}
+	}
 	RifleQuickBar->SetActiveSlotIndex(0);
 	const TArray<UDCLyraEquipmentInstance*> Instances = Equipment->GetEquipmentInstancesOfType(UDCLyraEquipmentInstance::StaticClass());
-	if (Instances.Num() != 1 || !Instances[0] || Instances[0]->GetInstigator() != GrantedRifle)
+	if (!GrantedRifle || RifleQuickBar->GetActiveSlotIndex() != 0
+		|| Instances.Num() != 1 || !Instances[0] || Instances[0]->GetInstigator() != GrantedRifle)
 	{
 		UE_LOG(LogDCRifleIntegration, Error, TEXT("Equipment/Inventory Instigator link failed; removing the granted loadout."));
 		ClearIntegrationRifle();
@@ -116,16 +147,21 @@ void ADCRifleIntegrationController::ClearIntegrationRifle()
 	// UI is local, even when equipment ownership is authoritative elsewhere.
 	RemoveWeaponReticleHost();
 	if (GetWorld()) { GetWorldTimerManager().ClearTimer(EquipTimer); }
-	if (!HasAuthority() || bClearingLoadout || !GrantedRifle) { return; }
+	if (!HasAuthority() || bClearingLoadout || (!GrantedRifle && !GrantedPistol)) { return; }
 	TGuardValue<bool> Clearing(bClearingLoadout, true);
-	const TArray<UDCInventoryItemInstance*> Slots = RifleQuickBar->GetSlots();
-	for (int32 Index = 0; Index < Slots.Num(); ++Index)
+	for (int32 Index = 0; Index < RifleQuickBar->GetSlots().Num(); ++Index)
 	{
-		if (Slots[Index] == GrantedRifle) { RifleQuickBar->RemoveItemFromSlot(Index); }
+		const UDCInventoryItemInstance* Item = RifleQuickBar->GetSlots()[Index];
+		if ((GrantedRifle && Item == GrantedRifle) || (GrantedPistol && Item == GrantedPistol))
+		{
+			RifleQuickBar->RemoveItemFromSlot(Index);
+		}
 	}
-	RifleInventory->RemoveItemInstance(GrantedRifle);
+	if (GrantedRifle) { RifleInventory->RemoveItemInstance(GrantedRifle); }
+	if (GrantedPistol) { RifleInventory->RemoveItemInstance(GrantedPistol); }
 	GrantedRifle = nullptr;
-	UE_LOG(LogDCRifleIntegration, Log, TEXT("[R5-R6] Test rifle removed; equipment abilities/actors released through QuickBar."));
+	GrantedPistol = nullptr;
+	UE_LOG(LogDCRifleIntegration, Log, TEXT("[R5-R6] Granted loadout removed; equipment abilities/actors released through QuickBar."));
 }
 
 void ADCRifleIntegrationController::DetachPawnListener()
