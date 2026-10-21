@@ -138,6 +138,10 @@
 		{
 			"Name": "DCStageUI",
 			"Enabled": true
+		},
+		{
+			"Name": "BlueprintArrange",
+			"Enabled": true
 		}
 	]
 }

@@ -60,6 +60,16 @@ FSlateBrush SafeBrush(const FSlateBrush& Source)
 	return Brush;
 }
 
+bool HasArmorSegmentFillBrushes(const TArray<FSlateBrush>& Brushes)
+{
+	if (Brushes.Num() != 3) { return false; }
+	for (const FSlateBrush& Brush : Brushes)
+	{
+		if (!::IsValid(Brush.GetResourceObject())) { return false; }
+	}
+	return true;
+}
+
 FText Number(float Value)
 {
 	FNumberFormattingOptions Options;
@@ -114,6 +124,7 @@ bool FDCPlayerStatusStyle::IsValid() const
 		&& FontSize >= 1 && FontSize <= 200 && (!TextFont.FontObject || (FMath::IsFinite(TextFont.Size) && TextFont.Size > 0.f && TextFont.Size <= 200.f))
 		&& DCPlayerStatus::FiniteColor(TextColor)
 		&& DCPlayerStatus::FiniteColor(ArmorColor) && DCPlayerStatus::FiniteColor(ReadyColor)
+		&& (ArmorSegmentFillBrushes.IsEmpty() || DCPlayerStatus::HasArmorSegmentFillBrushes(ArmorSegmentFillBrushes))
 		&& DCPlayerStatus::FiniteColor(ActiveColor) && DCPlayerStatus::FiniteColor(CooldownColor)
 		&& DCPlayerStatus::FiniteColor(UnavailableColor) && Nonnegative(ReadyGlowAlpha) && Nonnegative(InactiveGlowAlpha)
 		&& FMath::IsFinite(RefreshInterval) && RefreshInterval >= .01f && RefreshInterval <= 1.f;
@@ -129,6 +140,10 @@ FDCPlayerStatusStyle UDCPlayerStatusWidget::ResolveStyle(const FDCPlayerStatusSt
 	if (Source.IsValid()) { return Source; }
 	FDCPlayerStatusStyle Safe;
 	Safe.ArmorBorderBrush = Source.ArmorBorderBrush; Safe.ArmorFillBrush = Source.ArmorFillBrush;
+	if (DCPlayerStatus::HasArmorSegmentFillBrushes(Source.ArmorSegmentFillBrushes))
+	{
+		Safe.ArmorSegmentFillBrushes = Source.ArmorSegmentFillBrushes;
+	}
 	Safe.StarBrush = Source.StarBrush; Safe.SignatureRingBrush = Source.SignatureRingBrush;
 	if (Source.TextFont.FontObject && FMath::IsFinite(Source.TextFont.Size) && Source.TextFont.Size > 0.f && Source.TextFont.Size <= 200.f)
 	{
@@ -527,13 +542,16 @@ void UDCPlayerStatusWidget::UpdateArmorPresentation()
 	if (!ArmorText) { return; }
 	ArmorText->SetText(DCPlayerStatus::Number(DisplayedArmor));
 	const double SegmentCapacity = static_cast<double>(DisplayedMaxArmor) / 3.0;
+	const bool bUsePerSegmentFillBrushes = DCPlayerStatus::HasArmorSegmentFillBrushes(Appearance.ArmorSegmentFillBrushes);
 	for (int32 Index = 0; Index < ArmorSegments.Num(); ++Index)
 	{
 		FDCPlayerArmorSegment& Segment = ArmorSegments[Index];
 		Segment.Fraction = bHasContext && SegmentCapacity > 0.0
 			? static_cast<float>(FMath::Clamp((DisplayedArmor - SegmentCapacity * Index) / SegmentCapacity, 0.0, 1.0)) : 0.f;
 		ApplyArmorBrush(Segment.Border, Appearance.ArmorBorderBrush, Segment.Fraction, Segment.BorderMID, Segment.BorderSource);
-		ApplyArmorBrush(Segment.Fill, Appearance.ArmorFillBrush, Segment.Fraction, Segment.FillMID, Segment.FillSource);
+		const FSlateBrush& SegmentFillBrush = bUsePerSegmentFillBrushes && Appearance.ArmorSegmentFillBrushes.IsValidIndex(Index)
+			? Appearance.ArmorSegmentFillBrushes[Index] : Appearance.ArmorFillBrush;
+		ApplyArmorBrush(Segment.Fill, SegmentFillBrush, Segment.Fraction, Segment.FillMID, Segment.FillSource);
 		Segment.Fill->SetRenderScale(FVector2D(Segment.FillMID ? 1.f : Segment.Fraction, 1.f));
 	}
 }

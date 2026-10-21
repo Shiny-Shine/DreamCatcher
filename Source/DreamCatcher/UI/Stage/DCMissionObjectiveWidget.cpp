@@ -59,6 +59,7 @@ FDCMissionHUDStyle UDCMissionObjectiveWidget::ResolveStyle(const FDCMissionHUDSt
 	FDCMissionHUDStyle Safe;
 	Safe.EntryWidgetClass = Source.EntryWidgetClass;
 	Safe.PanelBrush = Source.PanelBrush; Safe.HeaderIconBrush = Source.HeaderIconBrush;
+	Safe.bHeaderIncludedInPanel = Source.bHeaderIncludedInPanel;
 	Safe.CheckboxBrush = Source.CheckboxBrush; Safe.CompletedBrush = Source.CompletedBrush;
 	return Safe;
 }
@@ -348,6 +349,10 @@ void UDCMissionObjectiveWidget::Refresh()
 	PanelSlot->SetSize(FVector2D(Appearance.PanelWidth, PanelHeight));
 	Panel->SetPadding(FMargin(Appearance.Padding)); Panel->SetBrush(Appearance.PanelBrush);
 	HeaderBox->SetHeightOverride(Appearance.HeaderHeight);
+	if (UWidget* HeaderContents = HeaderBox->GetContent())
+	{
+		HeaderContents->SetVisibility(Appearance.bHeaderIncludedInPanel ? ESlateVisibility::Hidden : ESlateVisibility::HitTestInvisible);
+	}
 	HeaderIcon->SetBrush(Appearance.HeaderIconBrush);
 	HeaderText->SetFont(FCoreStyle::GetDefaultFontStyle("Bold", Appearance.HeaderFontSize));
 	HeaderText->SetColorAndOpacity(FSlateColor(Appearance.TextColor));

@@ -67,6 +67,7 @@ struct FDCMissionHUDStyle
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Text", meta=(ClampMin="1", ClampMax="200")) int32 StageFontSize = 14;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Text") FLinearColor TextColor = FLinearColor::White;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Art") FSlateBrush PanelBrush;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Art") bool bHeaderIncludedInPanel = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Art") FSlateBrush HeaderIconBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Art") FSlateBrush CheckboxBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Art") FSlateBrush CompletedBrush;

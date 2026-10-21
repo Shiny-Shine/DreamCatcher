@@ -50,6 +50,8 @@ struct FDCPlayerStatusStyle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Armor") FLinearColor ArmorColor = FLinearColor::White;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Armor") FSlateBrush ArmorBorderBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Armor") FSlateBrush ArmorFillBrush;
+	/** Optional left/center/right fills. Empty preserves the common ArmorFillBrush. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Armor") TArray<FSlateBrush> ArmorSegmentFillBrushes;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Signature") FSlateBrush StarBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Signature") FSlateBrush SignatureRingBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Signature") FLinearColor ReadyColor = FLinearColor::White;
