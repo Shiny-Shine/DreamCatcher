@@ -75,6 +75,9 @@ struct FDCPlayerArmorSegment
 	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> FillMID;
 	UPROPERTY(Transient) TObjectPtr<UMaterialInterface> BorderSource;
 	UPROPERTY(Transient) TObjectPtr<UMaterialInterface> FillSource;
+	UPROPERTY(Transient) FSlateBrush AuthoredBorderBrush;
+	UPROPERTY(Transient) FSlateBrush AuthoredFillBrush;
+	FVector2D AuthoredFillScale = FVector2D(1.f, 1.f);
 	float Fraction = 0.f;
 };
 
@@ -88,6 +91,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status") FDCPlayerStatusStyle StatusStyle;
 	/** The existing W_Healthbar Blueprint, after its three denominator/initial-value edits. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status") TSubclassOf<UUserWidget> HealthWidgetClass;
+	/** Uses the saved Designer hierarchy. Geometry, fonts and colors stay owned by Designer. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Player Status|Designer") bool bUseDesignerLayout = false;
+	/** Editor presentation only; these values never write to a Pawn or ability system. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status|Designer", meta=(ClampMin="0")) float PreviewHealth = 100.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status|Designer", meta=(ClampMin="1")) float PreviewMaxHealth = 100.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status|Designer", meta=(ClampMin="0")) float PreviewArmor = 150.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status|Designer", meta=(ClampMin="0")) float PreviewMaxArmor = 150.f;
+	virtual void SynchronizeProperties() override;
 	/** Nullable-safe UI helper for the existing Health Blueprint. The fallback is presentation-only. */
 	UFUNCTION(BlueprintPure, Category="Player Status")
 	static float GetSafeMaxHealth(const UDCLyraHealthComponent* HealthComponent);
@@ -108,15 +119,19 @@ public:
 	UFUNCTION(BlueprintPure, Category="Player Status") UUserWidget* GetOriginalHealthWidget() const { return OriginalHealthWidget; }
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
+	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& CullingRect,
 		FSlateWindowElementList& Elements, int32 LayerId, const FWidgetStyle& Style, bool bParentEnabled) const override;
 private:
 	static FDCPlayerStatusStyle ResolveStyle(const FDCPlayerStatusStyle& Source);
+	bool BindDesignerWidgets();
+	void ApplyDesignerPreview();
 	void ApplyLayout();
 	void EnsureHealthWidget();
 	void ReleaseHealthWidget();
+	void NotifyOriginalHealthPawnChanged(APawn* OldPawn, APawn* NewPawn);
 	void BindHealthSpawnAnimation();
 	void UpdateHealthPresentation();
 	void UpdateArmorPresentation();
@@ -151,12 +166,16 @@ private:
 	UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> RingMID;
 	UPROPERTY(Transient) TObjectPtr<UMaterialInterface> StarSource;
 	UPROPERTY(Transient) TObjectPtr<UMaterialInterface> RingSource;
+	UPROPERTY(Transient) FSlateBrush AuthoredStarBrush;
+	UPROPERTY(Transient) FSlateBrush AuthoredRingBrush;
 	UPROPERTY(Transient) FDCPlayerStatusStyle Appearance;
 	TWeakObjectPtr<APlayerController> SourceController;
 	TWeakObjectPtr<APawn> SourcePawn;
 	TWeakObjectPtr<UDCLyraHealthComponent> SourceHealth;
 	TWeakObjectPtr<UAbilitySystemComponent> SourceASC;
 	TWeakObjectPtr<UWorld> TimerWorld;
+	TWeakObjectPtr<APlayerController> AuthoredHealthController;
+	TWeakObjectPtr<APawn> AuthoredHealthPawn;
 	FTimerHandle RefreshTimer;
 	FDelegateHandle WorldTearDownHandle;
 	FWidgetAnimationDynamicEvent SpawnFinishedDelegate;
@@ -181,4 +200,12 @@ private:
 	bool bReportedInvalidHealthClass = false;
 	bool bDiagnosticVolatile = false;
 	bool bSavedVolatility = false;
+	bool bDesignerTreeReady = false;
+	bool bReportedInvalidDesignerTree = false;
+	bool bPreviewing = false;
+	bool bAuthoredHealthReleased = false;
+	bool bAuthoredHealthObserved = false;
+#if WITH_DEV_AUTOMATION_TESTS
+	friend struct FDCPlayerStatusDesignerTestAccess;
+#endif
 };

@@ -61,6 +61,8 @@ FDCMissionHUDStyle UDCMissionObjectiveWidget::ResolveStyle(const FDCMissionHUDSt
 	Safe.PanelBrush = Source.PanelBrush; Safe.HeaderIconBrush = Source.HeaderIconBrush;
 	Safe.bHeaderIncludedInPanel = Source.bHeaderIncludedInPanel;
 	Safe.CheckboxBrush = Source.CheckboxBrush; Safe.CompletedBrush = Source.CompletedBrush;
+	Safe.MissionFont = Source.MissionFont; Safe.bFontSizeInPixels = Source.bFontSizeInPixels;
+	Safe.bShowStageTitle = Source.bShowStageTitle;
 	return Safe;
 }
 
@@ -208,7 +210,8 @@ void UDCMissionObjectiveWidget::SynchronizePage(int32 Index)
 	Page.PhaseText->SetText(Page.Title); Page.PhaseText->SetWrapTextAt(Width);
 	Page.PhaseText->SetFont(FCoreStyle::GetDefaultFontStyle("Regular", Page.Style.StageFontSize));
 	Page.PhaseText->SetColorAndOpacity(FSlateColor(Page.Style.TextColor));
-	Page.PhaseText->SetVisibility(Page.Title.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+	Page.PhaseText->SetVisibility(!Page.Style.bShowStageTitle || Page.Title.IsEmpty()
+		? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 	float Height = 0.f; for (const UDCMissionEntryData* Item : Page.Items) { Height += Item->GetRowHeight(); }
 	Page.ListBox->SetHeightOverride(Height); Page.ListBox->SetWidthOverride(Width);
 }
@@ -330,7 +333,7 @@ void UDCMissionObjectiveWidget::Refresh()
 	if (!bHasStatus) { Panel->SetVisibility(ESlateVisibility::Collapsed); return; }
 	SelectActiveAliases();
 	const float Width = Appearance.PanelWidth - 2.f * Appearance.Padding;
-	const float PhaseHeight = CurrentStageTitle.IsEmpty() ? 0.f
+	const float PhaseHeight = !Appearance.bShowStageTitle || CurrentStageTitle.IsEmpty() ? 0.f
 		: UDCMissionEntryWidget::MeasureTextHeight(CurrentStageTitle, Appearance.StageFontSize, Width) + DCMissionHUD::TitleGap;
 	float RowsHeight = 0.f;
 	for (const UDCMissionEntryData* Item : Pages[ActivePage].Items) { RowsHeight += Item->GetRowHeight(); }

@@ -111,6 +111,21 @@ const TCHAR* StateName(EDCPlayerSignatureState State)
 	default: return TEXT("Unavailable");
 	}
 }
+
+struct FHealthPawnParameters { APawn* OldPawn; APawn* NewPawn; };
+
+UFunction* HealthPawnChangedFunction(UUserWidget* Widget)
+{
+	UFunction* Function = Widget ? Widget->FindFunction(TEXT("OnPosessedPawnChanged")) : nullptr;
+	const FObjectPropertyBase* OldProperty = Function ? FindFProperty<FObjectPropertyBase>(Function, TEXT("OldPawn")) : nullptr;
+	const FObjectPropertyBase* NewProperty = Function ? FindFProperty<FObjectPropertyBase>(Function, TEXT("NewPawn")) : nullptr;
+	return Function && Function->NumParms == 2 && Function->ParmsSize == sizeof(FHealthPawnParameters) && OldProperty && NewProperty
+		&& OldProperty->PropertyClass == APawn::StaticClass() && NewProperty->PropertyClass == APawn::StaticClass()
+		&& OldProperty->HasAnyPropertyFlags(CPF_Parm) && NewProperty->HasAnyPropertyFlags(CPF_Parm)
+		&& !OldProperty->HasAnyPropertyFlags(CPF_OutParm | CPF_ReturnParm) && !NewProperty->HasAnyPropertyFlags(CPF_OutParm | CPF_ReturnParm)
+		&& OldProperty->GetOffset_ForInternal() == STRUCT_OFFSET(FHealthPawnParameters, OldPawn)
+		&& NewProperty->GetOffset_ForInternal() == STRUCT_OFFSET(FHealthPawnParameters, NewPawn) ? Function : nullptr;
+}
 }
 
 bool FDCPlayerStatusStyle::IsValid() const
@@ -170,8 +185,114 @@ TArray<float> UDCPlayerStatusWidget::GetArmorSegmentFills() const
 	return Values;
 }
 
+bool UDCPlayerStatusWidget::BindDesignerWidgets()
+{
+	if (!bUseDesignerLayout) { return false; }
+	RootCanvas = WidgetTree ? Cast<UCanvasPanel>(WidgetTree->RootWidget) : nullptr;
+	BarGroup = Cast<UCanvasPanel>(GetWidgetFromName(TEXT("PlayerStatusBars")));
+	ArmorPanel = Cast<UCanvasPanel>(GetWidgetFromName(TEXT("PlayerArmorBar")));
+	ArmorText = Cast<UTextBlock>(GetWidgetFromName(TEXT("ShieldNumber")));
+	HealthHost = Cast<USizeBox>(GetWidgetFromName(TEXT("PlayerHealthHost")));
+	SignaturePanel = Cast<UCanvasPanel>(GetWidgetFromName(TEXT("PlayerSignature")));
+	SignatureStar = Cast<UImage>(GetWidgetFromName(TEXT("PlayerSignatureStar")));
+	SignatureRing = Cast<UImage>(GetWidgetFromName(TEXT("PlayerSignatureRing")));
+	const TArray<FDCPlayerArmorSegment> Previous = ArmorSegments;
+	ArmorSegments.SetNum(3);
+	bool bValid = RootCanvas && BarGroup && ArmorPanel && ArmorText && HealthHost
+		&& SignaturePanel && SignatureStar && SignatureRing;
+	for (int32 Index = 0; Index < ArmorSegments.Num(); ++Index)
+	{
+		FDCPlayerArmorSegment& Segment = ArmorSegments[Index];
+		Segment.Root = Cast<UCanvasPanel>(GetWidgetFromName(*FString::Printf(TEXT("PlayerArmorSegment%d"), Index)));
+		Segment.Border = Cast<UImage>(GetWidgetFromName(*FString::Printf(TEXT("PlayerArmorBorder%d"), Index)));
+		Segment.Fill = Cast<UImage>(GetWidgetFromName(*FString::Printf(TEXT("PlayerArmorFill%d"), Index)));
+		bValid &= Segment.Root && Segment.Border && Segment.Fill;
+		if (!Segment.Root || !Segment.Border || !Segment.Fill) { continue; }
+		const FDCPlayerArmorSegment* Old = Previous.IsValidIndex(Index) ? &Previous[Index] : nullptr;
+		// A rebuild/synchronization may encounter our own live MID, not an authored brush.
+		if (!Old || Segment.Border != Old->Border || !Old->BorderMID || Segment.Border->GetBrush().GetResourceObject() != Old->BorderMID)
+		{
+			Segment.AuthoredBorderBrush = Segment.Border->GetBrush();
+			Segment.BorderMID = nullptr; Segment.BorderSource = nullptr;
+		}
+		if (!Old || Segment.Fill != Old->Fill || !Old->FillMID || Segment.Fill->GetBrush().GetResourceObject() != Old->FillMID)
+		{
+			Segment.AuthoredFillBrush = Segment.Fill->GetBrush();
+			// Do not capture the fraction-scaled texture fallback a second time.
+			if (!Old || Segment.Fill != Old->Fill) { Segment.AuthoredFillScale = Segment.Fill->GetRenderTransform().Scale; }
+			Segment.FillMID = nullptr; Segment.FillSource = nullptr;
+		}
+	}
+	if (SignatureStar && (!StarMID || SignatureStar->GetBrush().GetResourceObject() != StarMID)) { AuthoredStarBrush = SignatureStar->GetBrush(); }
+	if (SignatureRing && (!RingMID || SignatureRing->GetBrush().GetResourceObject() != RingMID)) { AuthoredRingBrush = SignatureRing->GetBrush(); }
+	UUserWidget* AuthoredHealth = HealthHost ? Cast<UUserWidget>(HealthHost->GetContent()) : nullptr;
+	bValid &= AuthoredHealth && HealthWidgetClass && AuthoredHealth->GetClass() == HealthWidgetClass.Get();
+	if (OriginalHealthWidget != AuthoredHealth)
+	{
+		if (OriginalHealthWidget) { ReleaseHealthWidget(); }
+		OriginalHealthWidget = AuthoredHealth; bAuthoredHealthObserved = false; bAuthoredHealthReleased = false;
+	}
+	bDesignerTreeReady = bValid;
+	if (!bValid && !bReportedInvalidDesignerTree)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Player status Designer hierarchy is incomplete or has incorrect widget types/HealthWidgetClass. The authored tree was preserved; repair its named bindings before playing."));
+	}
+	bReportedInvalidDesignerTree = !bValid;
+	return bValid;
+}
+
+void UDCPlayerStatusWidget::SynchronizeProperties()
+{
+	Super::SynchronizeProperties();
+	if (bUseDesignerLayout && IsDesignTime() && !IsTemplate() && BindDesignerWidgets()) { ApplyDesignerPreview(); }
+}
+
+void UDCPlayerStatusWidget::NativePreConstruct()
+{
+	Super::NativePreConstruct();
+	if (bUseDesignerLayout && IsDesignTime() && !IsTemplate() && BindDesignerWidgets()) { ApplyDesignerPreview(); }
+}
+
+void UDCPlayerStatusWidget::ApplyDesignerPreview()
+{
+	if (!IsDesignTime() || !bDesignerTreeReady || IsTemplate()) { return; }
+	TGuardValue<bool> PreviewGuard(bPreviewing, true);
+	Appearance = ResolveStyle(StatusStyle);
+	DisplayedMaxHealth = FMath::Max(1.f, DCPlayerStatus::SafeValue(PreviewMaxHealth));
+	DisplayedHealth = FMath::Clamp(DCPlayerStatus::SafeValue(PreviewHealth), 0.f, DisplayedMaxHealth);
+	DisplayedMaxArmor = DCPlayerStatus::SafeValue(PreviewMaxArmor);
+	DisplayedArmor = FMath::Clamp(DCPlayerStatus::SafeValue(PreviewArmor), 0.f, DisplayedMaxArmor);
+	BarGroup->SetVisibility(ESlateVisibility::HitTestInvisible);
+	SignaturePanel->SetVisibility(ESlateVisibility::HitTestInvisible);
+	UpdateArmorPresentation();
+	if (UCommonNumericTextBlock* Numeric = Cast<UCommonNumericTextBlock>(OriginalHealthWidget->GetWidgetFromName(TEXT("HealthNumber"))))
+	{
+		Numeric->SetCurrentValue(DisplayedHealth);
+	}
+	const float Fraction = DisplayedHealth / DisplayedMaxHealth;
+	for (const TCHAR* Name : { TEXT("BarBorder"), TEXT("BarFill"), TEXT("BarGlow") })
+	{
+		UImage* Image = Cast<UImage>(OriginalHealthWidget->GetWidgetFromName(Name));
+		UMaterialInstanceDynamic* MID = Image ? Image->GetDynamicMaterial() : nullptr;
+		if (MID)
+		{
+			MID->SetFlags(RF_Transient);
+			MID->SetScalarParameterValue(TEXT("Health_Current"), Fraction);
+			MID->SetScalarParameterValue(TEXT("Health_Updated"), Fraction);
+		}
+	}
+	// Preview is deliberately not a gameplay context and does not bind a source/timer.
+	SignatureState = EDCPlayerSignatureState::Unavailable;
+	UpdateSignaturePresentation();
+}
+
 TSharedRef<SWidget> UDCPlayerStatusWidget::RebuildWidget()
 {
+	if (bUseDesignerLayout)
+	{
+		BindDesignerWidgets();
+		return Super::RebuildWidget();
+	}
 	if (!WidgetTree) { WidgetTree = NewObject<UWidgetTree>(this, TEXT("WidgetTree")); }
 	if (!RootCanvas)
 	{
@@ -216,6 +337,7 @@ TSharedRef<SWidget> UDCPlayerStatusWidget::RebuildWidget()
 void UDCPlayerStatusWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	if (IsDesignTime() || (bUseDesignerLayout && !bDesignerTreeReady)) { return; }
 	SetVisibility(ESlateVisibility::HitTestInvisible); SetIsFocusable(false);
 	bConstructed = true;
 	if (WorldTearDownHandle.IsValid()) { FWorldDelegates::OnWorldBeginTearDown.Remove(WorldTearDownHandle); }
@@ -236,13 +358,17 @@ void UDCPlayerStatusWidget::NativeDestruct()
 	UnbindSource(); ReleaseHealthWidget();
 	for (FDCPlayerArmorSegment& Segment : ArmorSegments)
 	{
-		if (Segment.Border) { Segment.Border->SetBrush(FSlateBrush()); }
-		if (Segment.Fill) { Segment.Fill->SetBrush(FSlateBrush()); }
+		if (Segment.Border) { Segment.Border->SetBrush(bUseDesignerLayout ? Segment.AuthoredBorderBrush : FSlateBrush()); }
+		if (Segment.Fill)
+		{
+			Segment.Fill->SetBrush(bUseDesignerLayout ? Segment.AuthoredFillBrush : FSlateBrush());
+			if (bUseDesignerLayout) { Segment.Fill->SetRenderScale(Segment.AuthoredFillScale); }
+		}
 		Segment.BorderMID = nullptr; Segment.FillMID = nullptr; Segment.BorderSource = nullptr; Segment.FillSource = nullptr;
 		Segment.Fraction = 0.f;
 	}
-	if (SignatureStar) { SignatureStar->SetBrush(FSlateBrush()); }
-	if (SignatureRing) { SignatureRing->SetBrush(FSlateBrush()); }
+	if (SignatureStar) { SignatureStar->SetBrush(bUseDesignerLayout ? AuthoredStarBrush : FSlateBrush()); }
+	if (SignatureRing) { SignatureRing->SetBrush(bUseDesignerLayout ? AuthoredRingBrush : FSlateBrush()); }
 	StarMID = nullptr; RingMID = nullptr; StarSource = nullptr; RingSource = nullptr;
 	if (BarGroup) { BarGroup->SetVisibility(ESlateVisibility::Collapsed); }
 	if (SignaturePanel) { SignaturePanel->SetVisibility(ESlateVisibility::Collapsed); }
@@ -252,6 +378,7 @@ void UDCPlayerStatusWidget::NativeDestruct()
 
 void UDCPlayerStatusWidget::ApplyLayout()
 {
+	if (bUseDesignerLayout) { return; }
 	if (!BarGroup || !ArmorPanel || !HealthHost || !SignaturePanel) { return; }
 	const float Height = Appearance.ArmorHeight + Appearance.ArmorHealthGap + Appearance.HealthHeight;
 	UCanvasPanelSlot* GroupSlot = CastChecked<UCanvasPanelSlot>(BarGroup->Slot);
@@ -322,6 +449,8 @@ bool UDCPlayerStatusWidget::IsCurrentSource(const UDCLyraHealthComponent* Compon
 
 void UDCPlayerStatusWidget::RefreshPlayerStatus()
 {
+	if (IsDesignTime()) { ApplyDesignerPreview(); return; }
+	if (bUseDesignerLayout && !bDesignerTreeReady) { return; }
 	if (!bConstructed || bRefreshing) { return; }
 	TGuardValue<bool> RefreshGuard(bRefreshing, true);
 	if (!StatusStyle.IsValid() && !bReportedInvalidStyle)
@@ -350,7 +479,11 @@ void UDCPlayerStatusWidget::RefreshPlayerStatus()
 	}
 	if (SourceController.Get() != Controller)
 	{
-		UnbindSource(); ReleaseHealthWidget(); SourceController = Controller;
+		UnbindSource();
+		// The saved child's initial Construct has already bound its controller. Do not
+		// cancel/restart its spawn animation just because this wrapper observes it first.
+		if (!bUseDesignerLayout || bAuthoredHealthObserved || bAuthoredHealthReleased) { ReleaseHealthWidget(); }
+		SourceController = Controller;
 		if (Controller) { Controller->OnPossessedPawnChanged.AddUniqueDynamic(this, &ThisClass::HandlePossessedPawnChanged); }
 	}
 	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
@@ -386,7 +519,9 @@ void UDCPlayerStatusWidget::RefreshPlayerStatus()
 	DisplayedArmor = DCPlayerStatus::SafeValue(ArmorValue); DisplayedMaxArmor = DCPlayerStatus::SafeValue(MaximumArmor);
 	if (BarGroup) { BarGroup->SetVisibility(bHasContext ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed); }
 	if (SignaturePanel) { SignaturePanel->SetVisibility(bHasContext ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed); }
-	if (bHasContext) { EnsureHealthWidget(); UpdateHealthPresentation(); }
+	// Track the authored child's controller even before the first possessed Pawn.
+	if (bUseDesignerLayout || bHasContext) { EnsureHealthWidget(); }
+	if (bHasContext) { UpdateHealthPresentation(); }
 	UpdateArmorPresentation(); ReadSignatureState(); UpdateSignaturePresentation();
 }
 
@@ -406,6 +541,26 @@ void UDCPlayerStatusWidget::HandleWorldTearDown(UWorld* World)
 void UDCPlayerStatusWidget::EnsureHealthWidget()
 {
 	if (!HealthHost) { return; }
+	if (bUseDesignerLayout)
+	{
+		// The saved child belongs to the Designer hierarchy, including after detach/reentry.
+		OriginalHealthWidget = Cast<UUserWidget>(HealthHost->GetContent());
+		if (!OriginalHealthWidget || !HealthWidgetClass || OriginalHealthWidget->GetClass() != HealthWidgetClass.Get()) { return; }
+		APlayerController* Controller = GetOwningPlayer();
+		const bool bOwnerChanged = OriginalHealthWidget->GetOwningPlayer() != Controller;
+		if (bOwnerChanged) { OriginalHealthWidget->SetPlayerContext(GetPlayerContext()); }
+		if (Controller && DCPlayerStatus::HealthPawnChangedFunction(OriginalHealthWidget))
+		{
+			FScriptDelegate Delegate;
+			Delegate.BindUFunction(OriginalHealthWidget, TEXT("OnPosessedPawnChanged"));
+			Controller->OnPossessedPawnChanged.AddUnique(Delegate);
+			if (bOwnerChanged || bAuthoredHealthReleased) { NotifyOriginalHealthPawnChanged(AuthoredHealthPawn.Get(), Controller->GetPawn()); }
+			AuthoredHealthController = Controller; AuthoredHealthPawn = Controller->GetPawn();
+			bAuthoredHealthReleased = false; bAuthoredHealthObserved = true;
+		}
+		BindHealthSpawnAnimation();
+		return;
+	}
 	if (OriginalHealthWidget && OriginalHealthWidget->GetClass() != HealthWidgetClass.Get()) { ReleaseHealthWidget(); }
 	if (!HealthWidgetClass || HealthWidgetClass->IsChildOf(StaticClass())
 		|| HealthWidgetClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
@@ -434,13 +589,50 @@ void UDCPlayerStatusWidget::EnsureHealthWidget()
 
 void UDCPlayerStatusWidget::ReleaseHealthWidget()
 {
+	if (bUseDesignerLayout)
+	{
+		// A nested BP can Construct before the wrapper sees its first Pawn. In that
+		// case use its actual owner; after observation never replace an expired owner
+		// with a new controller resolved through a shared LocalPlayer context.
+		APlayerController* Controller = AuthoredHealthController.Get();
+		if (!bAuthoredHealthObserved && !bAuthoredHealthReleased && OriginalHealthWidget) { Controller = OriginalHealthWidget->GetOwningPlayer(); }
+		if (OriginalHealthWidget && DCPlayerStatus::HealthPawnChangedFunction(OriginalHealthWidget))
+		{
+			if (Controller)
+			{
+				FScriptDelegate Delegate;
+				Delegate.BindUFunction(OriginalHealthWidget, TEXT("OnPosessedPawnChanged"));
+				Controller->OnPossessedPawnChanged.Remove(Delegate);
+			}
+			APawn* OldPawn = AuthoredHealthPawn.Get();
+			if (!bAuthoredHealthObserved && Controller) { OldPawn = Controller->GetPawn(); }
+			if (!bAuthoredHealthReleased) { NotifyOriginalHealthPawnChanged(OldPawn, nullptr); }
+		}
+		// Always record release, including an expired controller or a NoPawn child.
+		AuthoredHealthController.Reset(); AuthoredHealthPawn.Reset(); bAuthoredHealthReleased = true;
+	}
 	if (OriginalHealthWidget && HealthSpawnAnimation)
 	{
 		OriginalHealthWidget->UnbindFromAnimationFinished(HealthSpawnAnimation, SpawnFinishedDelegate);
 	}
 	HealthSpawnAnimation = nullptr; SpawnFinishedDelegate.Unbind();
-	if (HealthHost) { HealthHost->SetContent(nullptr); }
-	OriginalHealthWidget = nullptr;
+	if (!bUseDesignerLayout)
+	{
+		if (HealthHost) { HealthHost->SetContent(nullptr); }
+		OriginalHealthWidget = nullptr;
+	}
+	bNeedsMaxText = true; bNeedsHealthMaterialSync = true; bNeedsHealthNumberSync = true;
+}
+
+void UDCPlayerStatusWidget::NotifyOriginalHealthPawnChanged(APawn* OldPawn, APawn* NewPawn)
+{
+	if (!OriginalHealthWidget || IsDesignTime()) { return; }
+	// This is the existing Blueprint event, not a replacement health/animation path.
+	if (UFunction* Function = DCPlayerStatus::HealthPawnChangedFunction(OriginalHealthWidget))
+	{
+		DCPlayerStatus::FHealthPawnParameters Parameters{OldPawn, NewPawn};
+		OriginalHealthWidget->ProcessEvent(Function, &Parameters);
+	}
 }
 
 void UDCPlayerStatusWidget::BindHealthSpawnAnimation()
@@ -461,16 +653,19 @@ void UDCPlayerStatusWidget::UpdateHealthPresentation()
 	if (!OriginalHealthWidget || !IsCurrentSource(SourceHealth.Get())) { return; }
 	UCommonNumericTextBlock* Numeric = Cast<UCommonNumericTextBlock>(OriginalHealthWidget->GetWidgetFromName(TEXT("HealthNumber")));
 	UTextBlock* MaximumText = Cast<UTextBlock>(OriginalHealthWidget->GetWidgetFromName(TEXT("DCMaxHealthText")));
-	if (USizeBox* OriginalRoot = Cast<USizeBox>(OriginalHealthWidget->GetWidgetFromName(TEXT("AnimBoundSB"))))
+	if (!bUseDesignerLayout)
 	{
-		OriginalRoot->SetWidthOverride(Appearance.BarWidth); OriginalRoot->SetHeightOverride(Appearance.HealthHeight);
-	}
-	FSlateFontInfo Font = Numeric ? Numeric->GetFont() : FCoreStyle::GetDefaultFontStyle("Regular", Appearance.FontSize);
-	if (Appearance.TextFont.FontObject) { Font = Appearance.TextFont; }
-	Font.Size = Appearance.FontSize;
-	for (UTextBlock* Label : { static_cast<UTextBlock*>(Numeric), MaximumText })
-	{
-		if (Label) { Label->SetFont(Font); Label->SetColorAndOpacity(FSlateColor(Appearance.TextColor)); }
+		if (USizeBox* OriginalRoot = Cast<USizeBox>(OriginalHealthWidget->GetWidgetFromName(TEXT("AnimBoundSB"))))
+		{
+			OriginalRoot->SetWidthOverride(Appearance.BarWidth); OriginalRoot->SetHeightOverride(Appearance.HealthHeight);
+		}
+		FSlateFontInfo Font = Numeric ? Numeric->GetFont() : FCoreStyle::GetDefaultFontStyle("Regular", Appearance.FontSize);
+		if (Appearance.TextFont.FontObject) { Font = Appearance.TextFont; }
+		Font.Size = Appearance.FontSize;
+		for (UTextBlock* Label : { static_cast<UTextBlock*>(Numeric), MaximumText })
+		{
+			if (Label) { Label->SetFont(Font); Label->SetColorAndOpacity(FSlateColor(Appearance.TextColor)); }
+		}
 	}
 	if (bNeedsMaxText)
 	{
@@ -521,7 +716,7 @@ void UDCPlayerStatusWidget::ApplyArmorBrush(UImage* Image, const FSlateBrush& Br
 	{
 		if (!MID || Source != Material) { MID = UMaterialInstanceDynamic::Create(Material, this); MID->SetFlags(RF_Transient); Source = Material; }
 		MID->SetScalarParameterValue(TEXT("Health_Current"), Fraction); MID->SetScalarParameterValue(TEXT("Health_Updated"), Fraction);
-		const FLinearColor Tint = DrawBrush.GetTint(FWidgetStyle()) * Appearance.ArmorColor;
+		const FLinearColor Tint = DrawBrush.GetTint(FWidgetStyle()) * (bUseDesignerLayout ? FLinearColor::White : Appearance.ArmorColor);
 		// Actual Lyra health material vector names, matching the existing boss HUD.
 		for (const TCHAR* Name : { TEXT("Bar_Health_Fill_RGBA"), TEXT("Bar_Health_Highlight_RGBA"), TEXT("Bar_Damage_Fill_RGBA"),
 			TEXT("Bar_Damage_Highlight_RGBA"), TEXT("Glow_Health_RGBA"), TEXT("Glow_Damage_RGBA"), TEXT("Outline_Damaged_RGBA"),
@@ -533,7 +728,7 @@ void UDCPlayerStatusWidget::ApplyArmorBrush(UImage* Image, const FSlateBrush& Br
 		}
 		DrawBrush.SetResourceObject(MID); DrawBrush.TintColor = FSlateColor(FLinearColor::White);
 	}
-	else { MID = nullptr; Source = nullptr; DrawBrush.TintColor = FSlateColor(DrawBrush.GetTint(FWidgetStyle()) * Appearance.ArmorColor); }
+	else { MID = nullptr; Source = nullptr; DrawBrush.TintColor = FSlateColor(DrawBrush.GetTint(FWidgetStyle()) * (bUseDesignerLayout ? FLinearColor::White : Appearance.ArmorColor)); }
 	Image->SetBrush(DrawBrush);
 }
 
@@ -546,13 +741,15 @@ void UDCPlayerStatusWidget::UpdateArmorPresentation()
 	for (int32 Index = 0; Index < ArmorSegments.Num(); ++Index)
 	{
 		FDCPlayerArmorSegment& Segment = ArmorSegments[Index];
-		Segment.Fraction = bHasContext && SegmentCapacity > 0.0
+		if (!Segment.Border || !Segment.Fill) { continue; }
+		Segment.Fraction = (bHasContext || bPreviewing) && SegmentCapacity > 0.0
 			? static_cast<float>(FMath::Clamp((DisplayedArmor - SegmentCapacity * Index) / SegmentCapacity, 0.0, 1.0)) : 0.f;
-		ApplyArmorBrush(Segment.Border, Appearance.ArmorBorderBrush, Segment.Fraction, Segment.BorderMID, Segment.BorderSource);
+		ApplyArmorBrush(Segment.Border, bUseDesignerLayout ? Segment.AuthoredBorderBrush : Appearance.ArmorBorderBrush, Segment.Fraction, Segment.BorderMID, Segment.BorderSource);
 		const FSlateBrush& SegmentFillBrush = bUsePerSegmentFillBrushes && Appearance.ArmorSegmentFillBrushes.IsValidIndex(Index)
 			? Appearance.ArmorSegmentFillBrushes[Index] : Appearance.ArmorFillBrush;
-		ApplyArmorBrush(Segment.Fill, SegmentFillBrush, Segment.Fraction, Segment.FillMID, Segment.FillSource);
-		Segment.Fill->SetRenderScale(FVector2D(Segment.FillMID ? 1.f : Segment.Fraction, 1.f));
+		ApplyArmorBrush(Segment.Fill, bUseDesignerLayout ? Segment.AuthoredFillBrush : SegmentFillBrush, Segment.Fraction, Segment.FillMID, Segment.FillSource);
+		const FVector2D Scale = bUseDesignerLayout ? Segment.AuthoredFillScale : FVector2D(1.f, 1.f);
+		Segment.Fill->SetRenderScale(FVector2D(Scale.X * (Segment.FillMID ? 1.f : Segment.Fraction), Scale.Y));
 	}
 }
 
@@ -637,8 +834,8 @@ void UDCPlayerStatusWidget::UpdateSignaturePresentation()
 	case EDCPlayerSignatureState::Cooldown: Color = Appearance.CooldownColor; break;
 	default: break;
 	}
-	ApplySignatureBrush(SignatureStar, Appearance.StarBrush, Color, false, StarMID, StarSource);
-	ApplySignatureBrush(SignatureRing, Appearance.SignatureRingBrush, Color, true, RingMID, RingSource);
+	ApplySignatureBrush(SignatureStar, bUseDesignerLayout ? AuthoredStarBrush : Appearance.StarBrush, Color, false, StarMID, StarSource);
+	ApplySignatureBrush(SignatureRing, bUseDesignerLayout ? AuthoredRingBrush : Appearance.SignatureRingBrush, Color, true, RingMID, RingSource);
 }
 
 void UDCPlayerStatusWidget::HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn) { RefreshPlayerStatus(); }

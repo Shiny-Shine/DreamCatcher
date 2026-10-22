@@ -1,4 +1,6 @@
 #include "UI/Stage/DCMissionListData.h"
+#include "Engine/Font.h"
+#include "Styling/CoreStyle.h"
 
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
@@ -26,6 +28,9 @@ bool FDCMissionHUDStyle::IsValid() const
 		&& FMath::IsFinite(Padding) && Padding >= 0.f && PanelWidth > Padding * 2.f
 		&& FMath::IsFinite(HeaderHeight) && HeaderHeight > 0.f
 		&& FMath::IsFinite(RowMinHeight) && RowMinHeight > 0.f
+		&& FMath::IsFinite(CheckboxSize) && CheckboxSize >= 1.f
+		&& FMath::IsFinite(CheckboxTextGap) && CheckboxTextGap >= 0.f
+		&& PanelWidth > Padding * 2.f + CheckboxSize + CheckboxTextGap
 		&& FMath::IsFinite(CompletedHoldDuration) && CompletedHoldDuration >= 0.f
 		&& FMath::IsFinite(MissionTransitionDuration) && MissionTransitionDuration > 0.f
 		&& MinHeight >= Padding * 2.f + HeaderHeight && MaxHeight >= MinHeight
@@ -33,6 +38,15 @@ bool FDCMissionHUDStyle::IsValid() const
 		&& StageFontSize >= 1 && StageFontSize <= 200
 		&& FMath::IsFinite(TextColor.R) && FMath::IsFinite(TextColor.G)
 		&& FMath::IsFinite(TextColor.B) && FMath::IsFinite(TextColor.A);
+}
+
+FSlateFontInfo FDCMissionHUDStyle::GetMissionFont() const
+{
+	const float NativeSize = bFontSizeInPixels
+		? static_cast<float>(FontSize) * 72.f / static_cast<float>(FontConstants::RenderDPI)
+		: static_cast<float>(FontSize);
+	return MissionFont ? FSlateFontInfo(MissionFont.Get(), NativeSize, FName(TEXT("Default")))
+		: FCoreStyle::GetDefaultFontStyle("Regular", NativeSize);
 }
 
 const FDCMissionDefinition* UDCMissionListData::FindEnabledMission(FName MissionId) const

@@ -14,8 +14,8 @@
 	{
 		"MajorVersion": 5,
 		"MinorVersion": 8,
-		"PatchVersion": 1,
-		"Changelist": 56057345,
+		"PatchVersion": 4,
+		"Changelist": 58902052,
 		"CompatibleChangelist": 55116800,
 		"IsLicenseeVersion": 0,
 		"IsPromotedBuild": 0,
@@ -3969,6 +3969,18 @@
 		},
 		{
 			"Path": "$(EngineDir)/Plugins/IoStoreInsights/Binaries/Win64/UnrealEditor.modules",
+			"Type": "RequiredResource"
+		},
+		{
+			"Path": "$(EngineDir)/Plugins/Marketplace/Blueprind1f28d5db30aV1/Binaries/Win64/UnrealEditor-BlueprintArrange.dll",
+			"Type": "DynamicLibrary"
+		},
+		{
+			"Path": "$(EngineDir)/Plugins/Marketplace/Blueprind1f28d5db30aV1/Binaries/Win64/UnrealEditor-BlueprintArrange.pdb",
+			"Type": "SymbolFile"
+		},
+		{
+			"Path": "$(EngineDir)/Plugins/Marketplace/Blueprind1f28d5db30aV1/Binaries/Win64/UnrealEditor.modules",
 			"Type": "RequiredResource"
 		},
 		{
@@ -29926,6 +29938,10 @@
 			"Type": "UFS"
 		},
 		{
+			"Path": "$(EngineDir)/Plugins/Marketplace/Blueprind1f28d5db30aV1/BlueprintArrange.uplugin",
+			"Type": "UFS"
+		},
+		{
 			"Path": "$(EngineDir)/Plugins/Marketplace/Developer/RiderLink/RiderLink.uplugin",
 			"Type": "UFS"
 		},
@@ -30381,6 +30397,7 @@
 		"BaseCharacterFXEditor",
 		"BaseMaterial",
 		"BlendSpaceMotionAnalysis",
+		"BlueprintArrange",
 		"BlueprintHeaderView",
 		"BlueprintMaterialTextureNodes",
 		"Bridge",

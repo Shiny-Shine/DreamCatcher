@@ -4,7 +4,12 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Components/Border.h"
+#include "Components/HorizontalBoxSlot.h"
+#include "Components/Image.h"
+#include "Components/SizeBox.h"
+#include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
+#include "Engine/Font.h"
 #include "Engine/Texture2D.h"
 #include "Engine/World.h"
 #include "Misc/App.h"
@@ -15,6 +20,7 @@
 #include "UI/Stage/DCMissionObjectiveWidget.h"
 #include "UI/Stage/DCMissionTransitionSwitcher.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Widgets/SWidget.h"
 #include <limits>
 
 struct FDCMissionHUDTestAccess
@@ -22,6 +28,12 @@ struct FDCMissionHUDTestAccess
 	static void Bind(UDCMissionEntryWidget* Row, UObject* Item) { Row->NativeOnListItemObjectSet(Item); }
 	static void Release(UDCMissionEntryWidget* Row) { Row->NativeOnEntryReleased(); }
 	static void Destruct(UDCMissionEntryWidget* Row) { Row->NativeDestruct(); }
+	static UTextBlock* Label(const UDCMissionEntryWidget* Row) { return Row->Label; }
+	static const USizeBox* CheckboxBox(const UDCMissionEntryWidget* Row) { return Row->CheckboxBox; }
+	static const UImage* Checkbox(const UDCMissionEntryWidget* Row) { return Row->Checkbox; }
+	static float CheckboxGap(const UDCMissionEntryWidget* Row)
+	{ return CastChecked<UHorizontalBoxSlot>(Row->CheckboxBox->Slot)->GetPadding().Right; }
+	static const UTextBlock* StageTitle(const UDCMissionObjectiveWidget* W) { return W->PhaseText; }
 	static FDCMissionHUDStyle Resolve(const FDCMissionHUDStyle& Source) { return UDCMissionObjectiveWidget::ResolveStyle(Source); }
 	static bool HasList(const UDCMissionObjectiveWidget* Panel) { return Panel->MissionList != nullptr; }
 	static bool PanelCollapsed(const UDCMissionObjectiveWidget* Panel) { return Panel->Panel && Panel->Panel->GetVisibility() == ESlateVisibility::Collapsed; }
@@ -127,6 +139,10 @@ bool FDCMissionHUDSafetyTest::RunTest(const FString&)
 	const FDCMissionHUDStyle Safe = FDCMissionHUDTestAccess::Resolve(Bad);
 	TestTrue(TEXT("Bad geometry and text settings receive valid defaults"), Safe.IsValid());
 	TestEqual(TEXT("Default width"), Safe.PanelWidth, 360.f); TestEqual(TEXT("Default font"), Safe.FontSize, 18);
+	TestEqual(TEXT("Existing checkbox size"), Safe.CheckboxSize, 24.f);
+	TestEqual(TEXT("Existing checkbox gap"), Safe.CheckboxTextGap, 16.f);
+	TestTrue(TEXT("Existing font units and stage title remain the defaults"), !Safe.bFontSizeInPixels && Safe.bShowStageTitle);
+	TestEqual(TEXT("Existing default font point size is unchanged"), Safe.GetMissionFont().Size, 18.f);
 	TestTrue(TEXT("Fallback preserves actual selected class"), Safe.EntryWidgetClass == Bad.EntryWidgetClass);
 	TestTrue(TEXT("Fallback preserves all original brush resources"), Safe.PanelBrush.GetResourceObject() == Art.Get()
 		&& Safe.HeaderIconBrush.GetResourceObject() == Art.Get() && Safe.CheckboxBrush.GetResourceObject() == Art.Get()
@@ -164,6 +180,83 @@ bool FDCMissionHUDWrapTest::RunTest(const FString&)
 	TStrongObjectPtr<UDCMissionListView> List(NewObject<UDCMissionListView>(GetTransientPackage(), NAME_None, RF_Transient));
 	TestTrue(TEXT("Mission list consumes no HUD controls"), FDCMissionHUDTestAccess::Passive(List.Get()));
 	TestTrue(TEXT("List subtree is excluded from hit testing"), List->GetVisibility() == ESlateVisibility::HitTestInvisible);
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCMissionArtTypographyTest, "DreamCatcher.UI.MissionHUD.ArtTypographyAndLayout",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCMissionArtTypographyTest::RunTest(const FString&)
+{
+	if (!DCMissionHUDTests::Context(*this)) { return false; }
+	FDCMissionHUDStyle Style;
+	Style.MissionFont = LoadObject<UFont>(nullptr, TEXT("/Game/DreamCatcher/UI/Font/Paperlogy-6SemiBold_Font.Paperlogy-6SemiBold_Font"));
+	if (!TestNotNull(TEXT("Selected Paperlogy family exists without creating or saving it"), Style.MissionFont.Get())) { return false; }
+	Style.FontSize = 16; Style.bFontSizeInPixels = true; Style.bShowStageTitle = false;
+	Style.PanelWidth = 373.f; Style.MinHeight = 205.f; Style.MaxHeight = 392.f;
+	Style.Padding = 21.f; Style.HeaderHeight = 43.f; Style.RowMinHeight = 40.f;
+	Style.CheckboxSize = 20.f; Style.CheckboxTextGap = 15.f; Style.bHeaderIncludedInPanel = true;
+	Style.CheckboxBrush.SetResourceObject(LoadObject<UTexture2D>(nullptr, TEXT("/Game/DreamCatcher/Screens/InGame_UI/Check_False.Check_False")));
+	Style.CompletedBrush.SetResourceObject(LoadObject<UTexture2D>(nullptr, TEXT("/Game/DreamCatcher/Screens/InGame_UI/Check_True.Check_True")));
+	if (!TestNotNull(TEXT("Unchecked source image"), Style.CheckboxBrush.GetResourceObject())
+		|| !TestNotNull(TEXT("Completed source image"), Style.CompletedBrush.GetResourceObject())) { return false; }
+	TestTrue(TEXT("Approved art geometry is valid"), Style.IsValid());
+	const FSlateFontInfo ResolvedFont = Style.GetMissionFont();
+	TestEqual(TEXT("Design pixel 16 resolves to native point 12 at the fixed Slate render DPI"), ResolvedFont.Size, 12.f);
+	TestTrue(TEXT("Resolver uses the selected real font"), ResolvedFont.FontObject == Style.MissionFont.Get());
+	FDCMissionHUDStyle Invalid = Style; Invalid.CheckboxSize = std::numeric_limits<float>::quiet_NaN();
+	TestFalse(TEXT("Non-finite checkbox size is invalid"), Invalid.IsValid());
+	const FDCMissionHUDStyle Safe = FDCMissionHUDTestAccess::Resolve(Invalid);
+	TestTrue(TEXT("Fallback keeps the selected family and presentation options"), Safe.MissionFont == Style.MissionFont
+		&& Safe.bFontSizeInPixels && !Safe.bShowStageTitle && Safe.CheckboxSize == 24.f && Safe.CheckboxTextGap == 16.f);
+	Invalid = Style; Invalid.CheckboxTextGap = -1.f;
+	TestFalse(TEXT("Negative checkbox gap is invalid"), Invalid.IsValid());
+	Invalid = Style; Invalid.PanelWidth = 2.f * Invalid.Padding + Invalid.CheckboxSize + Invalid.CheckboxTextGap;
+	TestFalse(TEXT("A non-positive remaining text width is invalid"), Invalid.IsValid());
+	FDCMissionProgress Progress = DCMissionHUDTests::Progress(TEXT("Defeat"), TEXT("악몽 처치하기"), EDCMissionProgressSource::CurrentEncounterDefeats);
+	TStrongObjectPtr<UDCMissionEntryData> Item(NewObject<UDCMissionEntryData>(GetTransientPackage(), NAME_None, RF_Transient));
+	Item->Update(Progress, Style);
+	TStrongObjectPtr<UDCMissionEntryWidget> Row(NewObject<UDCMissionEntryWidget>(GetTransientPackage(), NAME_None, RF_Transient));
+	Row->Initialize(); TSharedPtr<SWidget> RowSlate = Row->TakeWidget(); FDCMissionHUDTestAccess::Bind(Row.Get(), Item.Get());
+	UTextBlock* Label = FDCMissionHUDTestAccess::Label(Row.Get());
+	TestTrue(TEXT("Actual label uses the same complete font info as measurement"), Label->GetFont() == ResolvedFont);
+	TestEqual(TEXT("Actual checkbox width"), FDCMissionHUDTestAccess::CheckboxBox(Row.Get())->GetWidthOverride(), 20.f);
+	TestEqual(TEXT("Actual checkbox height"), FDCMissionHUDTestAccess::CheckboxBox(Row.Get())->GetHeightOverride(), 20.f);
+	TestEqual(TEXT("Actual checkbox text gap"), FDCMissionHUDTestAccess::CheckboxGap(Row.Get()), 15.f);
+	TestTrue(TEXT("Unfinished row uses Check_False"), FDCMissionHUDTestAccess::Checkbox(Row.Get())->GetBrush().GetResourceObject() == Style.CheckboxBrush.GetResourceObject());
+	TestEqual(TEXT("A short row retains the approved 40-unit pitch"), Item->GetRowHeight(), 40.f);
+	Progress.bCompleted = true; Progress.CurrentCount = Progress.TargetCount; Item->Update(Progress, Style);
+	TestTrue(TEXT("Completed row uses Check_True while retaining actual progress formatting"),
+		FDCMissionHUDTestAccess::Checkbox(Row.Get())->GetBrush().GetResourceObject() == Style.CompletedBrush.GetResourceObject()
+		&& Row->GetDisplayedText().ToString().Contains(TEXT("· 완료")));
+	Progress.DisplayText = FText::FromString(TEXT("광장구역으로 이동하고 주변을 탐색해서 다음 목표에 관한 단서를 찾은 다음 안전한 목표 지점으로 이동하기"));
+	Item->Update(Progress, Style); Row->ForceLayoutPrepass();
+	const float TextWidth = Style.PanelWidth - 2.f * Style.Padding - Style.CheckboxSize - Style.CheckboxTextGap;
+	const float MeasuredHeight = UDCMissionEntryWidget::MeasureTextHeight(Row->GetDisplayedText(), ResolvedFont, TextWidth);
+	// This detached fixture has no viewport prepass. Refresh the actual label's
+	// cached Slate widget explicitly before comparing it with the independent measure.
+	TSharedRef<SWidget> LabelSlate = Label->TakeWidget();
+	LabelSlate->Invalidate(EInvalidateWidgetReason::Layout); LabelSlate->SlatePrepass(1.f);
+	const float ActualHeight = Label->GetDesiredSize().Y;
+	TestTrue(TEXT("Long Korean text wraps with the selected family before overflow detection"), Item->GetRowHeight() > Style.RowMinHeight);
+	TestTrue(FString::Printf(TEXT("Actual label and common measurement agree on wrapped height (actual=%.3f, expected=%.3f, width=%.3f, font=%.3f)"),
+		ActualHeight, MeasuredHeight, TextWidth, ResolvedFont.Size), FMath::IsNearlyEqual(ActualHeight, MeasuredHeight, 1.f));
+	TStrongObjectPtr<UDCMissionListData> Data(NewObject<UDCMissionListData>(GetTransientPackage(), NAME_None, RF_Transient));
+	Style.EntryWidgetClass = LoadClass<UUserWidget>(nullptr, TEXT("/Game/DreamCatcher/UI/HUD/W_DC_MissionEntry.W_DC_MissionEntry_C"));
+	if (!TestTrue(TEXT("Existing compiled entry BP"), UDCMissionObjectiveWidget::IsEntryClassUsable(Style.EntryWidgetClass))) { return false; }
+	Data->HUDStyle = Style;
+	FDCMissionProgress Short = DCMissionHUDTests::Progress(TEXT("Guide"), TEXT("광장구역으로 이동하기"), EDCMissionProgressSource::Guidance);
+	Progress.DisplayText = FText::FromString(TEXT("악몽 처치하기")); Progress.bCompleted = false;
+	TStrongObjectPtr<UDCMissionObjectiveWidget> Panel(NewObject<UDCMissionObjectiveWidget>(GetTransientPackage(), NAME_None, RF_Transient));
+	Panel->Initialize(); Panel->SetMissionStatus(Data.Get(), FText::FromString(TEXT("전투 1")), {Progress, Short});
+	TSharedPtr<SWidget> PanelSlate = Panel->TakeWidget();
+	TestEqual(TEXT("Hidden stage title is actually collapsed"), FDCMissionHUDTestAccess::StageTitle(Panel.Get())->GetVisibility(), ESlateVisibility::Collapsed);
+	TestEqual(TEXT("Hidden title reserves neither text height nor its eight-unit gap"), Panel->GetRequiredContentHeight(), 165.f);
+	Data->HUDStyle.bShowStageTitle = true;
+	Panel->SetMissionStatus(Data.Get(), FText::FromString(TEXT("전투 1")), {Progress, Short});
+	TestTrue(TEXT("Other styles can still show their stage title"), FDCMissionHUDTestAccess::StageTitle(Panel.Get())->GetVisibility() == ESlateVisibility::HitTestInvisible
+		&& Panel->GetRequiredContentHeight() > 165.f);
+	FDCMissionHUDTestAccess::Destruct(Panel.Get()); PanelSlate.Reset(); Panel->ReleaseSlateResources(true);
+	FDCMissionHUDTestAccess::Destruct(Row.Get()); RowSlate.Reset(); Row->ReleaseSlateResources(true);
 	return !HasAnyErrors();
 }
 

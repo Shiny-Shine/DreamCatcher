@@ -2,10 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Fonts/SlateFontInfo.h"
 #include "Styling/SlateBrush.h"
 #include "DCMissionListData.generated.h"
 
 class UUserWidget;
+class UFont;
 
 UENUM(BlueprintType)
 enum class EDCMissionProgressSource : uint8
@@ -60,9 +62,15 @@ struct FDCMissionHUDStyle
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Layout") float Padding = 16.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Layout") float HeaderHeight = 40.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Layout") float RowMinHeight = 48.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Layout", meta=(ClampMin="1.0")) float CheckboxSize = 24.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Layout", meta=(ClampMin="0.0")) float CheckboxTextGap = 16.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Layout") bool bShowStageTitle = true;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Transition", meta=(Units="s", ClampMin="0.0")) float CompletedHoldDuration = .6f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Transition", meta=(Units="s")) float MissionTransitionDuration = .4f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Text", meta=(ClampMin="1", ClampMax="200")) int32 FontSize = 18;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Text") TObjectPtr<UFont> MissionFont;
+	/** Interpret FontSize as a design pixel em size; existing styles retain point sizes. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Text") bool bFontSizeInPixels = false;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Text", meta=(ClampMin="1", ClampMax="200")) int32 HeaderFontSize = 22;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Text", meta=(ClampMin="1", ClampMax="200")) int32 StageFontSize = 14;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Text") FLinearColor TextColor = FLinearColor::White;
@@ -74,6 +82,7 @@ struct FDCMissionHUDStyle
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Entries") TSubclassOf<UUserWidget> EntryWidgetClass;
 
 	bool IsValid() const;
+	FSlateFontInfo GetMissionFont() const;
 };
 
 /** Final ordered presentation values, captured before the live phase resets. */

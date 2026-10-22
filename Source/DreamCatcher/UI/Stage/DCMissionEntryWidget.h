@@ -70,6 +70,7 @@ class DREAMCATCHER_API UDCMissionEntryWidget : public UUserWidget, public IUserO
 public:
 	static FText FormatProgress(const FDCMissionProgress& Progress);
 	static float MeasureTextHeight(const FText& Text, int32 FontSize, float Width);
+	static float MeasureTextHeight(const FText& Text, const FSlateFontInfo& Font, float Width);
 	static float MeasureRowHeight(const FDCMissionProgress& Progress, const FDCMissionHUDStyle& Style);
 	UFUNCTION(BlueprintPure, Category="Mission|HUD")
 	FText GetDisplayedText() const;
@@ -88,6 +89,7 @@ private:
 	void UnbindEntry();
 	void Refresh();
 	UPROPERTY(Transient) TObjectPtr<USizeBox> RowBox;
+	UPROPERTY(Transient) TObjectPtr<USizeBox> CheckboxBox;
 	UPROPERTY(Transient) TObjectPtr<UImage> Checkbox;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> Label;
 	TWeakObjectPtr<UDCMissionEntryData> Entry;

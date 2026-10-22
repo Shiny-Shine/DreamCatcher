@@ -16,8 +16,6 @@
 
 namespace DCMissionRow
 {
-constexpr float IconSize = 24.f;
-constexpr float IconGap = 16.f;
 constexpr float VerticalPadding = 6.f;
 
 bool SameProgress(const FDCMissionProgress& A, const FDCMissionProgress& B)
@@ -90,17 +88,24 @@ FText UDCMissionEntryWidget::FormatProgress(const FDCMissionProgress& Progress)
 
 float UDCMissionEntryWidget::MeasureTextHeight(const FText& Text, int32 FontSize, float Width)
 {
+	return MeasureTextHeight(Text, FCoreStyle::GetDefaultFontStyle("Regular", FontSize), Width);
+}
+
+float UDCMissionEntryWidget::MeasureTextHeight(const FText& Text, const FSlateFontInfo& Font, float Width)
+{
+	const UTextBlock* TextDefaults = GetDefault<UTextBlock>();
 	TSharedRef<STextBlock> Measure = SNew(STextBlock).Text(Text)
-		.Font(FCoreStyle::GetDefaultFontStyle("Regular", FontSize)).WrapTextAt(FMath::Max(1.f, Width))
+		.Font(Font).WrapTextAt(FMath::Max(1.f, Width))
+		.ShadowOffset(TextDefaults->GetShadowOffset()).ShadowColorAndOpacity(TextDefaults->GetShadowColorAndOpacity())
 		.WrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping);
-	Measure->SlatePrepass();
+	Measure->SlatePrepass(1.f);
 	return FMath::CeilToFloat(Measure->GetDesiredSize().Y);
 }
 
 float UDCMissionEntryWidget::MeasureRowHeight(const FDCMissionProgress& Progress, const FDCMissionHUDStyle& Style)
 {
-	const float TextWidth = Style.PanelWidth - 2.f * Style.Padding - DCMissionRow::IconSize - DCMissionRow::IconGap;
-	const float ContentHeight = FMath::Max(DCMissionRow::IconSize, MeasureTextHeight(FormatProgress(Progress), Style.FontSize, TextWidth));
+	const float TextWidth = Style.PanelWidth - 2.f * Style.Padding - Style.CheckboxSize - Style.CheckboxTextGap;
+	const float ContentHeight = FMath::Max(Style.CheckboxSize, MeasureTextHeight(FormatProgress(Progress), Style.GetMissionFont(), TextWidth));
 	return FMath::Max(Style.RowMinHeight, ContentHeight + 2.f * DCMissionRow::VerticalPadding);
 }
 
@@ -112,11 +117,10 @@ TSharedRef<SWidget> UDCMissionEntryWidget::RebuildWidget()
 		RowBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("MissionRow"));
 		WidgetTree->RootWidget = RowBox;
 		UHorizontalBox* Contents = WidgetTree->ConstructWidget<UHorizontalBox>(); RowBox->SetContent(Contents);
-		USizeBox* IconBox = WidgetTree->ConstructWidget<USizeBox>();
-		IconBox->SetWidthOverride(DCMissionRow::IconSize); IconBox->SetHeightOverride(DCMissionRow::IconSize);
-		Checkbox = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("MissionCheckbox")); IconBox->SetContent(Checkbox);
-		UHorizontalBoxSlot* IconSlot = Contents->AddChildToHorizontalBox(IconBox);
-		IconSlot->SetVerticalAlignment(VAlign_Center); IconSlot->SetPadding(FMargin(0, 0, DCMissionRow::IconGap, 0));
+		CheckboxBox = WidgetTree->ConstructWidget<USizeBox>();
+		Checkbox = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("MissionCheckbox")); CheckboxBox->SetContent(Checkbox);
+		UHorizontalBoxSlot* IconSlot = Contents->AddChildToHorizontalBox(CheckboxBox);
+		IconSlot->SetVerticalAlignment(VAlign_Center);
 		Label = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("MissionText"));
 		Label->SetWrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping);
 		UHorizontalBoxSlot* TextSlot = Contents->AddChildToHorizontalBox(Label);
@@ -145,7 +149,7 @@ void UDCMissionEntryWidget::UnbindEntry()
 
 void UDCMissionEntryWidget::Refresh()
 {
-	if (!RowBox || !Checkbox || !Label) { return; }
+	if (!RowBox || !CheckboxBox || !Checkbox || !Label) { return; }
 	UDCMissionEntryData* Item = Entry.Get();
 	if (!Item)
 	{
@@ -156,9 +160,11 @@ void UDCMissionEntryWidget::Refresh()
 	const FDCMissionHUDStyle& Style = Item->GetStyle();
 	RowBox->SetWidthOverride(Style.PanelWidth - 2.f * Style.Padding);
 	RowBox->SetHeightOverride(Item->GetRowHeight());
-	Label->SetFont(FCoreStyle::GetDefaultFontStyle("Regular", Style.FontSize));
+	CheckboxBox->SetWidthOverride(Style.CheckboxSize); CheckboxBox->SetHeightOverride(Style.CheckboxSize);
+	CastChecked<UHorizontalBoxSlot>(CheckboxBox->Slot)->SetPadding(FMargin(0, 0, Style.CheckboxTextGap, 0));
+	Label->SetFont(Style.GetMissionFont());
 	Label->SetColorAndOpacity(FSlateColor(Style.TextColor)); Label->SetText(FormatProgress(Progress));
-	Label->SetWrapTextAt(Style.PanelWidth - 2.f * Style.Padding - DCMissionRow::IconSize - DCMissionRow::IconGap);
+	Label->SetWrapTextAt(Style.PanelWidth - 2.f * Style.Padding - Style.CheckboxSize - Style.CheckboxTextGap);
 	FSlateBrush Brush = Progress.bCompleted ? Style.CompletedBrush : Style.CheckboxBrush;
 	if (Brush.DrawAs == ESlateBrushDrawType::NoDrawType)
 	{
