@@ -8,7 +8,7 @@ class UCommonButtonBase;
 class UDCModeCardButton;
 class UTextBlock;
 
-/** Story menu layout lives in W_DC_Frontend; this class only routes its actions. */
+/** Mode-selection artwork lives in W_DC_Frontend; this class routes its actions. */
 UCLASS(Abstract, Blueprintable)
 class DREAMCATCHER_API UDCFrontendScreen : public UDCLyraActivatableWidget
 {
@@ -28,10 +28,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Frontend")
 	TSubclassOf<UCommonActivatableWidget> SettingsScreenClass;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UDCModeCardButton> StoryButton;
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UCommonButtonBase> SettingsButton;
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UCommonButtonBase> QuitButton;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UDCModeCardButton> FreeButton;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UDCModeCardButton> ChallengeButton;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UCommonButtonBase> SettingsButton;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UCommonButtonBase> QuitButton;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> StatusText;
 private:
+	void FreeModeUnavailable();
+	void ChallengeModeUnavailable();
+	void ShowUnavailableMode(const FText& ModeName);
 	void StoryTravelFailed(const FText& Message);
 	void SetTravelPending(bool bPending);
 	void CloseSettings();
@@ -41,5 +46,5 @@ private:
 	FDelegateHandle TravelFailureHandle;
 	FDelegateHandle SettingsDeactivateHandle;
 	bool bTravelPending = false;
-	bool bQuitPromptOpen = false;
+	bool bDialogOpen = false;
 };

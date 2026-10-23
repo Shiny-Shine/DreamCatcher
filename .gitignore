@@ -30,7 +30,7 @@ SourceArt/**/*.tga
 # 디자이너가 pull만 해도 C++ 클래스가 보이게,
 # 프로젝트/플러그인 Win64 Editor 바이너리는 다시 추적
 !Binaries/
-!Binaries/Win64/**
+Binaries/Win64/**
 !Plugins/**/Binaries/
 !Plugins/**/Binaries/Win64/**
 

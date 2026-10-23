@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "GameModes/Lyra/DCLyraExperienceManagerComponent.h"
 #include "GameModes/Lyra/DCLyraGameMode.h"
@@ -59,6 +60,7 @@ void ADCEnemySpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	bIsActive = false;
 	bWaitingForLyraExperience = false;
 	GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
+	GetWorldTimerManager().ClearTimer(ProximityTimerHandle);
 	CleanupOwnedLyraBots();
 	CleanupOwnedGASNPCs();
 	for (const TWeakObjectPtr<AActor>& Enemy : LivingEnemies) { UnbindEnemy(Enemy.Get()); }
@@ -75,9 +77,17 @@ void ADCEnemySpawner::ActivateSpawner()
 
 	// GAS NPCs and finite Lyra bots are authority-owned.
 	if ((GASEnemyClass || LyraBotControllerClass) && (!HasAuthority() || GetNetMode() == NM_Client)) { return; }
+	if (bRequirePlayerProximity && (!HasAuthority() || GetNetMode() == NM_Client)) { return; }
 	if ((GASEnemyClass || LyraBotControllerClass) && (SpawnCount <= 0 || MaxAliveAtOnce <= 0 || !FMath::IsFinite(SpawnInterval) || SpawnInterval < 0.0f))
 	{
 		FailSpawner(TEXT("invalid GAS/Lyra spawn count, concurrency, or interval"));
+		return;
+	}
+	if (bRequirePlayerProximity && ((!GASEnemyClass && !LyraBotControllerClass) || SpawnCount != 1 || MaxAliveAtOnce != 1
+		|| !FMath::IsFinite(PlayerTriggerRadius) || PlayerTriggerRadius <= 0.0f
+		|| !FMath::IsFinite(ProximityCheckInterval) || ProximityCheckInterval <= 0.0f))
+	{
+		FailSpawner(TEXT("invalid one-shot player proximity settings"));
 		return;
 	}
 	bIsActive = true;
@@ -135,6 +145,14 @@ void ADCEnemySpawner::TrySpawnNext()
 		return;
 	}
 
+	if (bRequirePlayerProximity && !IsPlayerWithinTriggerRadius())
+	{
+		// Only an active, Experience-ready spawner polls. Rearm the one-shot timer
+		// even when called by that timer; no overlap component or actor Tick is needed.
+		GetWorldTimerManager().SetTimer(ProximityTimerHandle, this, &ThisClass::TrySpawnNext, ProximityCheckInterval, false);
+		return;
+	}
+	GetWorldTimerManager().ClearTimer(ProximityTimerHandle);
 	SpawnEnemy();
 	if (!bIsActive || bEndingPlay || bSpawnFailed) { return; }
 	// A Death callback can run during the deferred actor's BeginPlay.
@@ -150,6 +168,25 @@ void ADCEnemySpawner::TrySpawnNext()
 	{
 		ScheduleNextSpawn();
 	}
+}
+
+bool ADCEnemySpawner::IsPlayerWithinTriggerRadius() const
+{
+	const FVector Origin = SpawnPoint->GetComponentLocation();
+	const double RadiusSquared = FMath::Square(static_cast<double>(PlayerTriggerRadius));
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		const APlayerController* PlayerController = It->Get();
+		const APawn* Pawn = IsValid(PlayerController) ? PlayerController->GetPawn() : nullptr;
+		if (!IsValid(Pawn) || Pawn->IsActorBeingDestroyed() || Pawn->GetController() != PlayerController) { continue; }
+		const UDCLyraHealthComponent* Health = UDCLyraHealthComponent::FindHealthComponent(Pawn);
+		if (IsValid(Health) && !Health->IsDeadOrDying() && Health->GetHealth() > 0.0f
+			&& FVector::DistSquared(Origin, Pawn->GetActorLocation()) <= RadiusSquared)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void ADCEnemySpawner::SpawnEnemy()
@@ -482,6 +519,7 @@ void ADCEnemySpawner::FailSpawner(const TCHAR* Reason)
 	bSpawnFailed = true;
 	bIsActive = false;
 	GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
+	GetWorldTimerManager().ClearTimer(ProximityTimerHandle);
 	CleanupOwnedGASNPCs();
 	UE_LOG(LogDreamCatcher, Error, TEXT("[R10-1] Spawner aborted: %s (%s); not reporting cleared."), *GetName(), Reason);
 	OnSpawnerFailed.Broadcast(this);
@@ -497,6 +535,7 @@ void ADCEnemySpawner::CompleteSpawner()
 	bIsCleared = true;
 	bIsActive = false;
 	GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
+	GetWorldTimerManager().ClearTimer(ProximityTimerHandle);
 	OnSpawnerCleared.Broadcast(this);
 }
 

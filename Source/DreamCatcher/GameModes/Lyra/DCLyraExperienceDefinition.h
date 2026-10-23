@@ -42,6 +42,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category=Gameplay)
 	TObjectPtr<const UDCPawnData> DefaultPawnData;
 
+	/** Optional player-bot pawn override. Unset preserves the shared default path. */
+	UPROPERTY(EditDefaultsOnly, Category=Gameplay)
+	TObjectPtr<const UDCPawnData> BotPawnData = nullptr;
+
 	/** Opt in to separate initial combat attributes for human players and player bots. */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage")
 	bool bUseRoleBasedBaseDamage = false;

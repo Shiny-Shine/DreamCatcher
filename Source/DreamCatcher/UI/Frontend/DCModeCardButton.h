@@ -33,12 +33,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Mode Card")
 	FLinearColor AccentColor = FLinearColor(.55f, .22f, 1.f, 1.f);
 
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UBorder> CardOutline;
+	// Composed card textures already contain the labels and outline.
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UBorder> CardOutline;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UImage> ArtworkImage;
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> NumberText;
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> LabelText;
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> TitleText;
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> DescriptionText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> NumberText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> LabelText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> TitleText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> DescriptionText;
 private:
 	void RefreshHighlight();
 	bool bInFocusPath = false;

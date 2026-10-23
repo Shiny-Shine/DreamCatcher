@@ -50,6 +50,9 @@ APawn* ADCR10FiniteFailureGameModeFixture::SpawnDefaultPawnAtTransform_Implement
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR && WITH_SERVER_CODE
 
 #include "EngineUtils.h"
+#include "Components/ArrowComponent.h"
+#include "Components/SceneComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/WorldSettings.h"
 #include "GameModes/Lyra/DCLyraGameState.h"
 #include "Misc/App.h"
@@ -59,6 +62,7 @@ APawn* ADCR10FiniteFailureGameModeFixture::SpawnDefaultPawnAtTransform_Implement
 #include "Tests/AutomationCommon.h"
 #include "Tests/DCEnemyGASTestTypes.h"
 #include "UObject/StrongObjectPtr.h"
+#include <limits>
 
 struct FDCLyraFiniteSpawnerTestAccess
 {
@@ -70,6 +74,18 @@ struct FDCLyraFiniteSpawnerTestAccess
 		Spawner->TrackLyraEnemy(Pawn, Bot);
 	}
 	static void DeliverExperienceCallback(ADCEnemySpawner* Spawner) { Spawner->OnLyraExperienceLoaded(nullptr); }
+	static void ConfigureProximity(ADCEnemySpawner* Spawner, float Radius = 2000.0f, float Interval = 0.01f,
+		int32 Count = 1, int32 Concurrent = 1)
+	{
+		Spawner->bRequirePlayerProximity = true;
+		Spawner->PlayerTriggerRadius = Radius;
+		Spawner->ProximityCheckInterval = Interval;
+		Spawner->SpawnCount = Count;
+		Spawner->MaxAliveAtOnce = Concurrent;
+	}
+	static bool InRange(const ADCEnemySpawner* Spawner) { return Spawner->IsPlayerWithinTriggerRadius(); }
+	static FTimerHandle ProximityTimer(const ADCEnemySpawner* Spawner) { return Spawner->ProximityTimerHandle; }
+	static void OffsetSpawnPoint(ADCEnemySpawner* Spawner, const FVector& Offset) { Spawner->SpawnPoint->SetRelativeLocation(Offset); }
 };
 
 namespace DCLyraFiniteSpawnerTests
@@ -93,6 +109,23 @@ struct FFixture
 		return Test.TestNotNull(TEXT("Lyra GameState in fixture"), World.GetTestWorld()->GetGameState<ADCLyraGameState>());
 	}
 	template<class T> T* Spawn() { return World.GetTestWorld()->SpawnActor<T>(); }
+	void TickTimers() { World.TickTestWorld(.001f); World.TickTestWorld(.02f); }
+	ADCR10FinitePawnFixture* Player(FAutomationTestBase& Test, const FVector& Location)
+	{
+		auto* PC = Spawn<APlayerController>();
+		auto* Pawn = Spawn<ADCR10FinitePawnFixture>();
+		if (!Test.TestNotNull(TEXT("Human controller"), PC) || !Test.TestNotNull(TEXT("Human pawn"), Pawn)) { return nullptr; }
+		// This APawn fixture normally has no transform-bearing component.
+		auto* Root = NewObject<USceneComponent>(Pawn, TEXT("ProximityFixtureRoot"));
+		Pawn->SetRootComponent(Root);
+		Root->RegisterComponent();
+		Pawn->SetActorLocation(Location);
+		PC->Possess(Pawn);
+		auto* PS = PC->GetPlayerState<ADCPlayerState>();
+		if (!Test.TestNotNull(TEXT("Human PlayerState"), PS)) { return nullptr; }
+		Pawn->Health->InitializeWithAbilitySystem(CastChecked<UDCAbilitySystemComponent>(PS->GetAbilitySystemComponent()));
+		return Pawn;
+	}
 	ADCR10FiniteSpawnerFixture* Spawner()
 	{
 		auto* S = Spawn<ADCR10FiniteSpawnerFixture>();
@@ -294,6 +327,162 @@ bool FDCFiniteSpawnRollbackTest::RunTest(const FString&)
 	TestEqual(TEXT("Failed spawn leaves no PlayerState"), StatesAfter, StatesBefore);
 	TestEqual(TEXT("No counted spawn on failure"), S->GetSpawnedCount(), 0);
 	AddInfo(TEXT("Native ownership/count/order and failure tests only. Real Blueprint spawn, inventory, locomotion and replication require the isolated map PIE."));
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFiniteProximityRangeTest, "DreamCatcher.R10.LyraAI.FiniteSpawner.Proximity.RangeAndEligibility",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCFiniteProximityRangeTest::RunTest(const FString&)
+{
+	using namespace DCLyraFiniteSpawnerTests;
+	FFixture F; if (!F.Start(*this)) { return false; }
+	auto* S = F.Spawner(); if (!TestNotNull(TEXT("Spawner"), S)) { return false; }
+	FDCLyraFiniteSpawnerTestAccess::ConfigureProximity(S);
+	TestFalse(TEXT("Missing human player cannot trigger"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	auto* Player = F.Player(*this, FVector(2001, 0, 0)); if (!Player) { return false; }
+	TestFalse(TEXT("Outside 20m"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	Player->SetActorLocation(FVector(2000, 0, 0));
+	TestTrue(TEXT("Exact 20m boundary is included"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	Player->SetActorLocation(FVector(0, 0, 2001));
+	TestFalse(TEXT("Height participates in the 3D distance"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	Player->SetActorLocation(FVector(0, 0, 2000));
+	TestTrue(TEXT("Vertical boundary is included"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	Player->SetActorLocation(FVector(1500, 1500, 0));
+	TestFalse(TEXT("Distance is spherical, not an axis-aligned box"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	S->SetActorLocation(FVector(500, 0, 0));
+	FDCLyraFiniteSpawnerTestAccess::OffsetSpawnPoint(S, FVector(100, 0, 0));
+	Player->SetActorLocation(FVector(2600, 0, 0));
+	TestTrue(TEXT("Origin is the world-space SpawnPoint"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	S->SetActorLocation(FVector::ZeroVector);
+	FDCLyraFiniteSpawnerTestAccess::OffsetSpawnPoint(S, FVector::ZeroVector);
+	Player->SetActorLocation(FVector(5000, 0, 0));
+	auto* Other = F.Spawner(); if (!TestNotNull(TEXT("Other spawner"), Other)) { return false; }
+	ADCLyraPlayerBotController* Bot = nullptr;
+	if (!F.Adopt(*this, Other, Bot)) { return false; }
+	TestFalse(TEXT("Living bot at the origin cannot trigger"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	Player->SetActorLocation(FVector::ZeroVector);
+	Player->Health->StartDeath();
+	TestFalse(TEXT("Dying human cannot trigger even before Pawn destruction"), FDCLyraFiniteSpawnerTestAccess::InRange(S));
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFiniteProximityGateTest, "DreamCatcher.R10.LyraAI.FiniteSpawner.Proximity.StageAndExperienceGate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCFiniteProximityGateTest::RunTest(const FString&)
+{
+	using namespace DCLyraFiniteSpawnerTests;
+	FFixture F; if (!F.Start(*this)) { return false; }
+	auto* S = F.Spawner(); if (!TestNotNull(TEXT("Spawner"), S)) { return false; }
+	FDCLyraFiniteSpawnerTestAccess::ConfigureProximity(S);
+	auto* Player = F.Player(*this, FVector::ZeroVector); if (!Player) { return false; }
+	F.TickTimers();
+	TestEqual(TEXT("Near player does not activate an unstarted encounter"), S->GetSpawnedCount(), 0);
+	TestFalse(TEXT("Inactive spawner does not poll"), F.World.GetTestWorld()->GetTimerManager().TimerExists(FDCLyraFiniteSpawnerTestAccess::ProximityTimer(S)));
+	S->ActivateSpawner(); S->ActivateSpawner(); F.TickTimers();
+	TestFalse(TEXT("Near player cannot bypass the Experience callback"), S->HasSpawnFailure());
+	TestFalse(TEXT("No polling before Experience readiness"), F.World.GetTestWorld()->GetTimerManager().TimerExists(FDCLyraFiniteSpawnerTestAccess::ProximityTimer(S)));
+	Player->SetActorLocation(FVector(2001, 0, 0));
+	FDCLyraFiniteSpawnerTestAccess::DeliverExperienceCallback(S); F.TickTimers(); F.TickTimers();
+	TestFalse(TEXT("Outside range keeps waiting through repeated timer callbacks"), S->HasSpawnFailure());
+	TestTrue(TEXT("Active spawner polls while outside range"), F.World.GetTestWorld()->GetTimerManager().TimerExists(FDCLyraFiniteSpawnerTestAccess::ProximityTimer(S)));
+	TestEqual(TEXT("Waiting is not a spawn or a clear"), S->GetSpawnedCount(), 0);
+	TestFalse(TEXT("Waiting does not clear the encounter"), S->IsSpawnerCleared());
+	// The existing fixture deliberately refuses Pawn creation. Reaching that
+	// production failure proves polling attempted the real Lyra spawn path.
+	AddExpectedError(TEXT("Lyra pawn creation/possession failed"), EAutomationExpectedErrorFlags::Contains, 1);
+	Player->SetActorLocation(FVector(2000, 0, 0)); F.TickTimers(); F.TickTimers();
+	TestTrue(TEXT("Entering range reaches the real spawn path"), S->HasSpawnFailure());
+	TestFalse(TEXT("Failed spawn cancels proximity polling"), F.World.GetTestWorld()->GetTimerManager().TimerExists(FDCLyraFiniteSpawnerTestAccess::ProximityTimer(S)));
+	TestFalse(TEXT("Failed spawn is not a clear"), S->IsSpawnerCleared());
+	TestEqual(TEXT("Failed spawn consumes no successful spawn"), S->GetSpawnedCount(), 0);
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFiniteProximitySingleUseTest, "DreamCatcher.R10.LyraAI.FiniteSpawner.Proximity.OneShotAndPendingEncounter",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCFiniteProximitySingleUseTest::RunTest(const FString&)
+{
+	using namespace DCLyraFiniteSpawnerTests;
+	FFixture F; if (!F.Start(*this)) { return false; }
+	auto* First = F.Spawner(); auto* Second = F.Spawner();
+	if (!TestNotNull(TEXT("First spawner"), First) || !TestNotNull(TEXT("Second spawner"), Second)) { return false; }
+	FDCLyraFiniteSpawnerTestAccess::ConfigureProximity(First);
+	FDCLyraFiniteSpawnerTestAccess::ConfigureProximity(Second);
+	auto* Player = F.Player(*this, FVector(5000, 0, 0)); if (!Player) { return false; }
+	ADCLyraPlayerBotController* FirstBot = nullptr; ADCLyraPlayerBotController* SecondBot = nullptr;
+	auto* FirstPawn = F.Adopt(*this, First, FirstBot); if (!FirstPawn) { return false; }
+	auto* E = F.Encounter(First, Second); if (!TestNotNull(TEXT("Encounter"), E)) { return false; }
+	E->StartEncounter();
+	FDCLyraFiniteSpawnerTestAccess::DeliverExperienceCallback(Second); F.TickTimers();
+	FirstPawn->Health->StartDeath();
+	TestTrue(TEXT("Counted spawner clears even with the player now far away"), First->IsSpawnerCleared());
+	TestEqual(TEXT("Untriggered second spawner remains pending"), E->GetRemainingSpawnerCount(), 1);
+	TestFalse(TEXT("A pending proximity spawner blocks encounter completion"), E->IsEncounterCompleted());
+	// Adopt exercises ownership/death, not a saved Blueprint spawn. Actual
+	// near-at-start and repeated-entry spawning are covered by the PIE probe.
+	auto* SecondPawn = F.Adopt(*this, Second, SecondBot); if (!SecondPawn) { return false; }
+	SecondPawn->Health->StartDeath();
+	TestTrue(TEXT("Every registered spawner must clear"), E->IsEncounterCompleted());
+	TestEqual(TEXT("Encounter completes once"), F.Observer->Encounters, 1);
+	FirstPawn->Health->FinishDeath(); SecondPawn->Health->FinishDeath();
+	Player->SetActorLocation(FVector::ZeroVector);
+	First->ActivateSpawner(); Second->ActivateSpawner(); F.TickTimers(); F.TickTimers();
+	TestEqual(TEXT("First spawner stays single use"), First->GetSpawnedCount(), 1);
+	TestEqual(TEXT("Second spawner stays single use"), Second->GetSpawnedCount(), 1);
+	TestFalse(TEXT("Clear cancels polling"), F.World.GetTestWorld()->GetTimerManager().TimerExists(FDCLyraFiniteSpawnerTestAccess::ProximityTimer(Second)));
+	TestEqual(TEXT("Reentry cannot complete the encounter twice"), F.Observer->Encounters, 1);
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFiniteProximityAbortTest, "DreamCatcher.R10.LyraAI.FiniteSpawner.Proximity.AbortWhileWaiting",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCFiniteProximityAbortTest::RunTest(const FString&)
+{
+	using namespace DCLyraFiniteSpawnerTests;
+	FFixture F; if (!F.Start(*this)) { return false; }
+	auto* S = F.Spawner(); if (!TestNotNull(TEXT("Spawner"), S)) { return false; }
+	FDCLyraFiniteSpawnerTestAccess::ConfigureProximity(S);
+	auto* Player = F.Player(*this, FVector(5000, 0, 0)); if (!Player) { return false; }
+	auto* E = F.Encounter(S); if (!TestNotNull(TEXT("Encounter"), E)) { return false; }
+	E->StartEncounter(); FDCLyraFiniteSpawnerTestAccess::DeliverExperienceCallback(S); F.TickTimers();
+	const FTimerHandle Pending = FDCLyraFiniteSpawnerTestAccess::ProximityTimer(S);
+	TestTrue(TEXT("Approach timer is waiting"), F.World.GetTestWorld()->GetTimerManager().TimerExists(Pending));
+	E->AbortEncounter();
+	Player->SetActorLocation(FVector::ZeroVector); F.TickTimers(); F.TickTimers();
+	TestTrue(TEXT("Abort removes its waiting spawner"), Gone(S));
+	TestFalse(TEXT("EndPlay removes the pending timer"), F.World.GetTestWorld()->GetTimerManager().TimerExists(Pending));
+	TestEqual(TEXT("Abort is not encounter completion"), F.Observer->Encounters, 0);
+	int32 Bots = 0;
+	for (TActorIterator<ADCLyraPlayerBotController> It(F.World.GetTestWorld()); It; ++It) { if (!Gone(*It)) { ++Bots; } }
+	TestEqual(TEXT("No delayed bot after entering an aborted spawn radius"), Bots, 0);
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFiniteProximityValidationTest, "DreamCatcher.R10.LyraAI.FiniteSpawner.Proximity.InvalidConfiguration",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCFiniteProximityValidationTest::RunTest(const FString&)
+{
+	using namespace DCLyraFiniteSpawnerTests;
+	FFixture F; if (!F.Start(*this)) { return false; }
+	struct FCase { float Radius; float Interval; int32 Count; int32 Concurrent; };
+	const FCase Cases[] = {{2000, .01f, 2, 1}, {2000, .01f, 1, 2}, {0, .01f, 1, 1},
+		{std::numeric_limits<float>::quiet_NaN(), .01f, 1, 1}, {2000, 0, 1, 1},
+		{2000, std::numeric_limits<float>::infinity(), 1, 1}};
+	AddExpectedError(TEXT("invalid one-shot player proximity settings"), EAutomationExpectedErrorFlags::Contains, UE_ARRAY_COUNT(Cases) + 1);
+	for (const FCase& Case : Cases)
+	{
+		auto* S = F.Spawner(); if (!TestNotNull(TEXT("Invalid spawner"), S)) { return false; }
+		FDCLyraFiniteSpawnerTestAccess::ConfigureProximity(S, Case.Radius, Case.Interval, Case.Count, Case.Concurrent);
+		S->ActivateSpawner();
+		TestTrue(TEXT("Invalid opt-in settings fail before waiting or spawning"), S->HasSpawnFailure());
+		TestFalse(TEXT("Invalid settings cannot clear"), S->IsSpawnerCleared());
+		TestFalse(TEXT("Invalid settings leave no timer"), F.World.GetTestWorld()->GetTimerManager().TimerExists(FDCLyraFiniteSpawnerTestAccess::ProximityTimer(S)));
+	}
+	auto* Empty = F.Spawn<ADCEnemySpawner>(); if (!TestNotNull(TEXT("Unconfigured spawner"), Empty)) { return false; }
+	FDCLyraFiniteSpawnerTestAccess::ConfigureProximity(Empty);
+	Empty->ActivateSpawner();
+	TestTrue(TEXT("Opt-in one-shot mode requires an actual spawn class"), Empty->HasSpawnFailure());
+	TestFalse(TEXT("Missing class cannot silently clear a proximity encounter"), Empty->IsSpawnerCleared());
 	return !HasAnyErrors();
 }
 

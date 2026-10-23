@@ -3972,18 +3972,6 @@
 			"Type": "RequiredResource"
 		},
 		{
-			"Path": "$(EngineDir)/Plugins/Marketplace/Blueprind1f28d5db30aV1/Binaries/Win64/UnrealEditor-BlueprintArrange.dll",
-			"Type": "DynamicLibrary"
-		},
-		{
-			"Path": "$(EngineDir)/Plugins/Marketplace/Blueprind1f28d5db30aV1/Binaries/Win64/UnrealEditor-BlueprintArrange.pdb",
-			"Type": "SymbolFile"
-		},
-		{
-			"Path": "$(EngineDir)/Plugins/Marketplace/Blueprind1f28d5db30aV1/Binaries/Win64/UnrealEditor.modules",
-			"Type": "RequiredResource"
-		},
-		{
 			"Path": "$(EngineDir)/Plugins/Marketplace/Developer/RiderLink/Binaries/Win64/UnrealEditor-RD.dll",
 			"Type": "DynamicLibrary"
 		},
@@ -29938,10 +29926,6 @@
 			"Type": "UFS"
 		},
 		{
-			"Path": "$(EngineDir)/Plugins/Marketplace/Blueprind1f28d5db30aV1/BlueprintArrange.uplugin",
-			"Type": "UFS"
-		},
-		{
 			"Path": "$(EngineDir)/Plugins/Marketplace/Developer/RiderLink/RiderLink.uplugin",
 			"Type": "UFS"
 		},
@@ -30397,7 +30381,6 @@
 		"BaseCharacterFXEditor",
 		"BaseMaterial",
 		"BlendSpaceMotionAnalysis",
-		"BlueprintArrange",
 		"BlueprintHeaderView",
 		"BlueprintMaterialTextureNodes",
 		"Bridge",

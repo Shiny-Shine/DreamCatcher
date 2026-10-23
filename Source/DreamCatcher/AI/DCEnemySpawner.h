@@ -82,8 +82,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawner")
 	bool bActivateOnBeginPlay = false;
 
+	/** Wait after Encounter activation for a living human player. Requires a one-enemy spawner. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawner|Proximity")
+	bool bRequirePlayerProximity = false;
+
+	/** World-space distance from SpawnPoint to the player Pawn center; no visibility test. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawner|Proximity", meta=(EditCondition="bRequirePlayerProximity", ClampMin="1.0", Units="cm"))
+	float PlayerTriggerRadius = 2000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Spawner|Proximity", meta=(EditCondition="bRequirePlayerProximity", ClampMin="0.01", Units="s"))
+	float ProximityCheckInterval = 0.1f;
+
 private:
 	void TrySpawnNext();
+	bool IsPlayerWithinTriggerRadius() const;
 	void SpawnEnemy();
 	void ScheduleNextSpawn();
 	void CompleteSpawner();
@@ -128,6 +140,7 @@ private:
 	bool bSpawningEnemy = false;
 	bool bEndingPlay = false;
 	FTimerHandle SpawnTimerHandle;
+	FTimerHandle ProximityTimerHandle;
 #if WITH_DEV_AUTOMATION_TESTS
 	friend struct FDCLyraFiniteSpawnerTestAccess;
 	friend struct FDCMissionTestAccess;

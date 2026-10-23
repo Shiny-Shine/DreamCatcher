@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "ModularGameMode.h"
 #include "UObject/PrimaryAssetId.h"
+#include "Templates/Function.h"
 #include "DCLyraGameMode.generated.h"
 
 class UDCLyraExperienceDefinition;
@@ -53,4 +54,14 @@ protected:
 	 */
 	UPROPERTY(EditDefaultsOnly, Category="Lyra|Experience", meta=(AllowedTypes="DCLyraExperienceDefinition"))
 	FPrimaryAssetId DefaultExperience;
+
+private:
+	/** Shared selection policy; providers stay lazy so explicit PlayerState data
+	 * never needs Experience/GameState access or loads the global fallback. */
+	static const UDCPawnData* SelectPawnDataForController(const AController* InController,
+		TFunctionRef<const UDCLyraExperienceDefinition*()> GetLoadedExperience,
+		TFunctionRef<const UDCPawnData*()> GetFallbackPawnData);
+#if WITH_DEV_AUTOMATION_TESTS
+	friend struct FDCInspectorBotPawnDataTestAccess;
+#endif
 };

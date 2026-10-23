@@ -3,6 +3,7 @@
 #include "DCLyraExperienceDefinition.h"
 #include "GameFeatureAction.h"
 #include "Character/DCPawnData.h"
+#include "GameFramework/Pawn.h"
 
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
@@ -20,6 +21,16 @@ UDCLyraExperienceDefinition::UDCLyraExperienceDefinition()
 EDataValidationResult UDCLyraExperienceDefinition::IsDataValid(FDataValidationContext& Context) const
 {
 	EDataValidationResult Result = CombineDataValidationResults(Super::IsDataValid(Context), EDataValidationResult::Valid);
+
+	if (BotPawnData)
+	{
+		const UClass* BotPawnClass = BotPawnData->PawnClass.Get();
+		if (!IsValid(BotPawnClass) || !BotPawnClass->IsChildOf(APawn::StaticClass()) || BotPawnClass->HasAnyClassFlags(CLASS_Abstract))
+		{
+			Context.AddError(LOCTEXT("InvalidBotPawnClass", "Bot Pawn Data must specify a valid, concrete Pawn class."));
+			Result = EDataValidationResult::Invalid;
+		}
+	}
 
 	if (bUseRoleBasedBaseDamage)
 	{

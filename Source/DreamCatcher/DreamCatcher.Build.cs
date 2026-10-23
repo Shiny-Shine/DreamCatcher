@@ -1,5 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
+using System.IO;
 using UnrealBuildTool;
 
 public class DreamCatcher : ModuleRules
@@ -55,6 +56,10 @@ public class DreamCatcher : ModuleRules
 			PrivateDependencyModuleNames.Add("MessageLog");
 			// Narrow editor repair for the HARU dash montage/profile connection.
 			PrivateDependencyModuleNames.AddRange(new[] { "UnrealEd", "BlueprintGraph" });
+			// Opt-in, unsaved Inspector FK pose preflight; no runtime module dependencies.
+			PrivateDependencyModuleNames.AddRange(new[] { "IKRig", "IKRigEditor", "AnimationBlueprintLibrary" });
+			// Inspector-only editor setup: private rig/physics/Blueprint copies.
+			PrivateDependencyModuleNames.AddRange(new[] { "SkeletalMeshModifiers", "ControlRig", "ControlRigDeveloper", "RigVMDeveloper", "RigVM" });
 		}
 
 		PublicIncludePaths.AddRange(new string[] {
@@ -72,6 +77,18 @@ public class DreamCatcher : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new[] { "CoreOnline", "DTLSHandlerComponent" });
 
 		SetupIrisSupport(Target);
+
+		// OptiXDenoise delay-loads this DLL, but its engine module omits runtime staging.
+		if (Target.Platform == UnrealTargetPlatform.Win64 && Target.Architecture == UnrealArch.X64 && Target.Type == TargetType.Game)
+		{
+			string OptiXRuntimeDirectory = Path.Combine(EngineDirectory,
+				"Plugins/Experimental/OptiXDenoise/Source/ThirdParty/OptiXDenoiseBase/lib");
+			RuntimeDependencies.Add("$(TargetOutputDir)/OptiXDenoiseBase.dll",
+				Path.Combine(OptiXRuntimeDirectory, "OptiXDenoiseBase.dll"), StagedFileType.NonUFS);
+			// The plugin loads its PTX file relative to its own base directory.
+			RuntimeDependencies.Add(Path.Combine(OptiXRuntimeDirectory, "OptiXDenoiserFunctionList.ptx"),
+				StagedFileType.NonUFS);
+		}
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] {

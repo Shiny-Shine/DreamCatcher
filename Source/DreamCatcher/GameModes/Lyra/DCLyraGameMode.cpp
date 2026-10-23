@@ -41,6 +41,21 @@ ADCLyraGameMode::ADCLyraGameMode(const FObjectInitializer& ObjectInitializer)
 
 const UDCPawnData* ADCLyraGameMode::GetPawnDataForController(const AController* InController) const
 {
+	return SelectPawnDataForController(InController,
+		[this]() -> const UDCLyraExperienceDefinition*
+		{
+			check(GameState);
+			UDCLyraExperienceManagerComponent* ExperienceComponent = GameState->FindComponentByClass<UDCLyraExperienceManagerComponent>();
+			check(ExperienceComponent);
+			return ExperienceComponent->IsExperienceLoaded() ? ExperienceComponent->GetCurrentExperienceChecked() : nullptr;
+		},
+		[]() -> const UDCPawnData* { return UDCAssetManager::Get().GetDefaultPawnData(); });
+}
+
+const UDCPawnData* ADCLyraGameMode::SelectPawnDataForController(const AController* InController,
+	TFunctionRef<const UDCLyraExperienceDefinition*()> GetLoadedExperience,
+	TFunctionRef<const UDCPawnData*()> GetFallbackPawnData)
+{
 	// See if pawn data is already set on the player state
 	if (InController != nullptr)
 	{
@@ -53,21 +68,19 @@ const UDCPawnData* ADCLyraGameMode::GetPawnDataForController(const AController* 
 		}
 	}
 
-	// If not, fall back to the the default for the current experience
-	check(GameState);
-	UDCLyraExperienceManagerComponent* ExperienceComponent = GameState->FindComponentByClass<UDCLyraExperienceManagerComponent>();
-	check(ExperienceComponent);
-
-	if (ExperienceComponent->IsExperienceLoaded())
+	if (const UDCLyraExperienceDefinition* Experience = GetLoadedExperience())
 	{
-		const UDCLyraExperienceDefinition* Experience = ExperienceComponent->GetCurrentExperienceChecked();
+		if (InController && InController->IsA<ADCLyraPlayerBotController>() && Experience->BotPawnData)
+		{
+			return Experience->BotPawnData;
+		}
 		if (Experience->DefaultPawnData != nullptr)
 		{
 			return Experience->DefaultPawnData;
 		}
 
 		// Experience is loaded and there's still no pawn data, fall back to the default for now
-		return UDCAssetManager::Get().GetDefaultPawnData();
+		return GetFallbackPawnData();
 	}
 
 	// Experience not loaded yet, so there is no pawn data to be had
