@@ -8,6 +8,20 @@
 
 사용자의 C++ 빌드·패키징·화면·소리·조작감 확인과 GitHub Desktop 커밋·푸시·병합 담당은 유지한다. 0.134 운영 규칙 반영 당시의 승인은 `AGENTS.md`와 이 명세 2개 문서에 한정됐다. 이후 BaseDamage는 아래 0.135 묶음으로 별도 1차·최종 승인됐으며, 피격 피드백 인계 문서 수정은 계속 제외한다.
 
+### 최신 TODO — 모드 선택 진입 PV / 적용·재로드·자동 검사 완료 / AGENTS 0.140
+
+- [x] TODO 1차 및 상세 1~5번 최종 승인. **L_DC_FrontEnd 맵 진입마다** 재생하며 같은 맵 재실행도 포함한다. 설정 창을 닫기만 할 때는 다시 재생하지 않는다.
+- [x] 현재 작업 우선으로 기존 Stash39개와 새 변경5개를 복원했다. 중복 Level_2는 최신 저장본 유지, 43개 고유 파일·스테이징 상태 확인, 두 Stash 보존이다. 새 PV·최신 Level_1/2·reticle 작업을 유지한다.
+- [x] `DCFrontendIntroScreen.h/.cpp` 및 FrontendStateComponent의 별도 Intro 단계, MP4 프로젝트 복사·NonUFSMovies 설정 작성 후 **사용자03:19:39 KST 빌드 성공** 확인. 이후 C++/Build.cs/Config 추가 변경과 Codex 빌드는 없다.
+- [x] `/Game/DreamCatcher/Screens/DREAMCATCHER_PV`의 FilePath를 `./Movies/DREAMCATCHER_PV.mp4`로 설정, 신규 `/Game/DreamCatcher/UI/Frontend/W_DC_FrontendIntro` 생성, 기존 `/Game/DreamCatcher/Blueprints/UI/BP_DC_FrontendStateComponent`의 IntroScreenClass 연결. **apply 저장3개, 별도 verify 저장0**이며 전체 속성/해시·참조·기존 그래프와 보호 파일을 확인했다.
+- [x] 신규 native **KeyboardReleaseAndCleanup / MouseReleaseAndCleanup 2개 성공·실패/테스트 경고0**. 반복/해제 입력과 자원 해제를 확인했다.
+- [x] 실제 PIE loop_A: 1920×1080/36.9056666초 PV 재생, 끝0.5초 전 seek 후0.0667333초로 반복, 위젯 API 종료 후 메뉴, **같은 모드 선택 맵 재실행의 새 월드에서도0.1001초부터 재생**, 두 번째 종료 후 메뉴를 확인했다.
+- [x] 별도 failure_A: 존재하지 않는 소스를 메모리에서만 지정해 메뉴 진행 후 CDO 원복. 두 PIE 모두 종료0·complete=true·Engine Error/ensure/Fatal0·Automation Success다. 정상 테스트 경고0, 실패 테스트는 예상한 미디어 누락 경고1개다.
+- [x] 후처리 JSON의 UTF-8 BOM 읽기만 보완했다. C++·Config·DLL·기존 맵/게임플레이 파일을 유지했고 raw Git index 갱신과 별개로 5,073개 스테이징 경로·모드·객체 동일을 확인했다. Codex의 커밋·푸시·병합은 없다.
+- [ ] 사용자 실제 키보드·마우스·게임패드 입력, 화면 비율·반복·소리·플레이 후 복귀 확인과 패키징 수용.
+
+**추가 C++ 빌드는 필요 없다.** 정상 Probe의 종료는 위젯 API 호출이고 반복 검사는 실제 끝 부근 seek 후 관찰이다. 전체 클립 두 번 완주나 하드웨어 입력·시각·소리 수용으로 확대하지 않는다. 상세는 [AGENTS.md](../../AGENTS.md) 0.140, 최종 근거는 `Saved/Diagnostics/FrontendPV20261024/final_result_A.json`과 native/PIE 보고서를 따른다. 기존 BaseDamage 검증 완료·수동 수용 한계는 아래0.136을 유지한다.
+
 ### 최신 TODO — 개체별 BaseDamage 조절 / 적용·재로드·자동 검사·실제 사격·재진입 검증 완료 / AGENTS 0.136
 
 - [x] TODO 1차 승인과 상세 1~5번 최종 승인: Editor 역할별 설정, 초기화 연결, 적의 라이플 보정 제외, 관련 검사, 서브에이전트 분담·문서 기록.

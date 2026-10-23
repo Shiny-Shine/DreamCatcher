@@ -44,6 +44,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Enemy|Attack")
 	bool TryStartRangedAttack(AActor* AttackTarget);
 	AActor* GetRequestedRangedAttackTarget() const { return RequestedAttackTarget.Get(); }
+	/** The default keeps the original Muzzle socket / world-space +60 cm fallback. */
+	UFUNCTION(BlueprintPure, Category="Enemy|Attack")
+	virtual FVector GetRangedAttackOrigin() const;
 
 	/** Authority-only, once at DeathStarted, not again at FinishDeath/Destroy. */
 	UPROPERTY(BlueprintAssignable, Category="Enemy|Events")

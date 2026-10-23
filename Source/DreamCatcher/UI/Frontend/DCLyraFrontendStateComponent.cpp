@@ -54,6 +54,7 @@ void UDCLyraFrontendStateComponent::EndPlay(const EEndPlayReason::Type EndPlayRe
 		FrontEndFlow->CancelFlow();
 	}
 	InProgressPressStartScreen.Reset();
+	InProgressIntroScreen.Reset();
 	if (UGameInstance* GameInstance = GetGameInstance<UGameInstance>())
 	{
 		if (UCommonUserSubsystem* Users = GameInstance->GetSubsystem<UCommonUserSubsystem>())
@@ -105,6 +106,7 @@ void UDCLyraFrontendStateComponent::OnExperienceLoaded(const UDCLyraExperienceDe
 		.QueueStep(TEXT("Wait For User Initialization"), this, &ThisClass::FlowStep_WaitForUserInitialization)
 		.QueueStep(TEXT("Try Show Press Start Screen"), this, &ThisClass::FlowStep_TryShowPressStartScreen)
 		.QueueStep(TEXT("Try Join Requested Session"), this, &ThisClass::FlowStep_TryJoinRequestedSession)
+		.QueueStep(TEXT("Try Show Frontend Intro"), this, &ThisClass::FlowStep_TryShowIntroScreen)
 		.QueueStep(TEXT("Try Show Main Screen"), this, &ThisClass::FlowStep_TryShowMainScreen);
 
 	Flow.ExecuteFlow();
@@ -261,6 +263,48 @@ void UDCLyraFrontendStateComponent::FlowStep_TryJoinRequestedSession(FControlFlo
 	}
 	// Skip this step if we didn't start requesting a session join
 	SubFlow->ContinueFlow();
+}
+
+void UDCLyraFrontendStateComponent::ContinueAfterIntro()
+{
+	if (InProgressIntroScreen.IsValid() && !bEndingPlay)
+	{
+		FControlFlowNodePtr Step = InProgressIntroScreen;
+		InProgressIntroScreen.Reset();
+		Step->ContinueFlow();
+	}
+}
+
+void UDCLyraFrontendStateComponent::FlowStep_TryShowIntroScreen(FControlFlowNodeRef SubFlow)
+{
+	// A new frontend GameState runs this step on every map visit. No login/session latch.
+	UPrimaryGameLayout* RootLayout = UPrimaryGameLayout::GetPrimaryGameLayoutForPrimaryPlayer(this);
+	if (IntroScreenClass.IsNull() || !RootLayout) { SubFlow->ContinueFlow(); return; }
+	InProgressIntroScreen = SubFlow;
+	TWeakObjectPtr<UDCLyraFrontendStateComponent> WeakThis = this;
+	PendingScreenLoad = RootLayout->PushWidgetToLayerStackAsync<UCommonActivatableWidget>(FrontendTags::TAG_UI_LAYER_MENU, true, IntroScreenClass,
+		[this, WeakThis](EAsyncWidgetLayerState State, UCommonActivatableWidget* Screen)
+		{
+			if (!WeakThis.IsValid() || bEndingPlay) { return; }
+			switch (State)
+			{
+			case EAsyncWidgetLayerState::Initialize:
+				if (Screen)
+				{
+					OwnedScreens.Add(Screen);
+					// Bind before activation, including an immediate missing-media failure.
+					Screen->OnDeactivated().AddWeakLambda(this, [this]() { ContinueAfterIntro(); });
+				}
+				break;
+			case EAsyncWidgetLayerState::AfterPush:
+				bShouldShowLoadingScreen = false;
+				if (!Screen || !Screen->IsActivated()) { ContinueAfterIntro(); }
+				break;
+			case EAsyncWidgetLayerState::Canceled:
+				ContinueAfterIntro();
+				break;
+			}
+		});
 }
 
 void UDCLyraFrontendStateComponent::FlowStep_TryShowMainScreen(FControlFlowNodeRef SubFlow)

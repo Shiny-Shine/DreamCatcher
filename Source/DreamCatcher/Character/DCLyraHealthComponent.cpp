@@ -16,6 +16,8 @@
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "Engine/World.h"
+#include "Components/PrimitiveComponent.h"
+#include "Physics/DCLyraCollisionChannels.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCLyraHealthComponent)
 
@@ -267,6 +269,12 @@ void UDCLyraHealthComponent::OnRep_DeathState(EDCLyraDeathState OldDeathState)
 	ensureMsgf((DeathState == NewDeathState), TEXT("DCLyraHealthComponent: Death transition failed [%d] -> [%d] for owner [%s]."), (uint8)OldDeathState, (uint8)NewDeathState, *GetNameSafe(GetOwner()));
 }
 
+bool UDCLyraHealthComponent::ShouldRejectPostDeathDamage() const
+{
+	return bPreventDamageAfterDeath
+		&& (IsDeadOrDying() || (HealthSet && HealthSet->GetHealth() <= 0.0f));
+}
+
 void UDCLyraHealthComponent::StartDeath()
 {
 	if (DeathState != EDCLyraDeathState::NotDead)
@@ -283,6 +291,18 @@ void UDCLyraHealthComponent::StartDeath()
 
 	AActor* Owner = GetOwner();
 	check(Owner);
+
+	if (bPreventDamageAfterDeath)
+	{
+		// Keep the original cosmetic lifetime and world/physics responses, but stop
+		// both direct and forgiving weapon traces from hitting the dying body.
+		Owner->ForEachComponent<UPrimitiveComponent>(true, [](UPrimitiveComponent* Component)
+		{
+			Component->SetCollisionResponseToChannel(DCLyra_TraceChannel_Weapon, ECR_Ignore);
+			Component->SetCollisionResponseToChannel(DCLyra_TraceChannel_Weapon_Capsule, ECR_Ignore);
+			Component->SetCollisionResponseToChannel(DCLyra_TraceChannel_Weapon_Multi, ECR_Ignore);
+		});
+	}
 
 	OnDeathStarted.Broadcast(Owner);
 

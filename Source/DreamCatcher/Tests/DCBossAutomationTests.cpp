@@ -40,6 +40,7 @@ ADCR12BossFixture::ADCR12BossFixture()
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/WorldSettings.h"
 #include "Misc/App.h"
 #include "Misc/AutomationTest.h"
@@ -47,6 +48,16 @@ ADCR12BossFixture::ADCR12BossFixture()
 #include "Misc/Parse.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/DCStageFlowTestTypes.h"
+
+struct FDCBigBrotherTestAccess
+{
+	static void FacePlayer(ADCBossCharacter* Boss, bool bEnable) { Boss->bAlwaysFacePlayer = bEnable; }
+	static void Origin(ADCBossCharacter* Boss, bool bEnable, FVector Offset)
+	{
+		Boss->bUseCustomAttackOrigin = bEnable;
+		Boss->AttackOriginOffset = Offset;
+	}
+};
 
 namespace DCBossTests
 {
@@ -213,6 +224,67 @@ bool FDCBossOwnershipTest::RunTest(const FString&)
 	TestTrue(TEXT("Single boss completes its spawner"), S->IsSpawnerCleared());
 	S->Destroy(); F.Advance(.03f);
 	TestTrue(TEXT("Ownership remains after counting a kill"), B->IsActorBeingDestroyed());
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCBigBrotherFacingTest, "DreamCatcher.R12.Boss.ContinuousFacingAndLockedAttack",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCBigBrotherFacingTest::RunTest(const FString&)
+{
+	DCBossTests::FFixture F; if (!F.Start(*this)) { return false; }
+	APlayerController* PC = F.Spawn<APlayerController>();
+	if (!TestNotNull(TEXT("Stage player controller"), PC)) { return false; }
+	F.World.GetTestWorld()->GetAuthGameMode<ADCR11ModeFixture>()->GenericPlayerInitialization(PC);
+	PC->Possess(F.Target);
+	const FVector Position = F.Boss->GetActorLocation();
+	F.Boss->SetActorRotation(FRotator(0, 180, 0)); F.Advance(.02f);
+	TestTrue(TEXT("Existing boss keeps its idle rotation without opting in"), F.Boss->GetActorForwardVector().Equals(-FVector::ForwardVector, .001));
+	FDCBigBrotherTestAccess::FacePlayer(F.Boss, true);
+	FDCBigBrotherTestAccess::Origin(F.Boss, true, FVector(0, 0, 100));
+	F.Advance(.02f);
+	TestTrue(TEXT("Opening delay still follows the player"), F.Boss->GetActorForwardVector().Equals(FVector::ForwardVector, .001));
+	const FVector Origin = F.Boss->GetRangedAttackOrigin();
+	TestTrue(TEXT("Line starts from the custom origin"), F.Boss->TryStartRangedAttack(F.Target));
+	FGameplayAbilitySpec* Spec = F.Boss->GetAbilitySystemComponent()->FindAbilitySpecFromClass(UDCR12LineFixture::StaticClass());
+	UDCGameplayAbility_EnemyRangedAttack* Line = Spec ? Cast<UDCGameplayAbility_EnemyRangedAttack>(Spec->GetPrimaryInstance()) : nullptr;
+	if (!TestNotNull(TEXT("Instanced line ability"), Line)) { return false; }
+	const FVector LockedAim = Line->GetLockedAimPoint();
+	F.Target->SetActorLocation(FVector(0, 500, 96)); F.Advance(.1f);
+	TestTrue(TEXT("Body faces the moving player during windup"), F.Boss->GetActorForwardVector().Equals(FVector::RightVector, .001));
+	TestTrue(TEXT("Telegraphed aim remains fixed"), Line->GetLockedAimPoint().Equals(LockedAim));
+	TestTrue(TEXT("An origin on the rotation axis stays fixed"), F.Boss->GetRangedAttackOrigin().Equals(Origin));
+	F.Advance(.25f);
+	TestEqual(TEXT("Turning the body does not retarget the warned shot"), F.Health(), 100.f);
+	F.Target->SetActorLocation(FVector(-500, 0, 96)); F.Advance(.02f);
+	TestTrue(TEXT("Body follows during recovery"), F.Boss->GetActorForwardVector().Equals(-FVector::ForwardVector, .001));
+	F.Advance(.3f);
+	F.Target->SetActorLocation(FVector(0, -500, 96)); F.Advance(.02f);
+	TestTrue(TEXT("Body follows between patterns"), F.Boss->GetActorForwardVector().Equals(-FVector::RightVector, .001));
+	F.Damage(F.Boss, 301.f);
+	F.Target->SetActorLocation(FVector(500, 500, 96)); F.Advance(.02f);
+	TestTrue(TEXT("Phase transition remains active"), F.Boss->GetBossPhaseComponent()->GetBossRunState() == EDCBossRunState::Transitioning);
+	TestTrue(TEXT("Body follows during phase transition"), F.Boss->GetActorForwardVector().Equals(FVector(1, 1, 0).GetSafeNormal(), .001));
+	TestTrue(TEXT("Boss never translates"), F.Boss->GetActorLocation().Equals(Position));
+	const FRotator StoppedRotation = F.Boss->GetActorRotation();
+	F.Boss->GetBossPhaseComponent()->ShutdownBoss();
+	F.Target->SetActorLocation(FVector(500, -500, 96)); F.Advance(.02f);
+	TestTrue(TEXT("Shutdown stops facing updates"), F.Boss->GetActorRotation().Equals(StoppedRotation));
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCBigBrotherOriginTest, "DreamCatcher.R12.Boss.CustomOriginAndLegacyFallback",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCBigBrotherOriginTest::RunTest(const FString&)
+{
+	DCBossTests::FFixture F; if (!F.Start(*this)) { return false; }
+	TestTrue(TEXT("Original NPC fallback remains world-space +60"), F.Target->GetRangedAttackOrigin().Equals(F.Target->GetActorLocation() + FVector(0, 0, 60)));
+	TestTrue(TEXT("Existing boss also defaults to the original origin"), F.Boss->GetRangedAttackOrigin().Equals(F.Boss->GetActorLocation() + FVector(0, 0, 60)));
+	F.Boss->SetActorRotation(FRotator(0, 90, 0)); F.Boss->SetActorScale3D(FVector(2));
+	FDCBigBrotherTestAccess::Origin(F.Boss, true, FVector(10, 0, 100));
+	const ADCGASEnemyCharacter* NPC = F.Boss;
+	TestTrue(TEXT("NPC API dispatches the configured actor-local origin"), NPC->GetRangedAttackOrigin().Equals(F.Boss->GetActorLocation() + FVector(0, 20, 200), .001));
+	FDCBigBrotherTestAccess::Origin(F.Boss, false, FVector(10, 0, 100));
+	TestTrue(TEXT("Disabling the option restores the unscaled legacy fallback"), NPC->GetRangedAttackOrigin().Equals(F.Boss->GetActorLocation() + FVector(0, 0, 60)));
 	return !HasAnyErrors();
 }
 

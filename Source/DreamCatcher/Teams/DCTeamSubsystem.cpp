@@ -13,6 +13,7 @@
 #include "Player/DCPlayerState.h"
 #include "Teams/DCTeamInfoBase.h"
 #include "Teams/DCTeamDisplayAsset.h"
+#include "Character/DCLyraHealthComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCTeamSubsystem)
 
@@ -345,6 +346,14 @@ TArray<int32> UDCTeamSubsystem::GetTeamIDs() const
 
 bool UDCTeamSubsystem::CanCauseDamage(const UObject* Instigator, const UObject* Target, bool bAllowDamageToSelf) const
 {
+	const UDCLyraHealthComponent* TargetHealth = UDCLyraHealthComponent::FindHealthComponent(Cast<const AActor>(Target));
+	if (TargetHealth && TargetHealth->ShouldRejectPostDeathDamage())
+	{
+		// Shared by ranged damage execution and the original hit-marker predicate.
+		// The hit that first reaches zero was accepted while the target was alive.
+		return false;
+	}
+
 	if (bAllowDamageToSelf)
 	{
 		// Single-life NPCs need not have PlayerStates. Two missing states do not

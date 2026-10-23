@@ -49,6 +49,8 @@ public class DreamCatcher : ModuleRules
 			"AudioMixer",
 			"AudioModulation"
 		});
+		// Story clear movie: engine media playback, texture and non-spatial UI audio.
+		PrivateDependencyModuleNames.Add("MediaAssets");
 		// Original AI development lookup and opt-in WorldSettings map validation.
 		PrivateDependencyModuleNames.Add("AssetRegistry");
 		if (Target.bBuildEditor)

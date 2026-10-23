@@ -7,7 +7,7 @@
 > **Lyra 이식 정책 갱신:** 2026-09-10 KST
 > **작업 분담·자동화·마감 기준 갱신:** 2026-10-05 KST / **TODO 승인 갱신:** 2026-10-18 KST / **서브에이전트 운영 갱신:** 2026-10-23 KST
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
-> **최신 재개:** 2026-10-23, 아래 **0.138 및 0.4** — 기본은 Codex가 직접 작업한다. 서브에이전트 2개 이상에게 맡길 수 있는 독립 작업으로 나눠 실제 병렬 처리할 수 있을 때만 서브에이전트를 사용하며, 그 외에는 직접 작업한다. 동시 활동 서브에이전트는 하위 재위임을 합산해 최대3개다. 결과 회수 후 사용 가능한 종료 수단과 실행 상태를 확인하고, 완전 종료 도구가 없으면 완료 확인 후 불필요한 호출·대기를 중단한다. TODO 두 단계 승인과 사용자 빌드·수동 확인·Git 작업 분담은 유지한다. **0.136의 BaseDamage 검증 완료·Editor 수치 조절 및 사용자 수용 한계는 그대로 유지**하며 HARU/SMG/탄창/Level_1·보스·미승인 인계 문서를 보존한다.
+> **최신 재개:** 2026-10-24, 아래 **0.140** — 사용자 빌드 후 승인한 PV 에셋3개 적용·별도 재로드, 새 native 입력/정리 검사2개, 실제 PIE의 1920×1080 재생·끝 부근 seek 후 반복·모드 선택 맵 재진입 재생·미디어 실패 시 메뉴 진행을 확인했다. **추가 C++ 변경/재빌드 불필요, 사용자 실제 키보드·마우스·게임패드 입력·화면·소리·패키징 수용 대기**다. 최신 Level_1/2·기존 미커밋 작업·두 Stash를 보존했다. 운영 기준은 0.4·0.138, BaseDamage 완료/수용 한계는 0.136을 유지한다.
 
 ---
 
@@ -1595,6 +1595,26 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - 원본 두 개와 공통 기준의 실제 LFS 해시를 보존했고 refs/codex-recovery/level1-20261016 아래4개 복구 참조를 추가했다. Stash d02c1c9는 그대로이며 재적용할 필요가 없다. 복구 맵 하나만 Git 충돌 해결 표시하고 커밋/푸시·빌드/패키징은 사용자에게 남긴다. 상세와 최종 해시는`docs/handoffs/level1-merge-recovery-2026-10-16.md`를 따른다.
 
 ---
+
+## 0.140 최신 재개 — 2026-10-24 PV 3에셋 적용·재로드·실제 반복/재진입/실패 경로 통과 / 사용자 수용 대기
+
+- 사용자가 Development Editor/Win64 빌드를 성공했다. DLL은 **03:19:39 KST**, 7,273,472바이트, SHA256 `130387eace2134845140849bedd9ddb0074b984d9d391a763833714c53324890`다. 준비한 C++ 소스와 일치하며 이번 적용/검사에서 C++·Build.cs·Config를 추가 수정하거나 빌드/패키징을 실행하지 않았다. 아래0.139의 사용자 빌드·에셋 연결 대기는 이전 이력이다.
+- `frontend_intro_setup.py` apply A는 종료0·complete=true, **기존 PV FileMediaSource·FrontendStateComponent 두 개와 신규 W_DC_FrontendIntro 한 개만 저장**했다. PV의 FilePath는 `./Movies/DREAMCATCHER_PV.mp4`, 신규 위젯의 IntroMediaSource는 기존 PV, FrontendStateComponent의 IntroScreenClass는 새 위젯이다. 기존 MainScreenClass/PressStartScreenClass·전체 CDO의 허용 필드 외 데이터·기존 그래프는 유지됐다. 별도 verify A는 저장0·종료0·complete=true이며 세 에셋의 전체 속성/해시·영상 존재/Validate를 확인했다.
+- 새 `DreamCatcher.Frontend.Intro.KeyboardReleaseAndCleanup`·`MouseReleaseAndCleanup` **native2개 성공, 테스트 실패/경고0**이다. 건너뛴 Enter의 반복·해제/다음 입력, 마우스 해제와 미디어/화면 소유 입력 자원 해제를 검사했다. 실제 하드웨어 키 입력·게임패드 장치 수용과 구분한다.
+- 실제 렌더링 PIE **loop_A**에서 PV **1920×1080, 길이36.9056666초**, 초기 재생0.1001초를 확인했다. 실제 미디어를 끝0.5초 전으로 seek한 뒤 0.0667333초로 돌아가는 반복을 관찰했다. 위젯 API로 종료하면 모드 선택 화면이 표시되고 미디어 참조가 해제됐다. 같은 `L_DC_FrontEnd`를 OpenLevel로 재실행한 별도 월드에서도 다시0.1001초부터 재생했고 두 번째 종료 후 메뉴가 표시됐다. 전체 클립 두 번 완주·실제 키 입력·플레이 후 Level_1 복귀를 재시험한 것은 아니다.
+- 별도 PIE **failure_A**는 존재하지 않는 소스를 **메모리에서만** 지정해 모드 선택 메뉴 진행을 확인하고 원래 CDO 참조를 복원했다. 두 PIE는 각각 프로세스 종료0·후처리 complete=true·Engine Error/ensure/Fatal0·Automation Success다. 정상 모드는 테스트 경고0, 실패 모드는 예상한 `Missing PV media source/file; continuing to mode selection` 경고1개가 있어 무경고로 보고하지 않는다.
+- 독립 후처리에서 Automation index의 UTF-8 BOM을 발견해 `frontend_intro_probe.py`의 JSON 읽기만 `utf-8-sig`로 보완했다. 기존 두 실제 PIE 결과를 정상 확정했으며 게임 코드/에셋 동작 수정이나 추가 재빌드는 없다. 에셋3개 적용 뒤 다른 콘텐츠·소스·Config·DLL·최신 Level_1/2/3·모드 선택 맵·기존 HARU/SMG/탄창·AI/보스·사용자 reticle 작업을 보존했다. Git raw index 해시는 갱신됐지만 **5,073개 스테이징 경로·모드·객체는 동일**함을 확인했고 두 Stash도 남았다. Codex는 커밋·푸시·병합을 하지 않았다.
+- 근거: `Saved/Diagnostics/FrontendPV20261024/final_result_A.json`, `post_build_baseline_A.json`, `assets_A/apply.json`·verify 보고서, `pie_loop_A.json`·`pie_failure_A.json`, `index_final_A.json`, `Saved/Automation/FrontendPVNative_A`·`FrontendPVPIE_loop_A`·`FrontendPVPIE_failure_A`. **다음은 사용자 Editor에서 L_DC_FrontEnd를 실행해 키보드/마우스/게임패드 건너뛰기·재진입·화면 비율/반복·소리를 확인**하는 단계다. 추가 C++ 빌드는 필요 없으며 패키징과 물리 입력/시각/청취 수용은 자동 검사 완료에 포함하지 않는다.
+
+## 0.139 이력 — 2026-10-24 매 모드 선택 맵 진입 PV 코드 준비 / 사용자 빌드 대기
+
+- 사용자는 PV TODO를 1차 승인하고 **최초 실행 한 번이 아니라 `/Game/DreamCatcher/Maps/L_DC_FrontEnd` 맵에 진입할 때마다** 재생하도록 정정했다. 상세 1~5번(영상 경로·패키징, 전체 화면 위젯, 입력·종료, 메뉴 흐름 연결, 검사·기록)을 최종 승인했으며 C++ 빌드는 사용자 담당이다. 직접 순차 작성했고 서브에이전트를 사용하지 않았다.
+- 앞선 Git 병합은 사용자 커밋 `dc51ea6`과 원격 `f2ba38f`의 병합 `be828d5`로 완료됐다. 새 PV·최신 저장 맵·reticle 작업을 별도 Stash로 먼저 보존한 뒤 기존 Stash 39개와 새 변경 5개를 복원했다. 겹친 Level_2는 사용자가 **현재 저장본 우선**으로 선택했고, 이어 다른 중복 파일도 현재 상태를 우선하라고 지시했다. 실제 43개 고유 파일의 해시·스테이징 상태를 확인했으며 두 Stash와 이전 Level_2도 남겼다. Codex는 커밋·푸시·병합 커밋을 만들지 않았다. 근거: `Saved/Diagnostics/Level1LocalKeep20261024/restore_A.json`.
+- 신규 `UI/Frontend/DCFrontendIntroScreen.h/.cpp`는 기존 MissionClear의 엔진 MediaPlayer·MediaTexture·비공간 UI 오디오 사용 방식을 참고한다. 원본 비율·검은 여백, 실제 반복 재생, 입력 즉시 미디어 해제, 재생 실패 시 메뉴 진행, 재활성화 초기화를 구현했다. 건너뛴 키의 반복/해제 또는 마우스 해제가 메뉴 선택으로 이어지지 않도록 해당 입력만 해제까지 보관하며, 해제/창 비활성화 후 입력 프로세서를 정리한다. 마우스 이동·아날로그 축 이동은 건너뛰기 입력에 포함하지 않는다.
+- `DCLyraFrontendStateComponent.h/.cpp`에 **로그인/세션 처리 뒤·모드 선택 앞의 별도 Intro 단계**와 `IntroScreenClass`를 추가했다. 기존 Press Start는 로그인된 사용자에게 생략되므로 PV 용도로 재사용하지 않았다. GameInstance에 재생 완료 플래그를 두지 않아 맵 재진입마다 실행하며 설정 창 닫기만으로는 다시 실행하지 않는다. 기존 CommonUI·로딩·메인 화면·스토리 진입 경로는 유지한다.
+- `/Game/DreamCatcher/Screens/DREAMCATCHER_PV`는 읽기 전용 UE 조회에서 FileMediaSource, 원본 `C:/Users/Min/Downloads/DREAMCATCHER_PV.mp4` 존재/Validate를 확인했다. 원본 MP4를 `Content/Movies/DREAMCATCHER_PV.mp4`로 복사했다(41,079,464바이트, SHA256 `76c64ec27aa07960b3142f4cc544d9ea4e004fa15d99ab496645af60748e7f5e`, 재인코딩 없음). 복원된 `DefaultGame.ini`에 `+NonUFSMovies=DREAMCATCHER_PV` 한 줄만 추가하고 기존 MissionClear·맵 설정을 보존했다. MediaAssets 의존성은 기존 Stash에 이미 있어 Build.cs를 추가 수정하지 않았다.
+- 기존 `DCFrontendAutomationTests.cpp`에 키 반복/해제와 마우스 해제·자원 정리 native 검사 2개를 추가했다. `Scripts/Editor/frontend_intro_setup.py`는 사용자 빌드 후 기존 PV·FrontendStateComponent 두 에셋과 신규 `W_DC_FrontendIntro` 한 개만 Unreal 내부 API로 설정·Compile·저장하며 별도 verify에서 재로드한다. 다른 에디터·활성 소스컨트롤·자동 Compile 저장을 거부하고 전체 CDO·기존 그래프/보호 파일·Git 인덱스를 확인한다. `frontend_intro_probe.py`는 실제 미디어 끝 근처 seek 후 반복 관찰·위젯 API 종료·같은 맵 재진입 재생과 별도 잘못된 미디어 모드를 준비한다. 물리 입력/화면/소리 수용과 구분하며 종료 후 로그·Automation 결과까지 최종 판정한다.
+- **현재는 C++ 코드와 자동화 작성 단계다.** 에셋 저장0이며 PV 에셋은 아직 Downloads 원본 경로를 참조한다. 신규 위젯 생성·기존 두 에셋 연결·별도 재로드·새 검사 실행·PIE·패키징은 미실행이다. 사용자 빌드 이후 같은 최종 승인 범위에서 에셋 apply→verify→native 검사/실제 PIE로 이어간다. 기존 HARU·SMG/탄창·AI/전투·보스·최신 Level_1/2·사용자 reticle 작업은 보존한다. 코드 작성 중 별도 외부 빌드로 DLL이 갱신됐지만 그 뒤 소스도 수정됐으므로 이번 최종 소스의 빌드 성공으로 간주하지 않는다. Codex는 C++ 빌드·패키징을 실행하지 않았다.
 
 ## 0.138 최신 재개 — 2026-10-23 직접 작업 우선·서브에이전트 사용 조건 변경
 

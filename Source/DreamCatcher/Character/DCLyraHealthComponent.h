@@ -86,6 +86,13 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "Lyra|Health", Meta = (ExpandBoolAsExecs = "ReturnValue"))
 	bool IsDeadOrDying() const { return (DeathState > EDCLyraDeathState::NotDead); }
 
+	// Opt-in for single-life Inspector bots. Existing player/boss defaults stay unchanged.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Lyra|Health|Death")
+	bool bPreventDamageAfterDeath = false;
+
+	// Also covers HP-zero callbacks before the Death ability has set DeathState.
+	UE_API bool ShouldRejectPostDeathDamage() const;
+
 	// Begins the death sequence for the owner.
 	UE_API virtual void StartDeath();
 

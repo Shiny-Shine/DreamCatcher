@@ -1,5 +1,6 @@
 #include "UI/Stage/DCStageUIComponent.h"
 #include "UI/Stage/DCStageResultLayer.h"
+#include "UI/Stage/DCMissionClearWidget.h"
 #include "UI/DCLyraSettingScreen.h"
 #include "AbilitySystem/Abilities/DCGameplayAbility.h"
 #include "AbilitySystem/DCAbilitySystemComponent.h"
@@ -113,9 +114,16 @@ void UDCStageUIComponent::StageEnded(ADCStageDirector*, bool)
 void UDCStageUIComponent::PresentResult()
 {
 	ADCStageRunGameMode* Mode = GetWorld()->GetAuthGameMode<ADCStageRunGameMode>();
-	if (bEnding || Result || !Root.IsValid() || !Mode || !Mode->HasRunEnded() || Mode->IsStageTravelPending()) { return; }
+	if (bEnding || Result || MissionClear || !Root.IsValid() || !Mode || !Mode->HasRunEnded() || Mode->IsStageTravelPending()) { return; }
 	CancelUnappliedSettings();
 	Menu->ClearWidgets(); Modal->ClearWidgets();
+	if (Mode->ShouldPlayMissionClear())
+	{
+		MissionClear = Root->PushWidgetToLayerStack<UDCMissionClearWidget>(TAG_R13_Menu, UDCMissionClearWidget::StaticClass(),
+			[Mode](UDCMissionClearWidget& Widget) { Widget.BindStage(Mode); });
+		SynchronizeInput();
+		return;
+	}
 	Result = Root->PushWidgetToLayerStack<UDCStageResultLayer>(TAG_R13_Menu, UDCStageResultLayer::StaticClass(),
 		[Mode](UDCStageResultLayer& Widget) { Widget.BindStage(Mode); });
 	SynchronizeInput();
@@ -138,6 +146,12 @@ void UDCStageUIComponent::EndPlay(const EEndPlayReason::Type Reason)
 	if (Modal.IsValid()) { Modal->OnDisplayedWidgetChanged().Remove(ModalHandle); }
 	CancelUnappliedSettings();
 	if (Root.IsValid() && Result) { Root->FindAndRemoveWidgetFromLayer(Result); }
+	if (MissionClear)
+	{
+		MissionClear->StopPresentation();
+		if (Root.IsValid()) { Root->FindAndRemoveWidgetFromLayer(MissionClear); }
+		MissionClear = nullptr;
+	}
 	Result = nullptr;
 	ReleaseInput();
 	Super::EndPlay(Reason);

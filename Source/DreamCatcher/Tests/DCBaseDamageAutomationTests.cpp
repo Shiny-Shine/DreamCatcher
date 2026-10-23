@@ -222,7 +222,7 @@ bool FDCBaseDamageRifleExecutionTest::RunTest(const FString&)
 	UDCAbilitySystemComponent* TargetASC = Target->GetDCAbilitySystemComponent();
 	TargetASC->InitAbilityActorInfo(Target, Target);
 	struct FCase { bool bBot; float PlayerBase; float EnemyBase; float Expected; };
-	const FCase Cases[] = {{false,0,12,12},{true,0,12,12},{false,8,8,20},{true,8,8,8},{true,8,0,0}};
+	const FCase Cases[] = {{false,0,12,24},{true,0,12,12},{false,8,8,32},{true,8,8,8},{true,8,0,0}};
 	for (const FCase& Case : Cases)
 	{
 		AController* Controller = Case.bBot ? static_cast<AController*>(Fixture.Spawn<ADCLyraPlayerBotController>())

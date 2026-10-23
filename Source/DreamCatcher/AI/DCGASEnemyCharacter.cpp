@@ -50,6 +50,12 @@ ADCGASEnemyCharacter::ADCGASEnemyCharacter(const FObjectInitializer& ObjectIniti
 }
 
 UAbilitySystemComponent* ADCGASEnemyCharacter::GetAbilitySystemComponent() const { return AbilitySystemComponent; }
+FVector ADCGASEnemyCharacter::GetRangedAttackOrigin() const
+{
+	const USkeletalMeshComponent* EnemyMesh = GetMesh();
+	return EnemyMesh && EnemyMesh->DoesSocketExist(TEXT("Muzzle")) ? EnemyMesh->GetSocketLocation(TEXT("Muzzle"))
+		: GetActorLocation() + FVector(0.0, 0.0, 60.0);
+}
 FGenericTeamId ADCGASEnemyCharacter::GetGenericTeamId() const { return FGenericTeamId(TeamId); }
 FOnDCTeamIndexChangedDelegate* ADCGASEnemyCharacter::GetOnTeamIndexChangedDelegate() { return &OnTeamChanged; }
 bool ADCGASEnemyCharacter::IsDeadOrDying() const { return bDeathReported || HealthComponent->IsDeadOrDying(); }

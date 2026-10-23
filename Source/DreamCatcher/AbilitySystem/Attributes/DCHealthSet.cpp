@@ -11,6 +11,7 @@
 #include "GameplayEffectExtension.h"
 #include "Messages/DCVerbMessage.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
+#include "Character/DCLyraHealthComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCHealthSet)
 
@@ -102,6 +103,15 @@ bool UDCHealthSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData &Data
 	{
 		if (Data.EvaluatedData.Magnitude > 0.0f)
 		{
+			const UDCLyraHealthComponent* TargetHealth = UDCLyraHealthComponent::FindHealthComponent(Data.Target.GetAvatarActor());
+			if (TargetHealth && TargetHealth->ShouldRejectPostDeathDamage())
+			{
+				// Reject before meta/resource changes and damage messages. Original weapon
+				// GEs require a successful modifier before executing their damage Cue.
+				Data.EvaluatedData.Magnitude = 0.0f;
+				return false;
+			}
+
 			const bool bIsDamageFromSelfDestruct = Data.EffectSpec.GetDynamicAssetTags().HasTagExact(TAG_Gameplay_DamageSelfDestruct);
 
 			if (Data.Target.HasMatchingGameplayTag(DCGameplayTags::Gameplay_DamageImmunity) && !bIsDamageFromSelfDestruct)

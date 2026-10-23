@@ -1,12 +1,15 @@
 #pragma once
 
 #include "GameModes/Lyra/DCLyraGameMode.h"
+#include "Engine/EngineBaseTypes.h"
 #include "Stage/DCStageDirector.h"
 #include "DCStageRunGameMode.generated.h"
 
 class UDCAbilitySystemComponent;
 class UDCLyraHealthComponent;
 class UDCStageResultWidget;
+class UDCMissionClearWidget;
+class UMediaSource;
 
 /** Opt-in, standalone R11 stage adapter. Original Lyra match modes are unchanged. */
 UCLASS()
@@ -34,6 +37,13 @@ public:
 	FText GetStageTitle() const { return PhaseTitle; }
 	UFUNCTION(BlueprintPure, Category="Stage|UI")
 	bool IsStageTravelPending() const { return bTravelPending; }
+	UFUNCTION(BlueprintPure, Category="Stage|Mission Clear")
+	bool ShouldPlayMissionClear() const;
+	UMediaSource* GetMissionClearSource() const { return MissionClearSource; }
+	float GetMissionClearFadeDuration() const { return MissionClearFadeDuration; }
+	bool BeginMissionClearPresentation(UDCMissionClearWidget* Presentation);
+	bool RequestMissionClearTravel(const UDCMissionClearWidget* Presentation);
+	void ReportMissionClearFailure(const UDCMissionClearWidget* Presentation);
 	/** Only the opt-in R13 in-game menu may abort and return before the result. */
 	UFUNCTION(BlueprintCallable, Category="Stage|UI")
 	bool RequestExitStageFromMenu();
@@ -54,6 +64,15 @@ protected:
 	TSubclassOf<UDCStageResultWidget> ResultWidgetClass;
 	UPROPERTY(EditDefaultsOnly, Category="Stage|UI")
 	TSoftObjectPtr<UWorld> ReturnMap;
+	/** Production story maps opt in; existing stage fixtures keep their result UI. */
+	UPROPERTY(EditDefaultsOnly, Category="Stage|Mission Clear", meta=(EditCondition="bUseExperienceUI"))
+	bool bPlayMissionClearOnSuccess = false;
+	UPROPERTY(EditDefaultsOnly, Category="Stage|Mission Clear", meta=(EditCondition="bPlayMissionClearOnSuccess"))
+	TObjectPtr<UMediaSource> MissionClearSource;
+	UPROPERTY(EditDefaultsOnly, Category="Stage|Mission Clear", meta=(EditCondition="bPlayMissionClearOnSuccess"))
+	TSoftObjectPtr<UWorld> NextLevel;
+	UPROPERTY(EditDefaultsOnly, Category="Stage|Mission Clear", meta=(EditCondition="bPlayMissionClearOnSuccess", ClampMin="0.0", Units="s"))
+	float MissionClearFadeDuration = .5f;
 	UPROPERTY(EditDefaultsOnly, Category="Stage", meta=(ClampMin="1.0", Units="s"))
 	float PlayerReadyTimeout = 15.0f;
 private:
@@ -67,6 +86,7 @@ private:
 	void CleanupPresentation();
 	bool QueueTravel(FName LevelName);
 	void ExecuteTravel();
+	void HandleStageTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& Error);
 	UFUNCTION()
 	void HandlePlayerPawnChanged(APawn* OldPawn, APawn* NewPawn);
 	UFUNCTION()
@@ -85,6 +105,8 @@ private:
 	TWeakObjectPtr<APlayerController> RunPlayer;
 	TWeakObjectPtr<UDCLyraHealthComponent> PlayerHealth;
 	TWeakObjectPtr<UDCAbilitySystemComponent> InputBlockedASC;
+	TWeakObjectPtr<UDCMissionClearWidget> MissionClearPresentation;
+	FDelegateHandle StageTravelFailureHandle;
 	UPROPERTY(Transient)
 	TObjectPtr<UDCStageResultWidget> StageWidget;
 	FText PhaseTitle;
@@ -101,6 +123,7 @@ private:
 	bool bTravelPending = false;
 	bool bOwnsInputIgnore = false;
 	bool bPreviousMouseCursor = false;
+	bool bMissionClearFailed = false;
 #if WITH_DEV_AUTOMATION_TESTS
 	friend struct FDCStageFlowTestAccess;
 	friend struct FDCStageUITestAccess;

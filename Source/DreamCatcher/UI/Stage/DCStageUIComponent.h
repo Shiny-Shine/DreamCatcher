@@ -9,6 +9,7 @@ class UCommonActivatableWidget;
 class UCommonActivatableWidgetContainerBase;
 class UDCAbilitySystemComponent;
 class UDCStageResultLayer;
+class UDCMissionClearWidget;
 class UPrimaryGameLayout;
 
 /** Local, opt-in R13 layer/input lifecycle. Existing R11/R12 do not add this component. */
@@ -38,6 +39,7 @@ private:
 	TWeakObjectPtr<ADCStageDirector> Stage;
 	TWeakObjectPtr<UDCAbilitySystemComponent> BlockedASC;
 	UPROPERTY(Transient) TObjectPtr<UDCStageResultLayer> Result;
+	UPROPERTY(Transient) TObjectPtr<UDCMissionClearWidget> MissionClear;
 	FDelegateHandle MenuHandle;
 	FDelegateHandle ModalHandle;
 	FTimerHandle ConnectTimer;

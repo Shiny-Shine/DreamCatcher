@@ -48,6 +48,8 @@ private:
 	void FlowStep_WaitForUserInitialization(FControlFlowNodeRef SubFlow);
 	void FlowStep_TryShowPressStartScreen(FControlFlowNodeRef SubFlow);
 	void FlowStep_TryJoinRequestedSession(FControlFlowNodeRef SubFlow);
+	void FlowStep_TryShowIntroScreen(FControlFlowNodeRef SubFlow);
+	void ContinueAfterIntro();
 	void FlowStep_TryShowMainScreen(FControlFlowNodeRef SubFlow);
 
 	bool bShouldShowLoadingScreen = true;
@@ -57,6 +59,10 @@ private:
 	UPROPERTY(EditAnywhere, Category = UI)
 	TSoftClassPtr<UCommonActivatableWidget> PressStartScreenClass;
 
+	// Separate from Press Start: replay even when the local user is already initialized.
+	UPROPERTY(EditAnywhere, Category = UI)
+	TSoftClassPtr<UCommonActivatableWidget> IntroScreenClass;
+
 	UPROPERTY(EditAnywhere, Category = UI)
 	TSoftClassPtr<UCommonActivatableWidget> MainScreenClass;
 
@@ -65,6 +71,7 @@ private:
 	
 	// If set, this is the in-progress press start screen task
 	FControlFlowNodePtr InProgressPressStartScreen;
+	FControlFlowNodePtr InProgressIntroScreen;
 
 	FDelegateHandle OnJoinSessionCompleteEventHandle;
 };

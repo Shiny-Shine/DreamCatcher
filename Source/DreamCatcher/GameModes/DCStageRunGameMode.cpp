@@ -7,17 +7,20 @@
 #include "Character/DCLyraHealthComponent.h"
 #include "Character/DCPawnExtensionComponent.h"
 #include "Engine/World.h"
+#include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameModes/Lyra/DCLyraExperienceManagerComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/PackageName.h"
 #include "Player/DCPlayerState.h"
 #include "Player/Lyra/DCLyraPlayerBotController.h"
 #include "Teams/DCTeamSubsystem.h"
 #include "TimerManager.h"
 #include "UI/Stage/DCStageResultWidget.h"
+#include "UI/Stage/DCMissionClearWidget.h"
 #include "DreamCatcher.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCStageRunGameMode)
@@ -41,6 +44,10 @@ void ADCStageRunGameMode::InitGameState()
 
 void ADCStageRunGameMode::StartPlay()
 {
+	if (GEngine)
+	{
+		StageTravelFailureHandle = GEngine->OnTravelFailure().AddUObject(this, &ThisClass::HandleStageTravelFailure);
+	}
 	Super::StartPlay();
 	for (TActorIterator<ADCStageDirector> It(GetWorld()); It; ++It)
 	{
@@ -243,7 +250,7 @@ void ADCStageRunGameMode::PresentResult()
 	PC->SetIgnoreMoveInput(true);
 	PC->SetIgnoreLookInput(true);
 	bOwnsInputIgnore = true;
-	PC->bShowMouseCursor = true;
+	PC->bShowMouseCursor = !ShouldPlayMissionClear();
 	if (!bUseExperienceUI)
 	{
 		StageWidget->ShowResult(bRunSucceeded);
@@ -251,8 +258,40 @@ void ADCStageRunGameMode::PresentResult()
 	}
 }
 
+bool ADCStageRunGameMode::ShouldPlayMissionClear() const
+{
+	return bUseExperienceUI && bPlayMissionClearOnSuccess && bRunEnded && bRunSucceeded && !bMissionClearFailed;
+}
+
+bool ADCStageRunGameMode::BeginMissionClearPresentation(UDCMissionClearWidget* Presentation)
+{
+	if (!Presentation || !ShouldPlayMissionClear() || bEndingPlay || bTravelPending
+		|| GetNetMode() != NM_Standalone || MissionClearPresentation.IsValid()) { return false; }
+	MissionClearPresentation = Presentation;
+	return true;
+}
+
+bool ADCStageRunGameMode::RequestMissionClearTravel(const UDCMissionClearWidget* Presentation)
+{
+	if (!Presentation || MissionClearPresentation.Get() != Presentation || !ShouldPlayMissionClear()
+		|| !Presentation->HasPlaybackFinished() || NextLevel.IsNull()) { return false; }
+	const FString Package = NextLevel.ToSoftObjectPath().GetLongPackageName();
+	if (!FPackageName::IsValidLongPackageName(Package) || !FPackageName::DoesPackageExist(Package)) { return false; }
+	return QueueTravel(FName(*Package));
+}
+
+void ADCStageRunGameMode::ReportMissionClearFailure(const UDCMissionClearWidget* Presentation)
+{
+	if (Presentation && MissionClearPresentation.Get() == Presentation && !bEndingPlay)
+	{
+		bMissionClearFailed = true;
+		if (APlayerController* PC = RunPlayer.Get()) { PC->bShowMouseCursor = true; }
+	}
+}
+
 bool ADCStageRunGameMode::RequestExitStageFromMenu()
 {
+	if (ShouldPlayMissionClear()) { return false; }
 	if (!bUseExperienceUI || bEndingPlay || bTravelPending || ReturnMap.IsNull() || GetNetMode() != NM_Standalone) { return false; }
 	if (!bRunEnded) { EndRun(false); }
 	return RequestExitStage();
@@ -260,11 +299,13 @@ bool ADCStageRunGameMode::RequestExitStageFromMenu()
 
 bool ADCStageRunGameMode::RequestRestartStage()
 {
+	if (ShouldPlayMissionClear()) { return false; }
 	return QueueTravel(FName(*UGameplayStatics::GetCurrentLevelName(this, true)));
 }
 
 bool ADCStageRunGameMode::RequestExitStage()
 {
+	if (ShouldPlayMissionClear()) { return false; }
 	if (ReturnMap.IsNull()) { return false; }
 	return QueueTravel(FName(*ReturnMap.ToSoftObjectPath().GetLongPackageName()));
 }
@@ -287,6 +328,15 @@ void ADCStageRunGameMode::ExecuteTravel()
 void ADCStageRunGameMode::PerformLevelTravel(FName LevelName)
 {
 	UGameplayStatics::OpenLevel(this, LevelName);
+}
+
+void ADCStageRunGameMode::HandleStageTravelFailure(UWorld* World, ETravelFailure::Type, const FString&)
+{
+	if (World != GetWorld() || bEndingPlay || !bTravelPending || !MissionClearPresentation.IsValid()) { return; }
+	GetWorldTimerManager().ClearTimer(TravelTimer);
+	bTravelPending = false;
+	PendingTravel = NAME_None;
+	MissionClearPresentation->ShowFailure(LOCTEXT("NextLevelFailed", "다음 화면을 열지 못했습니다. 레벨을 다시 시작하거나 모드 선택으로 돌아가 주세요."));
 }
 
 void ADCStageRunGameMode::HandleRetryClicked() { RequestRestartStage(); }
@@ -319,6 +369,9 @@ void ADCStageRunGameMode::CleanupPresentation()
 void ADCStageRunGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	bEndingPlay = true;
+	if (GEngine) { GEngine->OnTravelFailure().Remove(StageTravelFailureHandle); }
+	if (MissionClearPresentation.IsValid()) { MissionClearPresentation->StopPresentation(); }
+	MissionClearPresentation.Reset();
 	GetWorldTimerManager().ClearTimer(ReadyTimer);
 	GetWorldTimerManager().ClearTimer(ResultTimer);
 	GetWorldTimerManager().ClearTimer(TravelTimer);

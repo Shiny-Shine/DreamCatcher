@@ -1,5 +1,6 @@
 #include "Tests/DCStageUITestTypes.h"
 #include "UI/Stage/DCStageUIComponent.h"
+#include "UI/Stage/DCMissionClearWidget.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCStageUITestTypes)
 
@@ -20,10 +21,38 @@ ADCR13StageModeFixture::ADCR13StageModeFixture()
 #include "Player/DCPlayerState.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/DCLyraAIAssemblyTestTypes.h"
+#include "MediaPlayer.h"
+#include "MediaTexture.h"
+#include "UObject/StrongObjectPtr.h"
 
 struct FDCStageUITestAccess
 {
 	static void Block(UDCStageUIComponent* UI, bool bBlock) { UI->SetMenuInputBlocked(bBlock); }
+	static UMediaPlayer* SeedMovie(UDCMissionClearWidget* Widget)
+	{
+		Widget->Player = NewObject<UMediaPlayer>(Widget);
+		Widget->Texture = NewObject<UMediaTexture>(Widget);
+		Widget->Texture->SetMediaPlayer(Widget->Player);
+		Widget->Player->OnEndReached.AddUniqueDynamic(Widget, &UDCMissionClearWidget::MediaEnded);
+		Widget->Player->OnMediaOpened.AddUniqueDynamic(Widget, &UDCMissionClearWidget::MediaOpened);
+		Widget->Player->OnMediaOpenFailed.AddUniqueDynamic(Widget, &UDCMissionClearWidget::MediaOpenFailed);
+		Widget->Presentation = UDCMissionClearWidget::EPresentation::Playing;
+		return Widget->Player;
+	}
+	static bool Released(const UDCMissionClearWidget* Widget) { return !Widget->Player && !Widget->Texture && !Widget->Sound; }
+	static void SeedCompletedMovie(UDCMissionClearWidget* Widget)
+	{
+		Widget->Presentation = UDCMissionClearWidget::EPresentation::Stopped;
+		Widget->bPlaybackFinished = true;
+		Widget->bHasPresentedVideoFrame = true;
+		Widget->LastMediaSeconds = 6.9;
+	}
+	static bool ReadyForAnotherStage(const UDCMissionClearWidget* Widget, const ADCStageRunGameMode* Mode)
+	{
+		return Widget->Presentation == UDCMissionClearWidget::EPresentation::Idle && Widget->Mode.Get() == Mode
+			&& !Widget->bPlaybackFinished && !Widget->bHasPresentedVideoFrame && !Widget->bMediaOpened
+			&& Widget->LastMediaSeconds == -1.0 && Released(Widget);
+	}
 };
 
 namespace DCStageUITests
@@ -95,6 +124,26 @@ bool FDCStageUIInputLifetimeTest::RunTest(const FString&)
 	TestFalse(TEXT("No residual UI move ignore"), PC->IsMoveInputIgnored());
 	TestFalse(TEXT("No residual UI look ignore"), PC->IsLookInputIgnored());
 	AddInfo(TEXT("Native ownership/request contracts only; real CommonUI menus/settings/focus require the R13 asset PIE."));
+	return !HasAnyErrors();
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCStageUIMovieLifetimeTest, "DreamCatcher.R13.UI.MissionClearMediaLifetime",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCStageUIMovieLifetimeTest::RunTest(const FString&)
+{
+	DCStageUITests::FFixture F; if (!F.Start(*this)) { return false; }
+	TStrongObjectPtr<UDCMissionClearWidget> Movie { NewObject<UDCMissionClearWidget>(F.World.GetTestWorld()) };
+	TStrongObjectPtr<UMediaPlayer> Player { FDCStageUITestAccess::SeedMovie(Movie.Get()) };
+	TestTrue(TEXT("Media end delegate initially owned"), Player->OnEndReached.IsBound());
+	Movie->StopPresentation(); Movie->StopPresentation();
+	TestFalse(TEXT("Teardown is never movie completion"), Movie->HasPlaybackFinished());
+	TestFalse(TEXT("End callback removed"), Player->OnEndReached.IsBound());
+	TestFalse(TEXT("Open callback removed"), Player->OnMediaOpened.IsBound());
+	TestFalse(TEXT("Failure callback removed"), Player->OnMediaOpenFailed.IsBound());
+	TestTrue(TEXT("Texture/player/audio ownership released idempotently"), FDCStageUITestAccess::Released(Movie.Get()));
+	FDCStageUITestAccess::SeedCompletedMovie(Movie.Get());
+	Movie->BindStage(F.Mode);
+	TestTrue(TEXT("Pooled instance is reset for the next stage, including playback authorization"),
+		FDCStageUITestAccess::ReadyForAnotherStage(Movie.Get(), F.Mode));
 	return !HasAnyErrors();
 }
 #endif

@@ -6,11 +6,13 @@
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "Character/DCLyraHealthComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "GameModes/DCStageRunGameMode.h"
 #include "Engine/World.h"
 
 ADCBossCharacter::ADCBossCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+	PrimaryActorTick.bCanEverTick = true;
 	BossPhase = CreateDefaultSubobject<UDCBossPhaseComponent>(TEXT("BossPhase"));
 	AutoPossessAI = EAutoPossessAI::Disabled; // No unused bot controller/PlayerState/BT for this fixed-position boss.
 	bAutoRangedAttack = false;
@@ -30,6 +32,31 @@ void ADCBossCharacter::BeginPlay()
 	GetCharacterMovement()->StopMovementImmediately();
 	GetCharacterMovement()->DisableMovement();
 	if (HasAuthority()) { BossPhase->InitializeBoss(); }
+}
+
+void ADCBossCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (!bAlwaysFacePlayer || !CanRunBossCombat() || BossPhase->GetBossRunState() == EDCBossRunState::Stopped) { return; }
+	const ADCStageRunGameMode* Mode = GetWorld()->GetAuthGameMode<ADCStageRunGameMode>();
+	const APlayerController* PC = Mode->GetStagePlayerController();
+	const APawn* Target = IsValid(PC) ? PC->GetPawn() : nullptr;
+	const UDCLyraHealthComponent* Health = UDCLyraHealthComponent::FindHealthComponent(Target);
+	if (!IsValid(Target) || Target->IsActorBeingDestroyed() || Target->GetWorld() != GetWorld()
+		|| !Health || Health->IsDeadOrDying() || Health->GetHealth() <= 0.f) { return; }
+	FVector Direction = Target->GetActorLocation() - GetActorLocation();
+	Direction.Z = 0.0;
+	if (!Direction.ContainsNaN() && !Direction.IsNearlyZero())
+	{
+		// Abilities retain their original locked origin/aim/ground during windup.
+		SetActorRotation(FRotator(0.0, Direction.Rotation().Yaw, 0.0));
+	}
+}
+
+FVector ADCBossCharacter::GetRangedAttackOrigin() const
+{
+	return bUseCustomAttackOrigin && !AttackOriginOffset.ContainsNaN()
+		? GetActorTransform().TransformPosition(AttackOriginOffset) : Super::GetRangedAttackOrigin();
 }
 
 bool ADCBossCharacter::CanRunBossCombat() const

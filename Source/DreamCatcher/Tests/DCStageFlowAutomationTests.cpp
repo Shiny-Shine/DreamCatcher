@@ -1,5 +1,6 @@
 #include "Tests/DCStageFlowTestTypes.h"
 #include "AI/DCEnemySpawner.h"
+#include "UI/Stage/DCMissionClearWidget.h"
 #include "Player/DCPlayerState.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCStageFlowTestTypes)
@@ -43,6 +44,13 @@ struct FDCStageFlowTestAccess
 	static void Completion(ADCStageDirector* Stage, ADCEncounterController* Encounter) { Stage->HandleEncounterCompleted(Encounter); }
 	static void TeamsReady(ADCStageRunGameMode* Mode) { Mode->bExperienceReady = true; }
 	static void EndRun(ADCStageRunGameMode* Mode, bool bSucceeded) { Mode->EndRun(bSucceeded); }
+	static void ConfigureMissionClear(ADCStageRunGameMode* Mode, const TCHAR* Destination)
+	{
+		Mode->bUseExperienceUI = true;
+		Mode->bPlayMissionClearOnSuccess = true;
+		Mode->NextLevel = TSoftObjectPtr<UWorld>(FSoftObjectPath(Destination));
+	}
+	static void MarkMovieEnded(UDCMissionClearWidget* Widget) { Widget->bPlaybackFinished = true; }
 	static void ObserveDirector(ADCStageRunGameMode* Mode, ADCStageDirector* Stage)
 	{
 		Mode->Director = Stage;
@@ -240,4 +248,69 @@ bool FDCStageTeamTravelTest::RunTest(const FString&)
 	return !HasAnyErrors();
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCStageMissionClearTravelTest, "DreamCatcher.R11.Stage.MissionClearTravelGate",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCStageMissionClearTravelTest::RunTest(const FString&)
+{
+	const TCHAR* Destinations[] = {
+		TEXT("/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_2.Level_2"),
+		TEXT("/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_3.Level_3"),
+		TEXT("/Game/DreamCatcher/Maps/L_DC_FrontEnd.L_DC_FrontEnd") };
+	for (const TCHAR* Destination : Destinations)
+	{
+		DCStageFlowTests::FFixture F; if (!F.Start(*this)) { return false; }
+		auto* Mode = F.World.GetTestWorld()->GetAuthGameMode<ADCR11ModeFixture>();
+		TStrongObjectPtr<UDCMissionClearWidget> Movie { NewObject<UDCMissionClearWidget>(F.World.GetTestWorld()) };
+		TStrongObjectPtr<UDCMissionClearWidget> Stale { NewObject<UDCMissionClearWidget>(F.World.GetTestWorld()) };
+		FDCStageFlowTestAccess::ConfigureMissionClear(Mode, Destination);
+		TestFalse(TEXT("Running stage has no clear presentation"), Mode->ShouldPlayMissionClear());
+		FDCStageFlowTestAccess::EndRun(Mode, true);
+		TestTrue(TEXT("Only successful opt-in run selects the movie UI"), Mode->ShouldPlayMissionClear());
+		TestFalse(TEXT("Unregistered completion rejected"), Mode->RequestMissionClearTravel(Movie.Get()));
+		TestTrue(TEXT("One presentation registered"), Mode->BeginMissionClearPresentation(Movie.Get()));
+		TestFalse(TEXT("Second presentation rejected"), Mode->BeginMissionClearPresentation(Stale.Get()));
+		TestFalse(TEXT("Opening/fading alone cannot travel"), Mode->RequestMissionClearTravel(Movie.Get()));
+		TestFalse(TEXT("Retry cannot skip the playing movie"), Mode->RequestRestartStage());
+		TestFalse(TEXT("Menu cannot skip the playing movie"), Mode->RequestExitStageFromMenu());
+		FDCStageFlowTestAccess::MarkMovieEnded(Stale.Get());
+		TestFalse(TEXT("Stale completion rejected"), Mode->RequestMissionClearTravel(Stale.Get()));
+		FDCStageFlowTestAccess::MarkMovieEnded(Movie.Get());
+		TestTrue(TEXT("Natural completion queues configured destination"), Mode->RequestMissionClearTravel(Movie.Get()));
+		TestFalse(TEXT("Duplicate completion rejected"), Mode->RequestMissionClearTravel(Movie.Get()));
+		TestEqual(TEXT("No travel inside media delegate"), Mode->TravelCalls, 0);
+		F.World.TickTestWorld(.02f); F.World.TickTestWorld(.02f);
+		TestEqual(TEXT("One deferred travel"), Mode->TravelCalls, 1);
+		TestEqual(TEXT("Configured destination"), Mode->LastTravel, FName(*FSoftObjectPath(Destination).GetLongPackageName()));
+	}
+	AddInfo(TEXT("Native authorization/destination contracts. Real decoding/audio and full map travel require the rendered PIE probe."));
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCStageMissionClearRecoveryTest, "DreamCatcher.R11.Stage.MissionClearFailureRecovery",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCStageMissionClearRecoveryTest::RunTest(const FString&)
+{
+	for (const bool bSucceeded : { false, true })
+	{
+		DCStageFlowTests::FFixture F; if (!F.Start(*this)) { return false; }
+		auto* Mode = F.World.GetTestWorld()->GetAuthGameMode<ADCR11ModeFixture>();
+		TStrongObjectPtr<UDCMissionClearWidget> Movie { NewObject<UDCMissionClearWidget>(F.World.GetTestWorld()) };
+		FDCStageFlowTestAccess::ConfigureMissionClear(Mode, TEXT("/Game/Missing.Next"));
+		FDCStageFlowTestAccess::EndRun(Mode, bSucceeded);
+		if (bSucceeded)
+		{
+			TestTrue(TEXT("Presentation starts"), Mode->BeginMissionClearPresentation(Movie.Get()));
+			FDCStageFlowTestAccess::MarkMovieEnded(Movie.Get());
+			TestFalse(TEXT("Missing destination never silently advances"), Mode->RequestMissionClearTravel(Movie.Get()));
+			Mode->ReportMissionClearFailure(nullptr);
+			TestTrue(TEXT("Unowned error cannot unlock the movie"), Mode->ShouldPlayMissionClear());
+			Mode->ReportMissionClearFailure(Movie.Get());
+		}
+		TestFalse(TEXT("Death or playback error does not replay the clear movie"), Mode->ShouldPlayMissionClear());
+		TestTrue(TEXT("Existing restart available"), Mode->RequestRestartStage());
+		F.World.TickTestWorld(.02f); F.World.TickTestWorld(.02f);
+		TestEqual(TEXT("One explicit recovery travel"), Mode->TravelCalls, 1);
+	}
+	return !HasAnyErrors();
+}
 #endif

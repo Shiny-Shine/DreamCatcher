@@ -235,6 +235,23 @@ void ADreamCatcherCharacter::RefreshGASAimMode(bool bForceBroadcast)
 	BP_OnAimModeChanged(CurrentGASAimMode);
 }
 
+void ADreamCatcherCharacter::FellOutOfWorld(const UDamageType& DamageType)
+{
+	if (IsPlayerControlled() && HealthComponent)
+	{
+		// Reuse Lyra's fall-death effect so armor/immunity cannot bypass death,
+		// and the existing death ability and stage-failure flow run normally.
+		if (HasAuthority())
+		{
+			HealthComponent->DamageSelfDestruct(/*bFellOutOfWorld=*/ true);
+		}
+		return;
+	}
+
+	// Inspector bots share this character base; preserve their engine behavior.
+	Super::FellOutOfWorld(DamageType);
+}
+
 void ADreamCatcherCharacter::OnDeathFinished(AActor*)
 {
 	GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::DestroyDueToDeath);

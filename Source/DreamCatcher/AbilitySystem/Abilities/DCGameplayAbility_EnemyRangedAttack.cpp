@@ -8,7 +8,6 @@
 #include "AbilitySystem/DCGameplayTags.h"
 #include "AbilitySystem/Executions/DCLyraDamageExecution.h"
 #include "Character/DCLyraHealthComponent.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
 #include "GameplayEffect.h"
 #include "Teams/DCTeamSubsystem.h"
@@ -50,9 +49,7 @@ bool UDCGameplayAbility_EnemyRangedAttack::HasValidConfiguration() const
 
 FVector UDCGameplayAbility_EnemyRangedAttack::GetFireOrigin(const ADCGASEnemyCharacter* Enemy)
 {
-	const USkeletalMeshComponent* Mesh = Enemy->GetMesh();
-	return Mesh && Mesh->DoesSocketExist(TEXT("Muzzle")) ? Mesh->GetSocketLocation(TEXT("Muzzle"))
-		: Enemy->GetActorLocation() + FVector(0.0, 0.0, 60.0);
+	return Enemy->GetRangedAttackOrigin();
 }
 
 FVector UDCGameplayAbility_EnemyRangedAttack::GetAimPoint(const AActor* AttackTarget)

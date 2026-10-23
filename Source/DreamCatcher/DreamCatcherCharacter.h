@@ -39,6 +39,7 @@ public:
 	float GetCurrentLookSensitivityMultiplier() const;
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void FellOutOfWorld(const class UDamageType& DamageType) override;
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;

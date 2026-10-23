@@ -22,6 +22,70 @@ void ADCFrontendModeFixture::PerformStoryTravel(FName Destination) { ++TravelCal
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Tests/AutomationCommon.h"
+#include "UI/Frontend/DCFrontendIntroScreen.h"
+#include "Framework/Application/IInputProcessor.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Input/Events.h"
+#include "InputCoreTypes.h"
+#include "MediaPlayer.h"
+#include "MediaTexture.h"
+#include "Misc/ScopeExit.h"
+#include "UObject/StrongObjectPtr.h"
+
+struct FDCFrontendIntroTestAccess
+{
+	static TSharedPtr<IInputProcessor> CaptureSkip(UDCFrontendIntroScreen* Screen, FKey Key)
+	{
+		Screen->bIntroActive = true;
+		Screen->Player = NewObject<UMediaPlayer>(Screen);
+		Screen->Texture = NewObject<UMediaTexture>(Screen);
+		Screen->Texture->SetMediaPlayer(Screen->Player);
+		Screen->Player->OnMediaOpened.AddUniqueDynamic(Screen, &UDCFrontendIntroScreen::MediaOpened);
+		Screen->InstallInputProcessor();
+		TSharedPtr<IInputProcessor> Guard = Screen->InputProcessor;
+		Screen->SkipFromInput(Key);
+		return Guard;
+	}
+	static bool Released(const UDCFrontendIntroScreen* Screen)
+	{
+		return !Screen->bIntroActive && !Screen->Player && !Screen->Texture && !Screen->Sound && !Screen->InputProcessor;
+	}
+};
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFrontendIntroKeyGuardTest, "DreamCatcher.Frontend.Intro.KeyboardReleaseAndCleanup",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCFrontendIntroKeyGuardTest::RunTest(const FString&)
+{
+	if (!FSlateApplication::IsInitialized()) { AddError(TEXT("Run in an initialized Editor Slate application.")); return false; }
+	TStrongObjectPtr<UDCFrontendIntroScreen> Screen(NewObject<UDCFrontendIntroScreen>());
+	TSharedPtr<IInputProcessor> Guard = FDCFrontendIntroTestAccess::CaptureSkip(Screen.Get(), EKeys::Enter);
+	ON_SCOPE_EXIT { FSlateApplication::Get().UnregisterInputPreProcessor(Guard); };
+	TestTrue(TEXT("Skipping closes media and detaches the screen's input resources"), FDCFrontendIntroTestAccess::Released(Screen.Get()));
+	FSlateApplication& App = FSlateApplication::Get();
+	TestTrue(TEXT("Held confirm cannot activate the mode menu"), Guard->HandleKeyDownEvent(App, FKeyEvent(EKeys::Enter, FModifierKeysState(), 0, true, 0, 0)));
+	TestFalse(TEXT("Another deliberate key remains usable"), Guard->HandleKeyDownEvent(App, FKeyEvent(EKeys::Right, FModifierKeysState(), 0, false, 0, 0)));
+	TestTrue(TEXT("The skipping key release is consumed"), Guard->HandleKeyUpEvent(App, FKeyEvent(EKeys::Enter, FModifierKeysState(), 0, false, 0, 0)));
+	TestFalse(TEXT("A new confirm belongs to the menu"), Guard->HandleKeyDownEvent(App, FKeyEvent(EKeys::Enter, FModifierKeysState(), 0, false, 0, 0)));
+	Screen->SkipIntro();
+	TestTrue(TEXT("Repeated finish is harmless"), FDCFrontendIntroTestAccess::Released(Screen.Get()));
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFrontendIntroMouseGuardTest, "DreamCatcher.Frontend.Intro.MouseReleaseAndCleanup",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCFrontendIntroMouseGuardTest::RunTest(const FString&)
+{
+	if (!FSlateApplication::IsInitialized()) { AddError(TEXT("Run in an initialized Editor Slate application.")); return false; }
+	TStrongObjectPtr<UDCFrontendIntroScreen> Screen(NewObject<UDCFrontendIntroScreen>());
+	TSharedPtr<IInputProcessor> Guard = FDCFrontendIntroTestAccess::CaptureSkip(Screen.Get(), EKeys::LeftMouseButton);
+	ON_SCOPE_EXIT { FSlateApplication::Get().UnregisterInputPreProcessor(Guard); };
+	FSlateApplication& App = FSlateApplication::Get();
+	const FPointerEvent Release(0, FVector2D::ZeroVector, FVector2D::ZeroVector, TSet<FKey>(), EKeys::LeftMouseButton, 0.f, FModifierKeysState());
+	TestTrue(TEXT("The click releasing over a mode card is consumed"), Guard->HandleMouseButtonUpEvent(App, Release));
+	TestFalse(TEXT("Only the skipping click is retained"), Guard->HandleMouseButtonUpEvent(App, Release));
+	TestTrue(TEXT("No media or screen-owned input resource remains"), FDCFrontendIntroTestAccess::Released(Screen.Get()));
+	return !HasAnyErrors();
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFrontendTravelTest, "DreamCatcher.Frontend.DeferredTravelAndRecovery",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
