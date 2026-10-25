@@ -79,6 +79,10 @@ struct FDCPlayerArmorSegment
 	UPROPERTY(Transient) FSlateBrush AuthoredFillBrush;
 	FVector2D AuthoredFillScale = FVector2D(1.f, 1.f);
 	float Fraction = 0.f;
+	float PreviousFraction = 0.f;
+	float AnimationElapsed = 0.f;
+	bool bAnimating = false;
+	bool bHealing = false;
 };
 
 /** Passive Stage HUD wrapper around the original Lyra W_Healthbar. */
@@ -122,6 +126,7 @@ protected:
 	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& Geometry, const FSlateRect& CullingRect,
 		FSlateWindowElementList& Elements, int32 LayerId, const FWidgetStyle& Style, bool bParentEnabled) const override;
 private:
@@ -135,13 +140,16 @@ private:
 	void BindHealthSpawnAnimation();
 	void UpdateHealthPresentation();
 	void UpdateArmorPresentation();
+	void ResetArmorAnimation();
+	void AdvanceArmorAnimation(float DeltaTime);
+	void ApplyArmorAnimation(const FDCPlayerArmorSegment& Segment);
 	void ReadSignatureState();
 	void UpdateSignaturePresentation();
 	void UnbindSource();
 	void UnbindHealth();
 	void HandleWorldTearDown(UWorld* World);
 	bool IsCurrentSource(const UDCLyraHealthComponent* Component) const;
-	void ApplyArmorBrush(UImage* Image, const FSlateBrush& Brush, float Fraction,
+	void ApplyArmorBrush(UImage* Image, const FSlateBrush& Brush,
 		TObjectPtr<UMaterialInstanceDynamic>& MID, TObjectPtr<UMaterialInterface>& Source);
 	void ApplySignatureBrush(UImage* Image, const FSlateBrush& Brush, const FLinearColor& Color, bool bRing,
 		TObjectPtr<UMaterialInstanceDynamic>& MID, TObjectPtr<UMaterialInterface>& Source);
@@ -184,6 +192,7 @@ private:
 	float DisplayedMaxHealth = 0.f;
 	float DisplayedArmor = 0.f;
 	float DisplayedMaxArmor = 0.f;
+	float PresentedMaxArmor = 0.f;
 	float CooldownRemaining = 0.f;
 	float CooldownDuration = 0.f;
 	float SignatureProgress = 0.f;
@@ -203,6 +212,7 @@ private:
 	bool bDesignerTreeReady = false;
 	bool bReportedInvalidDesignerTree = false;
 	bool bPreviewing = false;
+	bool bArmorPresentationInitialized = false;
 	bool bAuthoredHealthReleased = false;
 	bool bAuthoredHealthObserved = false;
 #if WITH_DEV_AUTOMATION_TESTS

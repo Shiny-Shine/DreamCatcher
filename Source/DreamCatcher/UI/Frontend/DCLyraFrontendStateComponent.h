@@ -18,6 +18,8 @@ struct FFrame;
 enum class ECommonUserOnlineContext : uint8;
 enum class ECommonUserPrivilege : uint8;
 class UCommonActivatableWidget;
+class UAudioComponent;
+class USoundBase;
 class UCommonUserInfo;
 class UDCLyraExperienceDefinition;
 
@@ -30,6 +32,9 @@ public:
 
 	UDCLyraFrontendStateComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	UFUNCTION(BlueprintPure, Category = "UI|Audio")
+	UAudioComponent* GetMenuMusicComponent() const { return MenuMusicComponent; }
+
 	//~UActorComponent interface
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -40,7 +45,12 @@ public:
 	//~End of ILoadingProcessInterface
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+	friend struct FDCFrontendMusicTestAccess;
+#endif
 	void OnExperienceLoaded(const UDCLyraExperienceDefinition* Experience);
+	void StartMenuMusic();
+	void StopMenuMusic();
 
 	UFUNCTION()
 	void OnUserInitialized(const UCommonUserInfo* UserInfo, bool bSuccess, FText Error, ECommonUserPrivilege RequestedPrivilege, ECommonUserOnlineContext OnlineContext);
@@ -65,6 +75,14 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = UI)
 	TSoftClassPtr<UCommonActivatableWidget> MainScreenClass;
+
+	// The existing cue retains its gain/pitch/loop settings. Start only after the menu is visible.
+	UPROPERTY(EditAnywhere, Category = "UI|Audio")
+	TObjectPtr<USoundBase> MenuMusic;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> MenuMusicComponent;
+	bool bMenuMusicStartRequested = false;
 
 	TSharedPtr<FControlFlow> FrontEndFlow;
 	TSharedPtr<FStreamableHandle> PendingScreenLoad;

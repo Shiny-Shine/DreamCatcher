@@ -14,6 +14,7 @@ void ADCFrontendModeFixture::PerformStoryTravel(FName Destination) { ++TravelCal
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR && WITH_SERVER_CODE
 #include "CommonPlayerController.h"
 #include "Engine/World.h"
+#include "GameFramework/Actor.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/SpectatorPawn.h"
 #include "GameFramework/WorldSettings.h"
@@ -23,6 +24,9 @@ void ADCFrontendModeFixture::PerformStoryTravel(FName Destination) { ++TravelCal
 #include "Misc/Parse.h"
 #include "Tests/AutomationCommon.h"
 #include "UI/Frontend/DCFrontendIntroScreen.h"
+#include "UI/Frontend/DCLyraFrontendStateComponent.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundWave.h"
 #include "Framework/Application/IInputProcessor.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Input/Events.h"
@@ -51,6 +55,49 @@ struct FDCFrontendIntroTestAccess
 		return !Screen->bIntroActive && !Screen->Player && !Screen->Texture && !Screen->Sound && !Screen->InputProcessor;
 	}
 };
+
+struct FDCFrontendMusicTestAccess
+{
+	static UAudioComponent* SeedRequestedMusic(UDCLyraFrontendStateComponent* Component)
+	{
+		Component->MenuMusic = NewObject<USoundWave>(Component);
+		Component->MenuMusicComponent = NewObject<UAudioComponent>(Component);
+		Component->bMenuMusicStartRequested = true;
+		return Component->MenuMusicComponent;
+	}
+	static void Request(UDCLyraFrontendStateComponent* Component) { Component->StartMenuMusic(); }
+	static void Stop(UDCLyraFrontendStateComponent* Component) { Component->StopMenuMusic(); }
+};
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFrontendMusicOwnershipTest, "DreamCatcher.Frontend.Music.OwnershipAndDuplicateRequest",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCFrontendMusicOwnershipTest::RunTest(const FString&)
+{
+	if (!FApp::IsUnattended() || !FParse::Param(FCommandLine::Get(), TEXT("DCFrontendIsolatedAutomation")))
+	{
+		AddError(TEXT("Run in a separate unattended editor with -DCFrontendIsolatedAutomation -DCLyraRuntimeDiagnostics.")); return false;
+	}
+	FTestWorldWrapper Fixture;
+	if (!Fixture.CreateTestWorld(EWorldType::Game)) { Fixture.ForwardErrorMessages(this); return false; }
+	AActor* Owner = Fixture.GetTestWorld()->SpawnActor<AActor>();
+	if (!TestNotNull(TEXT("Unsaved music owner world"), Owner)) { return false; }
+	UClass* ConcreteClass = LoadClass<UDCLyraFrontendStateComponent>(nullptr,
+		TEXT("/Game/DreamCatcher/Blueprints/UI/BP_DC_FrontendStateComponent.BP_DC_FrontendStateComponent_C"));
+	if (!TestNotNull(TEXT("Existing concrete frontend component"), ConcreteClass)) { return false; }
+	TStrongObjectPtr<UDCLyraFrontendStateComponent> Component(NewObject<UDCLyraFrontendStateComponent>(Owner, ConcreteClass));
+	TStrongObjectPtr<UAudioComponent> Unrelated(NewObject<UAudioComponent>(Owner));
+	if (!TestNotNull(TEXT("Component has a real world for the duplicate request check"), Component->GetWorld())) { return false; }
+	UAudioComponent* Music = FDCFrontendMusicTestAccess::SeedRequestedMusic(Component.Get());
+	FDCFrontendMusicTestAccess::Request(Component.Get());
+	TestEqual(TEXT("Repeated menu-ready notification keeps the same music instance"), Component->GetMenuMusicComponent(), Music);
+	FDCFrontendMusicTestAccess::Stop(Component.Get());
+	TestNull(TEXT("Owned music reference released"), Component->GetMenuMusicComponent());
+	TestTrue(TEXT("Owned audio component destroyed"), Music->IsBeingDestroyed());
+	TestFalse(TEXT("Unrelated audio component is not destroyed"), Unrelated->IsBeingDestroyed());
+	FDCFrontendMusicTestAccess::Stop(Component.Get());
+	TestNull(TEXT("Repeated cleanup is harmless"), Component->GetMenuMusicComponent());
+	return !HasAnyErrors();
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCFrontendIntroKeyGuardTest, "DreamCatcher.Frontend.Intro.KeyboardReleaseAndCleanup",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

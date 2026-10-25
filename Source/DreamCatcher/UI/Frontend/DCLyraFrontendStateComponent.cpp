@@ -5,12 +5,16 @@
 #include "CommonGameInstance.h"
 #include "CommonSessionSubsystem.h"
 #include "CommonUserSubsystem.h"
+#include "Components/AudioComponent.h"
 #include "ControlFlowManager.h"
+#include "DreamCatcher.h"
 #include "Engine/StreamableManager.h"
+#include "Engine/World.h"
 #include "GameModes/Lyra/DCLyraExperienceManagerComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NativeGameplayTags.h"
 #include "PrimaryGameLayout.h"
+#include "Sound/SoundBase.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCLyraFrontendStateComponent)
@@ -44,6 +48,7 @@ void UDCLyraFrontendStateComponent::EndPlay(const EEndPlayReason::Type EndPlayRe
 	// CommonGame's root layout survives local world travel. Release only this flow's
 	// screens and delegates so a previous menu cannot remain above the stage HUD.
 	bEndingPlay = true;
+	StopMenuMusic();
 	if (PendingScreenLoad.IsValid())
 	{
 		PendingScreenLoad->CancelHandle();
@@ -307,6 +312,37 @@ void UDCLyraFrontendStateComponent::FlowStep_TryShowIntroScreen(FControlFlowNode
 		});
 }
 
+void UDCLyraFrontendStateComponent::StartMenuMusic()
+{
+	if (bEndingPlay || bMenuMusicStartRequested || !MenuMusic || !GetWorld() || GetWorld()->GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	// Exactly once per frontend world, including after the cue naturally ends.
+	// Settings cover/uncover the menu without restarting its music.
+	bMenuMusicStartRequested = true;
+	MenuMusicComponent = UGameplayStatics::SpawnSound2D(this, MenuMusic, 1.f, 1.f, 0.f, nullptr, false, false);
+	if (MenuMusicComponent)
+	{
+		UE_LOG(LogDreamCatcher, Log, TEXT("[FrontendMusic] Started after mode selection: %s"), *MenuMusic->GetPathName());
+	}
+	else
+	{
+		UE_LOG(LogDreamCatcher, Warning, TEXT("[FrontendMusic] Could not create the menu music component"));
+	}
+}
+
+void UDCLyraFrontendStateComponent::StopMenuMusic()
+{
+	if (IsValid(MenuMusicComponent))
+	{
+		MenuMusicComponent->Stop();
+		MenuMusicComponent->DestroyComponent();
+	}
+	MenuMusicComponent = nullptr;
+	bMenuMusicStartRequested = false;
+}
+
 void UDCLyraFrontendStateComponent::FlowStep_TryShowMainScreen(FControlFlowNodeRef SubFlow)
 {
 	if (UPrimaryGameLayout* RootLayout = UPrimaryGameLayout::GetPrimaryGameLayoutForPrimaryPlayer(this))
@@ -323,6 +359,7 @@ void UDCLyraFrontendStateComponent::FlowStep_TryShowMainScreen(FControlFlowNodeR
 				    case EAsyncWidgetLayerState::AfterPush:
 						    OwnedScreens.Add(Screen);
 					    bShouldShowLoadingScreen = false;
+					    if (Screen && Screen->IsActivated()) { StartMenuMusic(); }
 					    SubFlow->ContinueFlow();
 					    return;
 				    case EAsyncWidgetLayerState::Canceled:

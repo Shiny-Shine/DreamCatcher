@@ -20,6 +20,7 @@
 #include "UI/Boss/DCBossHealthWidget.h"
 #include "UI/Player/DCPlayerStatusWidget.h"
 #include "UObject/StrongObjectPtr.h"
+#include <limits>
 
 struct FDCPlayerStatusDesignerTestAccess
 {
@@ -29,7 +30,16 @@ struct FDCPlayerStatusDesignerTestAccess
 	static void Ensure(UDCPlayerStatusWidget* W) { W->EnsureHealthWidget(); }
 	static void Destruct(UDCPlayerStatusWidget* W) { W->NativeDestruct(); }
 	static void RefreshWithoutPawn(UDCPlayerStatusWidget* W) { W->bConstructed = true; W->RefreshPlayerStatus(); W->bConstructed = false; }
-	static const FDCPlayerArmorSegment& Segment(const UDCPlayerStatusWidget* W) { return W->ArmorSegments[0]; }
+	static const FDCPlayerArmorSegment& Segment(const UDCPlayerStatusWidget* W, int32 Index = 0) { return W->ArmorSegments[Index]; }
+	static void PresentArmor(UDCPlayerStatusWidget* W, float Value, float Maximum = 150.f)
+	{
+		// UI state only: no Pawn, ASC, gameplay attributes or timers are created.
+		W->bConstructed = true; W->bHasContext = true;
+		W->DisplayedArmor = Value; W->DisplayedMaxArmor = Maximum;
+		W->UpdateArmorPresentation();
+	}
+	static void AdvanceArmor(UDCPlayerStatusWidget* W, float DeltaTime) { W->AdvanceArmorAnimation(DeltaTime); }
+	static void Unbind(UDCPlayerStatusWidget* W) { W->UnbindSource(); }
 	static bool HasTimer(const UDCPlayerStatusWidget* W) { return W->RefreshTimer.IsValid() || W->TimerWorld.IsValid(); }
 	static bool Released(const UDCPlayerStatusWidget* W) { return W->bAuthoredHealthReleased; }
 };
@@ -103,6 +113,20 @@ struct FFixture
 		Child<UImage>(Tree, TEXT("PlayerSignatureRing"), Signature);
 	}
 };
+
+bool BindArmorMaterials(FAutomationTestBase& Test, FFixture& Fixture)
+{
+	UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr,
+		TEXT("/Game/DreamCatcher/UI/HUD/Art/MI_DC_HUD_ArmorArt_Left.MI_DC_HUD_ArmorArt_Left"));
+	if (!Test.TestNotNull(TEXT("Saved shield material supplies the animation parameters"), Material)) { return false; }
+	for (int32 Index = 0; Index < 3; ++Index)
+	{
+		UImage* ArmorImage = Cast<UImage>(Fixture.Status->GetWidgetFromName(*FString::Printf(TEXT("PlayerArmorFill%d"), Index)));
+		if (!Test.TestNotNull(TEXT("Named shield image"), ArmorImage)) { return false; }
+		FSlateBrush Brush = ArmorImage->GetBrush(); Brush.SetResourceObject(Material); ArmorImage->SetBrush(Brush);
+	}
+	return Test.TestTrue(TEXT("Runtime authored hierarchy binds"), FDCPlayerStatusDesignerTestAccess::Bind(Fixture.Status.Get()));
+}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCPlayerStatusDesignerLayoutTest, "DreamCatcher.UI.PlayerStatus.Designer.AuthoredLayoutAndPreview",
@@ -197,6 +221,114 @@ bool FDCPlayerStatusDesignerInvalidTreeTest::RunTest(const FString&)
 	F.Status->SynchronizeProperties();
 	TestTrue(TEXT("Invalid authored root is never replaced by native fallback"), F.Status->WidgetTree->RootWidget == F.Root);
 	TestTrue(TEXT("Invalid tree preserves authored nested child"), F.Host->GetContent() == F.Health);
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCPlayerStatusArmorAnimationTest, "DreamCatcher.UI.PlayerStatus.Designer.ArmorAnimationTiming",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCPlayerStatusArmorAnimationTest::RunTest(const FString&)
+{
+	if (!DCPlayerStatusDesignerTests::Context(*this)) { return false; }
+	DCPlayerStatusDesignerTests::FFixture F(false);
+	if (!DCPlayerStatusDesignerTests::BindArmorMaterials(*this, F)) { return false; }
+	using Access = FDCPlayerStatusDesignerTestAccess;
+	Access::PresentArmor(F.Status.Get(), 150.f);
+	TArray<ESlateVisibility> AuthoredVisibility;
+	for (int32 Index = 0; Index < 3; ++Index) { AuthoredVisibility.Add(Access::Segment(F.Status.Get(), Index).Fill->GetVisibility()); }
+	UMaterialInstanceDynamic* MID = Access::Segment(F.Status.Get(), 2).FillMID.Get();
+	if (!TestNotNull(TEXT("Third segment MID"), MID)) { return false; }
+	TestFalse(TEXT("Initial status snaps without damage feedback"), Access::Segment(F.Status.Get(), 2).bAnimating);
+	Access::PresentArmor(F.Status.Get(), 100.f);
+	TestEqual(TEXT("Numeric shield updates immediately"), F.Shield->GetText().ToString(), FString(TEXT("100")));
+	TestEqual(TEXT("Damage starts with old full segment"), MID->K2_GetScalarParameterValue(TEXT("Health_Current")), 1.f);
+	TestEqual(TEXT("Damage records empty target separately"), MID->K2_GetScalarParameterValue(TEXT("Health_Updated")), 0.f);
+	TestFalse(TEXT("Unaffected left segment stays settled"), Access::Segment(F.Status.Get(), 0).bAnimating);
+	TestFalse(TEXT("Unaffected middle segment stays settled"), Access::Segment(F.Status.Get(), 1).bAnimating);
+	Access::AdvanceArmor(F.Status.Get(), .06f);
+	TestTrue(TEXT("Saved zero-tangent cubic at quarter of 0.24 seconds"),
+		FMath::IsNearlyEqual(MID->K2_GetScalarParameterValue(TEXT("Animate_HealthNewToUpdated")), .15625f, 1.e-4f));
+	const float Elapsed = Access::Segment(F.Status.Get(), 2).AnimationElapsed;
+	Access::PresentArmor(F.Status.Get(), 100.f);
+	TestEqual(TEXT("Periodic refresh does not restart damage"), Access::Segment(F.Status.Get(), 2).AnimationElapsed, Elapsed);
+	TestTrue(TEXT("Refresh retains the same MID"), Access::Segment(F.Status.Get(), 2).FillMID.Get() == MID);
+	Access::AdvanceArmor(F.Status.Get(), .18f);
+	TestTrue(TEXT("Transition reaches its target at 0.24 seconds"),
+		FMath::IsNearlyEqual(MID->K2_GetScalarParameterValue(TEXT("Animate_HealthNewToUpdated")), 1.f, 1.e-4f));
+	TestEqual(TEXT("Damage fade holds until 0.4 seconds"), MID->K2_GetScalarParameterValue(TEXT("Animate_UpdatedFade")), 0.f);
+	Access::AdvanceArmor(F.Status.Get(), .36f);
+	TestTrue(TEXT("Damage is halfway faded at 0.6 seconds"),
+		FMath::IsNearlyEqual(MID->K2_GetScalarParameterValue(TEXT("Animate_UpdatedFade")), .5f, 1.e-4f));
+	Access::AdvanceArmor(F.Status.Get(), .21f);
+	TestFalse(TEXT("Damage animation finishes"), Access::Segment(F.Status.Get(), 2).bAnimating);
+	TestEqual(TEXT("Settled current equals empty shield"), MID->K2_GetScalarParameterValue(TEXT("Health_Current")), 0.f);
+	TestEqual(TEXT("Settled fade remains complete"), MID->K2_GetScalarParameterValue(TEXT("Animate_UpdatedFade")), 1.f);
+	TestTrue(TEXT("Material-backed segment retains full authored geometry"), Access::Segment(F.Status.Get(), 2).Fill->GetRenderTransform().Scale.Equals(FVector2D(1.f, 1.f)));
+	TestTrue(TEXT("Authored bar position retained during animation"), CastChecked<UCanvasPanelSlot>(F.Bars->Slot)->GetPosition().Equals(FVector2D(17, 23)));
+	TestTrue(TEXT("Authored bar size retained during animation"), CastChecked<UCanvasPanelSlot>(F.Bars->Slot)->GetSize().Equals(FVector2D(451, 79)));
+	Access::PresentArmor(F.Status.Get(), 0.f);
+	Access::AdvanceArmor(F.Status.Get(), .8f);
+	for (int32 Index = 0; Index < 3; ++Index)
+	{
+		const FDCPlayerArmorSegment& Segment = Access::Segment(F.Status.Get(), Index);
+		TestEqual(TEXT("Zero armor clears every fill target"), Segment.Fraction, 0.f);
+		TestFalse(TEXT("Zero armor settles each segment"), Segment.bAnimating);
+		TestEqual(TEXT("Empty segment retains authored visibility for the gray material"), Segment.Fill->GetVisibility(), AuthoredVisibility[Index]);
+	}
+	TestFalse(TEXT("UI simulation creates no gameplay timer"), Access::HasTimer(F.Status.Get()));
+	TestNull(TEXT("UI simulation creates no ASC"), F.Status->GetStatusAbilitySystem());
+	Access::Destruct(F.Status.Get());
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCPlayerStatusArmorRetargetTest, "DreamCatcher.UI.PlayerStatus.Designer.ArmorAnimationRetargetAndReset",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FDCPlayerStatusArmorRetargetTest::RunTest(const FString&)
+{
+	if (!DCPlayerStatusDesignerTests::Context(*this)) { return false; }
+	DCPlayerStatusDesignerTests::FFixture F(false);
+	if (!DCPlayerStatusDesignerTests::BindArmorMaterials(*this, F)) { return false; }
+	using Access = FDCPlayerStatusDesignerTestAccess;
+	Access::PresentArmor(F.Status.Get(), 150.f);
+	Access::PresentArmor(F.Status.Get(), 125.f);
+	Access::AdvanceArmor(F.Status.Get(), .6f);
+	Access::PresentArmor(F.Status.Get(), 110.f);
+	const FDCPlayerArmorSegment& Last = Access::Segment(F.Status.Get(), 2);
+	TestEqual(TEXT("Repeated hit starts at the prior actual value, not the old full value"), Last.PreviousFraction, .5f);
+	TestTrue(TEXT("Repeated hit uses latest actual target"), FMath::IsNearlyEqual(Last.Fraction, .2f));
+	TestEqual(TEXT("New damage starts a fresh animation"), Last.AnimationElapsed, 0.f);
+	Access::AdvanceArmor(F.Status.Get(), std::numeric_limits<float>::quiet_NaN());
+	Access::AdvanceArmor(F.Status.Get(), -1.f);
+	TestEqual(TEXT("Invalid deltas cannot corrupt animation state"), Last.AnimationElapsed, 0.f);
+	Access::PresentArmor(F.Status.Get(), 0.f);
+	Access::AdvanceArmor(F.Status.Get(), .8f);
+	Access::PresentArmor(F.Status.Get(), 75.f);
+	Access::AdvanceArmor(F.Status.Get(), .12f);
+	const FDCPlayerArmorSegment& Middle = Access::Segment(F.Status.Get(), 1);
+	TestTrue(TEXT("Recovery uses the healing material path"), Middle.bAnimating && Middle.bHealing);
+	TestEqual(TEXT("Recovery reaches the actual partial-segment target"), Middle.Fraction, .5f);
+	Access::PresentArmor(F.Status.Get(), 60.f);
+	TestTrue(TEXT("Interrupted recovery starts from the visible halfway fill"), FMath::IsNearlyEqual(Middle.PreviousFraction, .25f));
+	TestTrue(TEXT("Interrupted recovery switches to the latest lower target"), !Middle.bHealing && FMath::IsNearlyEqual(Middle.Fraction, .2f));
+	Access::PresentArmor(F.Status.Get(), 100.f, 300.f);
+	TestFalse(TEXT("Capacity changes snap rather than looking like damage"), Middle.bAnimating);
+	TestEqual(TEXT("New capacity determines the segment target"), Middle.Fraction, 0.f);
+	Access::Unbind(F.Status.Get());
+	TestFalse(TEXT("Losing the source clears gameplay context"), F.Status->HasPlayerStatus());
+	Access::PresentArmor(F.Status.Get(), 60.f);
+	TestFalse(TEXT("New source initializes without an old damage trail"), Access::Segment(F.Status.Get(), 1).bAnimating);
+	TestTrue(TEXT("New source has matching current and target fill"),
+		FMath::IsNearlyEqual(Access::Segment(F.Status.Get(), 1).PreviousFraction, .2f));
+	Access::PresentArmor(F.Status.Get(), 30.f);
+	TestTrue(TEXT("Later damage can animate again"), Access::Segment(F.Status.Get(), 0).bAnimating);
+	Access::Destruct(F.Status.Get());
+	Access::AdvanceArmor(F.Status.Get(), .8f);
+	TestFalse(TEXT("Destruct cancels the pending animation"), Access::Segment(F.Status.Get(), 0).bAnimating);
+	TestNull(TEXT("Destruct releases the animated MID"), Access::Segment(F.Status.Get(), 0).FillMID.Get());
+	TestTrue(TEXT("Rebind retains the Designer hierarchy"), Access::Bind(F.Status.Get()));
+	Access::PresentArmor(F.Status.Get(), 150.f);
+	TestFalse(TEXT("Reentry snaps to the new full status"), Access::Segment(F.Status.Get(), 0).bAnimating);
+	TestEqual(TEXT("Reentry is full"), Access::Segment(F.Status.Get(), 0).Fraction, 1.f);
+	Access::Destruct(F.Status.Get());
 	return !HasAnyErrors();
 }
 

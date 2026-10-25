@@ -30,6 +30,18 @@
 
 namespace DCPlayerStatus
 {
+// Saved W_Healthbar OnDamaged/OnHealed curves use a 60,000 Hz tick resolution.
+constexpr float ArmorTransitionSeconds = 14400.f / 60000.f;
+constexpr float ArmorDamageHoldSeconds = 24000.f / 60000.f;
+constexpr float ArmorAnimationSeconds = 48000.f / 60000.f;
+constexpr float ArmorHealingFadeInSeconds = 600.f / 60000.f;
+
+float ArmorCurve(float Time, float Start, float End)
+{
+	// These material channels are cubic keys with zero tangents in W_Healthbar.
+	return FMath::SmoothStep(0.f, 1.f, FMath::Clamp((Time - Start) / (End - Start), 0.f, 1.f));
+}
+
 bool Diagnostics()
 {
 	static const bool bEnabled = FParse::Param(FCommandLine::Get(), TEXT("DCPlayerStatusPaintDiagnostics"));
@@ -198,6 +210,7 @@ bool UDCPlayerStatusWidget::BindDesignerWidgets()
 	SignatureRing = Cast<UImage>(GetWidgetFromName(TEXT("PlayerSignatureRing")));
 	const TArray<FDCPlayerArmorSegment> Previous = ArmorSegments;
 	ArmorSegments.SetNum(3);
+	bool bArmorBindingsChanged = Previous.Num() != ArmorSegments.Num();
 	bool bValid = RootCanvas && BarGroup && ArmorPanel && ArmorText && HealthHost
 		&& SignaturePanel && SignatureStar && SignatureRing;
 	for (int32 Index = 0; Index < ArmorSegments.Num(); ++Index)
@@ -209,6 +222,7 @@ bool UDCPlayerStatusWidget::BindDesignerWidgets()
 		bValid &= Segment.Root && Segment.Border && Segment.Fill;
 		if (!Segment.Root || !Segment.Border || !Segment.Fill) { continue; }
 		const FDCPlayerArmorSegment* Old = Previous.IsValidIndex(Index) ? &Previous[Index] : nullptr;
+		bArmorBindingsChanged |= !Old || Old->Root != Segment.Root || Old->Fill != Segment.Fill;
 		// A rebuild/synchronization may encounter our own live MID, not an authored brush.
 		if (!Old || Segment.Border != Old->Border || !Old->BorderMID || Segment.Border->GetBrush().GetResourceObject() != Old->BorderMID)
 		{
@@ -223,6 +237,7 @@ bool UDCPlayerStatusWidget::BindDesignerWidgets()
 			Segment.FillMID = nullptr; Segment.FillSource = nullptr;
 		}
 	}
+	if (bArmorBindingsChanged) { ResetArmorAnimation(); }
 	if (SignatureStar && (!StarMID || SignatureStar->GetBrush().GetResourceObject() != StarMID)) { AuthoredStarBrush = SignatureStar->GetBrush(); }
 	if (SignatureRing && (!RingMID || SignatureRing->GetBrush().GetResourceObject() != RingMID)) { AuthoredRingBrush = SignatureRing->GetBrush(); }
 	UUserWidget* AuthoredHealth = HealthHost ? Cast<UUserWidget>(HealthHost->GetContent()) : nullptr;
@@ -349,6 +364,12 @@ void UDCPlayerStatusWidget::NativeConstruct()
 	RefreshPlayerStatus();
 }
 
+void UDCPlayerStatusWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	AdvanceArmorAnimation(InDeltaTime);
+}
+
 void UDCPlayerStatusWidget::NativeDestruct()
 {
 	bConstructed = false;
@@ -411,6 +432,7 @@ void UDCPlayerStatusWidget::ApplyLayout()
 
 void UDCPlayerStatusWidget::UnbindHealth()
 {
+	ResetArmorAnimation();
 	if (UDCLyraHealthComponent* Health = SourceHealth.Get())
 	{
 		Health->OnHealthChanged.RemoveDynamic(this, &ThisClass::HandleHealthChanged);
@@ -707,7 +729,7 @@ void UDCPlayerStatusWidget::UpdateHealthPresentation()
 	bNeedsHealthMaterialSync = !bAllMaterialsReady;
 }
 
-void UDCPlayerStatusWidget::ApplyArmorBrush(UImage* Image, const FSlateBrush& Brush, float Fraction,
+void UDCPlayerStatusWidget::ApplyArmorBrush(UImage* Image, const FSlateBrush& Brush,
 	TObjectPtr<UMaterialInstanceDynamic>& MID, TObjectPtr<UMaterialInterface>& Source)
 {
 	FSlateBrush DrawBrush = DCPlayerStatus::SafeBrush(Brush);
@@ -715,7 +737,6 @@ void UDCPlayerStatusWidget::ApplyArmorBrush(UImage* Image, const FSlateBrush& Br
 	if (Material)
 	{
 		if (!MID || Source != Material) { MID = UMaterialInstanceDynamic::Create(Material, this); MID->SetFlags(RF_Transient); Source = Material; }
-		MID->SetScalarParameterValue(TEXT("Health_Current"), Fraction); MID->SetScalarParameterValue(TEXT("Health_Updated"), Fraction);
 		const FLinearColor Tint = DrawBrush.GetTint(FWidgetStyle()) * (bUseDesignerLayout ? FLinearColor::White : Appearance.ArmorColor);
 		// Actual Lyra health material vector names, matching the existing boss HUD.
 		for (const TCHAR* Name : { TEXT("Bar_Health_Fill_RGBA"), TEXT("Bar_Health_Highlight_RGBA"), TEXT("Bar_Damage_Fill_RGBA"),
@@ -732,25 +753,109 @@ void UDCPlayerStatusWidget::ApplyArmorBrush(UImage* Image, const FSlateBrush& Br
 	Image->SetBrush(DrawBrush);
 }
 
+void UDCPlayerStatusWidget::ResetArmorAnimation()
+{
+	bArmorPresentationInitialized = false;
+	PresentedMaxArmor = 0.f;
+	for (FDCPlayerArmorSegment& Segment : ArmorSegments)
+	{
+		Segment.Fraction = 0.f;
+		Segment.PreviousFraction = 0.f;
+		Segment.AnimationElapsed = DCPlayerStatus::ArmorAnimationSeconds;
+		Segment.bAnimating = false;
+		Segment.bHealing = false;
+	}
+}
+
+void UDCPlayerStatusWidget::ApplyArmorAnimation(const FDCPlayerArmorSegment& Segment)
+{
+	const float Current = Segment.bAnimating ? Segment.PreviousFraction : Segment.Fraction;
+	const float Transition = Segment.bAnimating
+		? DCPlayerStatus::ArmorCurve(Segment.AnimationElapsed, 0.f, DCPlayerStatus::ArmorTransitionSeconds) : 1.f;
+	float Fade = 1.f;
+	if (Segment.bAnimating)
+	{
+		const float DamageFade = DCPlayerStatus::ArmorCurve(Segment.AnimationElapsed,
+			DCPlayerStatus::ArmorDamageHoldSeconds, DCPlayerStatus::ArmorAnimationSeconds);
+		// Match the saved BarFill healing pulse as well as the damage fade.
+		Fade = Segment.bHealing
+			? FMath::Min(DCPlayerStatus::ArmorCurve(Segment.AnimationElapsed, 0.f, DCPlayerStatus::ArmorHealingFadeInSeconds), 1.f - DamageFade)
+			: DamageFade;
+	}
+	for (UMaterialInstanceDynamic* MID : { Segment.BorderMID.Get(), Segment.FillMID.Get() })
+	{
+		if (!MID) { continue; }
+		MID->SetScalarParameterValue(TEXT("Health_Current"), Current);
+		MID->SetScalarParameterValue(TEXT("Health_Updated"), Segment.Fraction);
+		MID->SetScalarParameterValue(TEXT("Animate_HealthNewToUpdated"), Transition);
+		MID->SetScalarParameterValue(TEXT("Animate_UpdatedFade"), Fade);
+		MID->SetScalarParameterValue(TEXT("DamageOrHealing"), Segment.bAnimating && Segment.bHealing ? 1.f : 0.f);
+	}
+}
+
+void UDCPlayerStatusWidget::AdvanceArmorAnimation(float DeltaTime)
+{
+	if (!bConstructed || !bHasContext || IsDesignTime() || !bArmorPresentationInitialized
+		|| (bUseDesignerLayout && !bDesignerTreeReady) || !FMath::IsFinite(DeltaTime) || DeltaTime <= 0.f) { return; }
+	for (FDCPlayerArmorSegment& Segment : ArmorSegments)
+	{
+		if (!Segment.bAnimating) { continue; }
+		Segment.AnimationElapsed = FMath::Min(DCPlayerStatus::ArmorAnimationSeconds,
+			Segment.AnimationElapsed + FMath::Min(DeltaTime, DCPlayerStatus::ArmorAnimationSeconds));
+		if (Segment.AnimationElapsed >= DCPlayerStatus::ArmorAnimationSeconds)
+		{
+			Segment.PreviousFraction = Segment.Fraction;
+			Segment.bAnimating = false;
+			Segment.bHealing = false;
+		}
+		ApplyArmorAnimation(Segment);
+	}
+}
+
 void UDCPlayerStatusWidget::UpdateArmorPresentation()
 {
 	if (!ArmorText) { return; }
 	ArmorText->SetText(DCPlayerStatus::Number(DisplayedArmor));
 	const double SegmentCapacity = static_cast<double>(DisplayedMaxArmor) / 3.0;
 	const bool bUsePerSegmentFillBrushes = DCPlayerStatus::HasArmorSegmentFillBrushes(Appearance.ArmorSegmentFillBrushes);
+	const bool bSnap = !bArmorPresentationInitialized || bPreviewing || IsDesignTime() || !bConstructed || !bHasContext
+		|| !FMath::IsNearlyEqual(PresentedMaxArmor, DisplayedMaxArmor);
 	for (int32 Index = 0; Index < ArmorSegments.Num(); ++Index)
 	{
 		FDCPlayerArmorSegment& Segment = ArmorSegments[Index];
 		if (!Segment.Border || !Segment.Fill) { continue; }
-		Segment.Fraction = (bHasContext || bPreviewing) && SegmentCapacity > 0.0
+		const float Fraction = (bHasContext || bPreviewing) && SegmentCapacity > 0.0
 			? static_cast<float>(FMath::Clamp((DisplayedArmor - SegmentCapacity * Index) / SegmentCapacity, 0.0, 1.0)) : 0.f;
-		ApplyArmorBrush(Segment.Border, bUseDesignerLayout ? Segment.AuthoredBorderBrush : Appearance.ArmorBorderBrush, Segment.Fraction, Segment.BorderMID, Segment.BorderSource);
+		if (bSnap)
+		{
+			Segment.PreviousFraction = Fraction;
+			Segment.AnimationElapsed = DCPlayerStatus::ArmorAnimationSeconds;
+			Segment.bAnimating = false;
+			Segment.bHealing = false;
+		}
+		else if (!FMath::IsNearlyEqual(Fraction, Segment.Fraction))
+		{
+			// Repeated damage starts at the last actual fill, so spent shield is never repainted.
+			// If a refill is interrupted, continue from its visible position instead of jumping to its target.
+			Segment.PreviousFraction = Segment.bAnimating && Segment.bHealing
+				? FMath::Lerp(Segment.PreviousFraction, Segment.Fraction,
+					DCPlayerStatus::ArmorCurve(Segment.AnimationElapsed, 0.f, DCPlayerStatus::ArmorTransitionSeconds))
+				: Segment.Fraction;
+			Segment.bAnimating = !FMath::IsNearlyEqual(Segment.PreviousFraction, Fraction);
+			Segment.bHealing = Fraction > Segment.PreviousFraction;
+			Segment.AnimationElapsed = 0.f;
+		}
+		Segment.Fraction = Fraction;
+		ApplyArmorBrush(Segment.Border, bUseDesignerLayout ? Segment.AuthoredBorderBrush : Appearance.ArmorBorderBrush, Segment.BorderMID, Segment.BorderSource);
 		const FSlateBrush& SegmentFillBrush = bUsePerSegmentFillBrushes && Appearance.ArmorSegmentFillBrushes.IsValidIndex(Index)
 			? Appearance.ArmorSegmentFillBrushes[Index] : Appearance.ArmorFillBrush;
-		ApplyArmorBrush(Segment.Fill, bUseDesignerLayout ? Segment.AuthoredFillBrush : SegmentFillBrush, Segment.Fraction, Segment.FillMID, Segment.FillSource);
+		ApplyArmorBrush(Segment.Fill, bUseDesignerLayout ? Segment.AuthoredFillBrush : SegmentFillBrush, Segment.FillMID, Segment.FillSource);
+		ApplyArmorAnimation(Segment);
 		const FVector2D Scale = bUseDesignerLayout ? Segment.AuthoredFillScale : FVector2D(1.f, 1.f);
 		Segment.Fill->SetRenderScale(FVector2D(Scale.X * (Segment.FillMID ? 1.f : Segment.Fraction), Scale.Y));
 	}
+	PresentedMaxArmor = DisplayedMaxArmor;
+	bArmorPresentationInitialized = bHasContext || bPreviewing;
 }
 
 void UDCPlayerStatusWidget::ReadSignatureState()

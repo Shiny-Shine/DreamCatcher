@@ -8,6 +8,20 @@
 
 사용자의 C++ 빌드·패키징·화면·소리·조작감 확인과 GitHub Desktop 커밋·푸시·병합 담당은 유지한다. 0.134 운영 규칙 반영 당시의 승인은 `AGENTS.md`와 이 명세 2개 문서에 한정됐다. 이후 BaseDamage는 아래 0.135 묶음으로 별도 1차·최종 승인됐으며, 피격 피드백 인계 문서 수정은 계속 제외한다.
 
+### 최신 TODO — PV·모드 선택 BGM 재생 순서 / 적용·재로드·검사 완료 / AGENTS 0.143
+
+- [x] TODO 1차·상세1~4번 최종 승인. **PV 중 PV 소리만, 영상 종료 후 모드 선택 화면이 표시되면 기존 BGM 시작**. 설정 창 개폐 시 중복/재시작 없이 유지한다.
+- [x] 사용자 일반 Editor 빌드 확인: DLL **2026-10-25 15:09:48 KST**. 이전 Live Coding 기본 DLL 미반영은0.142 이력이며 이번 일반 DLL에는 새 속성/API가 있다.
+- [x] `/Game/DreamCatcher/Maps/L_DC_FrontEnd`의 BeginPlay→PlaySound2D 실행선1개 해제, `/Game/DreamCatcher/Blueprints/UI/BP_DC_FrontendStateComponent`의 MenuMusic에 기존 선택화면_Cue 연결. 최종 **apply D 저장2개·별도 verify 저장0**, 나머지 그래프/기본값/배치/설정·스테이징 보존 확인.
+- [x] 초기 보존 비교는 컴파일의 자동 LevelScriptActor 생성/이름 교체 때문에 저장 전 중단됐다. 실제 에디터 월드 초기화와 해당 생성 액터 이름의 역할 대응만 보완했으며, 다른 액터·트랜스폼·WorldSettings·그래프 보호는 유지했다. 기능 C++ 변경과 추가 재빌드는 없다.
+- [x] 신규 소유권/중복 요청 native **1개 성공·실패/테스트 경고0**.
+- [x] 오디오 활성 실제 PIE normal_A에서 PV 중 BGM0개, 종료 뒤1개 재생, 설정 개폐 동일 인스턴스 유지, 맵 재실행에서 PV 단독 후 새 BGM1개, 월드 종료 시 재생0개 확인.
+- [x] failure_A에서 메모리의 잘못된 PV 소스에도 메뉴 BGM1개와 종료 정리를 확인한 뒤 CDO 원복. 두 PIE 종료0·complete=true·Engine Error/ensure/Fatal0·Automation Success. 정상 테스트 경고0, 실패 테스트는 예상 미디어 누락 경고1개다.
+- [x] 현재 PV 음량0.15·BGM Cue/Wave·다른 맵·무기/피해·플레이어 UI/HUD 아트·Config·DLL·Git 상태 보존 확인. Codex 빌드·커밋·푸시·패키징 없음.
+- [ ] 사용자 실제 청취·키 입력·플레이 후 복귀·패키징 수용.
+
+**추가 C++ 빌드는 필요 없다.** 검사는 재생 컴포넌트 상태와 위젯 API 조작을 관찰한 결과이며 사람의 실제 청취·하드웨어 입력 수용을 대신하지 않는다. 상세는 [AGENTS.md](../../AGENTS.md) 0.143, 최종 근거는 `Saved/Diagnostics/FrontendMusic20261025/final_result_A.json`과 native/PIE 보고서다. 아래 기존 PV 검증 이력은 유지한다.
+
 ### 최신 TODO — 모드 선택 진입 PV / 적용·재로드·자동 검사 완료 / AGENTS 0.140
 
 - [x] TODO 1차 및 상세 1~5번 최종 승인. **L_DC_FrontEnd 맵 진입마다** 재생하며 같은 맵 재실행도 포함한다. 설정 창을 닫기만 할 때는 다시 재생하지 않는다.

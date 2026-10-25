@@ -213,7 +213,7 @@ void UDCFrontendIntroScreen::OpenIntro()
 		Sound->SetMediaPlayer(Player);
 		Sound->RegisterComponentWithWorld(GetWorld());
 		Sound->Start();
-		Sound->SetVolumeMultiplier(0.25f); // 기존 볼륨의 25%
+		Sound->SetVolumeMultiplier(0.15f); // 기존 볼륨의 15%
 	}
 	UE_LOG(LogDreamCatcher, Log, TEXT("[FrontendIntro] Opening PV: %s"), *GetWorld()->GetMapName());
 	if (!Player->OpenSource(IntroMediaSource)) { FailIntro(TEXT("OpenSource rejected PV")); }

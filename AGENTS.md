@@ -7,7 +7,7 @@
 > **Lyra 이식 정책 갱신:** 2026-09-10 KST
 > **작업 분담·자동화·마감 기준 갱신:** 2026-10-05 KST / **TODO 승인 갱신:** 2026-10-18 KST / **서브에이전트 운영 갱신:** 2026-10-23 KST
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
-> **최신 재개:** 2026-10-24, 아래 **0.140** — 사용자 빌드 후 승인한 PV 에셋3개 적용·별도 재로드, 새 native 입력/정리 검사2개, 실제 PIE의 1920×1080 재생·끝 부근 seek 후 반복·모드 선택 맵 재진입 재생·미디어 실패 시 메뉴 진행을 확인했다. **추가 C++ 변경/재빌드 불필요, 사용자 실제 키보드·마우스·게임패드 입력·화면·소리·패키징 수용 대기**다. 최신 Level_1/2·기존 미커밋 작업·두 Stash를 보존했다. 운영 기준은 0.4·0.138, BaseDamage 완료/수용 한계는 0.136을 유지한다.
+> **최신 재개:** 2026-10-25, 아래 **0.143** — 일반 Editor DLL 확인 후 **PV/BGM 재생 순서의 맵·BP 두 에셋 적용/별도 재로드·native1개·오디오 활성 PIE 정상/실패2모드 통과**다. PV 중 메뉴 BGM0개, 종료 후1개 재생, 설정 개폐 동일 인스턴스, 재진입 시 PV 단독/이후 BGM1개, 맵 종료 시 정리를 관찰했다. **추가 C++ 변경/재빌드 불필요, 사용자 실제 청취·입력·패키징 수용 대기**다. 현재 PV 음량0.15·Cue/Wave·다른 미커밋 파일을 보존했고 Codex 빌드/커밋/푸시는 없다. 운영 기준은0.4·0.138을 유지한다.
 
 ---
 
@@ -1595,6 +1595,35 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - 원본 두 개와 공통 기준의 실제 LFS 해시를 보존했고 refs/codex-recovery/level1-20261016 아래4개 복구 참조를 추가했다. Stash d02c1c9는 그대로이며 재적용할 필요가 없다. 복구 맵 하나만 Git 충돌 해결 표시하고 커밋/푸시·빌드/패키징은 사용자에게 남긴다. 상세와 최종 해시는`docs/handoffs/level1-merge-recovery-2026-10-16.md`를 따른다.
 
 ---
+
+## 0.143 최신 재개 — 2026-10-25 PV/BGM 두 에셋 적용·재로드·오디오 활성 PIE 통과 / 사용자 청취 대기
+
+- 사용자가 에디터 종료 후 일반 Editor 빌드를 완료했다. 기본 DLL은 **15:09:48 KST·7,308,800바이트**, SHA256 `e4ac0c1e54c14771a1756ed6ad5252552e84bff2cdfc96215500b294a8129452`다. 새 MenuMusic 속성과 조회 API를 실제 적용·native/PIE에서 확인했으며 아래0.142의 Live Coding 대기는 이전 이력이다. 이번 단계에서 C++/Config/Build.cs 변경이나 Codex C++ 빌드는 없다.
+- 승인된 `/Game/DreamCatcher/Maps/L_DC_FrontEnd`의 **BeginPlay→PlaySound2D 실행선1개만 해제**하고 원래 노드/핀/기본값을 보존했다. `/Game/DreamCatcher/Blueprints/UI/BP_DC_FrontendStateComponent`의 MenuMusic만 기존 `/Game/DreamCatcher/Audio/선택화면_Cue`로 연결했다. 최종 apply **D는 저장2개·종료0·complete=true**, 별도 verify D는 **저장0·종료0·complete=true**다. 나머지 그래프·BP CDO·배치 클래스/트랜스폼·WorldSettings와 보호 파일/스테이징이 일치한다.
+- 초기 apply A/B2/C는 레벨 BP 컴파일의 자동 스크립트 액터 생성·이름 교체를 배치 변경으로 감지해 **저장 전에 중단(각 저장0)**했다. 별도 B 호출1회는 다른 Unreal commandlet 감지로 사전 중단됐다. 실제 에디터 월드로 먼저 맵을 열고, 확인된 자동 LevelScriptActor 이름 `_C_0→_C_1`만 역할로 대응하도록 Python 보존 비교를 보완했다. 해당 액터의 클래스/트랜스폼, 다른 액터의 이름/클래스/트랜스폼, WorldSettings·그래프 보호는 유지했다. 이 실패를 적용 성공으로 세지 않으며 저장된 결과는 D 두 에셋뿐이다.
+- 새 `DreamCatcher.Frontend.Music.OwnershipAndDuplicateRequest` **native1개 성공·실패/테스트 경고0**을 확인했다. 실제 소리가 없는 임시 월드의 중복 요청과 소유 오디오만 정리하는 경계를 검사했고, 실제 재생 순서는 다음 오디오 활성 PIE로 별도 검증했다.
+- 실제 렌더링/오디오 활성 PIE **normal_A**에서 **PV 중 메뉴 BGM 컴포넌트0개 → PV 종료 후 기존 Cue 컴포넌트1개 재생**을 확인했다. 설정 창을 열고 닫아도 같은 BGM 인스턴스가 계속 재생됐다. 같은 모드 선택 맵을 재실행하면 PV 단독 단계로 돌아갔다가 종료 뒤 새 월드의 BGM1개가 재생됐고, PIE/월드 종료 후 해당 Cue 재생0개를 확인했다. 위젯 API로 건너뛰기·설정을 조작했으며 실제 키 입력·청취 수용과 구분한다.
+- 별도 **failure_A**는 PV 소스를 메모리에서만 누락 파일로 지정해 메뉴 표시·BGM1개 재생·월드 종료 정리를 확인하고 CDO 참조를 원복했다. 두 PIE는 각각 종료0·complete=true·Engine Error/ensure/Fatal0·Automation Success다. 정상 테스트 경고0, 실패 테스트는 예상한 미디어 누락 경고1개가 있어 무경고로 보고하지 않는다.
+- 현재 PV CPP의0.15 음량 조정, BGM Cue/Wave의 볼륨/루프/피치, 최신 Level_1/2/3, 사용자 무기/피해 설정·플레이어 상태 UI 및 HUD 아트 변경, Config·DLL·Git HEAD/스테이징을 보존했다. 자동화 Python의 월드 초기화/보존 비교만 보완했고 기능 C++ 수정이나 추가 재빌드는 없다. Codex는 다른 에셋 저장·커밋·푸시·병합·패키징을 하지 않았다.
+- 근거: `Saved/Diagnostics/FrontendMusic20261025/final_result_A.json`, `post_build_baseline_A.json`, `assets_D/apply.json`·verify 보고서, `pie_normal_A.json`·`pie_failure_A.json`, `Saved/Automation/FrontendMusicNative_A`·`FrontendMusicPIE_normal_A`·`FrontendMusicPIE_failure_A`. **다음은 사용자 Editor에서 PV/BGM이 겹치지 않는지, 건너뛰기·설정 창·맵 복귀의 실제 소리를 확인**하는 단계이며 추가 C++ 빌드는 필요 없다. 패키징·물리 입력·청취 수용은 자동 검사 완료에 포함하지 않는다.
+
+## 0.142 최신 재개 — 2026-10-25 Live Coding 성공 후 기본 DLL 준비 검사 / 일반 Editor 빌드 필요
+
+- 사용자가 빌드 성공을 알리고 승인한 두 에셋 적용·재로드·오디오 검사를 요청했다. 현재 UBT 로그는 **14:56:39 KST의 `-LiveCoding` 실행, 0액션, Succeeded/1.25초**이며 기본 `UnrealEditor-DreamCatcher.dll`은 **14:24:18 KST·7,293,952바이트**로 남아 있다. 변경한 프런트엔드 헤더/CPP/검사 CPP의14:35~14:43 수정 이후 일반 DLL이 생성됐다고 판단하지 않는다.
+- 저장하지 않는 별도 Unreal commandlet의 `build_readiness_A.json`에서 클래스 로드는 성공했지만 **MenuMusic 속성과 GetMenuMusicComponent API 모두 없음**을 확인했다. 두 대상 에셋의 변경 전후 해시 일치·에셋 저장0·프로세스 종료0이다. 이 상태에서 BP에 새 속성을 기록하거나 오디오 검사를 진행하지 않았다. 추가 C++/Config/에셋 수정이나 Codex 빌드는 없다.
+- 다음은 Unreal Editor를 완전히 종료하고 IDE의 **DreamCatcherEditor / Development Editor / Win64 일반 빌드**다. Live Coding 버튼/단축키 대신 해당 Editor 타깃의 일반 빌드를 사용한다. 빌드 후 새 프로세스의 속성/API 등록을 확인하고, 이미 최종 승인한 0.141 범위의 맵·BP apply→verify→native/오디오 활성 PIE를 계속한다. 새 기능 범위 승인이나 기존 마이그레이션/맵 복구 반복은 필요 없다.
+- 근거: `Saved/Diagnostics/FrontendMusic20261025/build_readiness_A.json`·동일 로그 및 UBT 로그. 현재 코드 준비3 C++·스크립트2개는 0.141 기록과 같고, 최신 PV 음량 조정·BGM Cue/Wave·다른 미커밋 작업은 유지했다. 코드 준비는 완료지만 실제 겹침 해결 적용·native/PIE·사용자 청취 수용은 아직 완료가 아니다.
+
+## 0.141 최신 재개 — 2026-10-25 PV/BGM 재생 순서 코드 준비 / 사용자 빌드 대기
+
+- 사용자가 PV 소리와 모드 선택 BGM이 겹친다고 보고했다. TODO 1차 승인 뒤 상세 1~4번(프런트엔드 BGM 관리, 레벨 자동 재생 해제, 기존 Cue 연결, 검사·기록)을 제시했고 사용자의 “진행할게”를 해당 항목의 최종 승인으로 확인했다. 코드 준비→사용자 C++ 빌드→두 에셋 적용/재로드/검사 순서이며 직접 순차 처리한다.
+- 읽기 전용 UE 조사 `Saved/Diagnostics/FrontendMusic20261025/inspect_A.json`은 `/Game/DreamCatcher/Maps/L_DC_FrontEnd`의 `K2Node_Event_0.ReceiveBeginPlay → K2Node_CallFunction_0.PlaySound2D` 연결을 확인했다. 소스는 `/Game/DreamCatcher/Audio/선택화면_Cue`, 호출 Volume/Pitch=1/1·StartTime=0, Cue Volume=약0.15·Pitch=1이다. 조사 종료0·에셋 저장0·보호 파일 불변이다. 기존 PV 코드는 자기 MediaSoundComponent만 정리하므로 레벨 BGM은 별도로 계속 재생되는 구조였다.
+- `DCLyraFrontendStateComponent.h/.cpp`에 `MenuMusic`과 소유 `MenuMusicComponent`, `StartMenuMusic`/`StopMenuMusic` 및 조회 API를 추가했다. **실제 모드 선택 화면의 AfterPush/Activated 뒤에만** 기존 Cue를 SpawnSound2D로 한 번 시작한다. 원래 호출의1/1/0과 Cue·Wave 설정은 유지하고, 프런트엔드 EndPlay에서 소유한 컴포넌트만 Stop/Destroy한다. 설정 창 개폐는 음악 수명과 분리돼 중복 시작/재시작하지 않는다. PV 실패나 PV 단계 생략도 같은 메뉴 표시 경로를 사용한다.
+- 기존 `DCFrontendAutomationTests.cpp`에 `DreamCatcher.Frontend.Music.OwnershipAndDuplicateRequest` 한 개를 작성했다. 저장하지 않는 월드의 구체 BP 컴포넌트에서 중복 요청과 소유 오디오만 정리하는 경계를 검사하도록 준비했으며 별도 unattended Editor·`-DCFrontendIsolatedAutomation -DCLyraRuntimeDiagnostics`를 요구한다. 실제 오디오 재생 순서는 전용 PIE에서 별도 확인한다.
+- 신규 `frontend_music_setup.py`는 사용자 빌드 후 **기존 L_DC_FrontEnd 맵과 BP_DC_FrontendStateComponent 두 에셋만** 설정한다. 원래 PlaySound2D 노드를 보존하고 BeginPlay와의 실행 연결1개만 해제한 뒤, BP의 MenuMusic에 기존 Cue를 연결한다. 그래프의 나머지 노드/핀/기본값·맵 액터/Transform/WorldSettings·BP의 허용 필드 외 CDO를 비교하고 내부 API Compile/저장 및 별도 재로드를 준비했다. 오디오 Cue/Wave·PV 에셋·Config·다른 맵은 저장하지 않는다.
+- 신규 `frontend_music_probe.py`는 오디오가 활성화된 별도 PIE에서 PV 중 메뉴 BGM 컴포넌트 미생성, PV 종료 뒤 Cue 컴포넌트1개 재생, 설정 개폐의 동일 인스턴스 유지, 모드 선택 맵 재진입의 PV 단독 단계, 맵/PIE 이탈의 BGM 종료와 별도 미디어 실패 경로를 검사하도록 준비했다. 위젯 API 조작과 재생 상태 관찰이며 실제 키 입력·청취 수용으로 확대하지 않는다.
+- 최종 범위 검사 중 별도 동시 작업으로 `DCPlayerStatusDesignerAutomationTests.cpp`·`UI/Player/DCPlayerStatusWidget.h/.cpp`의 변경을 감지했다. 이번 BGM 수정 파일과 겹치지 않아 현재 내용을 보존했으며 그 코드의 검증 완료를 주장하지 않는다. PV 음량 CPP·오디오 Cue/Wave·Config/Build.cs·DLL·기존 맵·Git HEAD/index의 보호 해시는 기준과 일치한다.
+- **현재는 C++3파일·전용 스크립트2개 작성과 정적 검토 완료 / 사용자 빌드 대기**다. Python AST·공백·보호 범위를 확인했고 C++ 빌드·native 실행·에셋2개 적용/재로드·PIE는 아직 하지 않았다. `DCFrontendIntroScreen.cpp`의 현재 PV 음량0.15 조정과 기존 BGM Cue/Wave, Config/Build.cs, 최신 Level_1/2/3·기타 미커밋 무기/피해 설정·Git 상태를 보존했다. 아직 레벨 BeginPlay 연결이 남아 있으므로 이 코드 준비만으로 겹침 해결이 적용됐다고 보고하지 않는다. 다음은 사용자 Development Editor/Win64 빌드 후 같은 승인 범위의 apply→별도 verify→native/실제 PIE 및 사용자 청취 확인이다.
 
 ## 0.140 최신 재개 — 2026-10-24 PV 3에셋 적용·재로드·실제 반복/재진입/실패 경로 통과 / 사용자 수용 대기
 
