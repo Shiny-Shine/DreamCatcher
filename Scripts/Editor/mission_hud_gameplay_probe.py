@@ -340,7 +340,7 @@ def valid(obj):
 
 def widgets(pc, world, cls, active=False):
     return [widget for widget in ue.ObjectIterator(ue.UserWidget) if valid(widget)
-        and widget.get_class() == cls and not widget.get_name().startswith('Default__')
+        and math_library.call_method('ClassIsChildOf', args=(widget.get_class(), cls)) and not widget.get_name().startswith('Default__')
         and widget.get_world() == world and widget.get_owning_player() == pc
         and (not active or widget.is_activated())]
 
@@ -368,7 +368,7 @@ def child(owner, name):
 
 def owned_class(owner, cls):
     values = [widget for widget in ue.ObjectIterator(ue.UserWidget) if valid(widget)
-        and widget.get_class() == cls and owned_by(widget, owner)]
+        and math_library.call_method('ClassIsChildOf', args=(widget.get_class(), cls)) and owned_by(widget, owner)]
     assert len(values) == 1, (owner.get_path_name(), cls.get_name(), len(values))
     return values[0]
 
@@ -388,7 +388,7 @@ def active_hud(pc, world, required=True):
     point = child(layout, 'ExtensionPoint_ModeStatus')
     assert isinstance(point, ue.DynamicEntryBoxBase)
     overlays = [entry for entry in point.get_all_entries() if valid(entry)
-        and entry.get_class() == CLASSES['DCStageOverlayWidget']]
+        and math_library.call_method('ClassIsChildOf', args=(entry.get_class(), CLASSES['DCStageOverlayWidget']))]
     assert len(overlays) <= 1, 'Duplicate active stage overlays'
     if not overlays:
         assert not required, 'Active ModeStatus has no stage overlay'

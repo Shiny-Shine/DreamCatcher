@@ -48,6 +48,7 @@ if '--verify-report' in sys.argv:
     raise SystemExit(verify_report(*sys.argv[position + 1:]))
 
 import unreal as ue
+math_library = ue.get_default_object(ue.load_class(None, '/Script/Engine.KismetMathLibrary'))
 
 PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
 COMMAND = ue.SystemLibrary.get_command_line()
@@ -153,7 +154,7 @@ def valid(obj):
 
 
 def widgets(pc, world, cls, active=False):
-    return [w for w in ue.ObjectIterator(ue.UserWidget) if w.get_class() == cls
+    return [w for w in ue.ObjectIterator(ue.UserWidget) if math_library.call_method('ClassIsChildOf', args=(w.get_class(), cls))
         and w.get_owning_player() == pc and w.get_world() == world and not w.get_name().startswith('Default__')
         and (not active or w.is_activated())]
 
@@ -195,7 +196,7 @@ def active_boss_entries(pc, world):
     # pool's active widgets (base .cpp:64-66), excluding released/pool objects.
     assert isinstance(point, ue.DynamicEntryBoxBase), point.get_class().get_path_name()
     entries = list(point.get_all_entries())
-    overlays = [entry for entry in entries if valid(entry) and entry.get_class() == overlay_class]
+    overlays = [entry for entry in entries if valid(entry) and math_library.call_method('ClassIsChildOf', args=(entry.get_class(), overlay_class))]
     assert len(overlays) <= 1, 'Duplicate StageOverlay entries are registered on the active HUD'
     result = []
     for overlay in overlays:
@@ -215,7 +216,7 @@ def retained_boss_objects(pc, world):
     active = {widget.get_path_name() for _, widget in active_boss_entries(pc, world)}
     result = []
     for widget in ue.ObjectIterator(ue.UserWidget):
-        if not valid(widget) or widget.get_class() != widget_class or widget.get_name().startswith('Default__'): continue
+        if not valid(widget) or not math_library.call_method('ClassIsChildOf', args=(widget.get_class(), widget_class)) or widget.get_name().startswith('Default__'): continue
         owner = widget.get_owning_player(); obj_world = widget.get_world()
         result.append(dict(widget=widget.get_path_name(),
             world=obj_world.get_path_name() if valid(obj_world) else None,

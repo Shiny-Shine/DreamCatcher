@@ -7,7 +7,7 @@
 > **Lyra 이식 정책 갱신:** 2026-09-10 KST
 > **작업 분담·자동화·마감 기준 갱신:** 2026-10-05 KST / **TODO 승인 갱신:** 2026-10-18 KST / **서브에이전트 운영 갱신:** 2026-10-23 KST
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
-> **최신 재개:** 2026-10-25, 아래 **0.143** — 일반 Editor DLL 확인 후 **PV/BGM 재생 순서의 맵·BP 두 에셋 적용/별도 재로드·native1개·오디오 활성 PIE 정상/실패2모드 통과**다. PV 중 메뉴 BGM0개, 종료 후1개 재생, 설정 개폐 동일 인스턴스, 재진입 시 PV 단독/이후 BGM1개, 맵 종료 시 정리를 관찰했다. **추가 C++ 변경/재빌드 불필요, 사용자 실제 청취·입력·패키징 수용 대기**다. 현재 PV 음량0.15·Cue/Wave·다른 미커밋 파일을 보존했고 Codex 빌드/커밋/푸시는 없다. 운영 기준은0.4·0.138을 유지한다.
+> **최신 재개:** 2026-10-29, 아래 **0.149** — **공통 모드 카드 통합·UMG 확대/복귀 이관·기존 C++/카드 정리를 최종 사용자 PIE 수용까지 완료**했다. 사용자 빌드41.97초 성공, 옛 카드 Blueprint3개 참조0 확인·삭제·별도 재로드 후 사용자가 **“정리 후에도 모두 정상”**을 확인했다. 사용자 작성 EventGraph·HoverZoom·WidgetTree와 원본 이미지3개는 보존했고 일회성 도구는 삭제했다. 추가 빌드·재제작·완료 검사 반복은 필요 없다. 정확한 근거는 `docs/handoffs/automation-cleanup-2026-10-27.md`의0.149를 따른다. HUD 이관0.148도 완료 상태이며 남은 정리·다른 UI 이관은 후속 범위다.
 
 ---
 
@@ -81,7 +81,7 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 1. 아래 0.4의 TODO 1차 승인과 항목별 최종 확인을 따릅니다. 상세 검토에서 원본 근거·변경 이유·대상 경로·검증 범위를 설명하고, 최종 승인된 에셋만 처리합니다.
 2. 필요한 C++ API와 이벤트 훅은 승인된 코드 범위에서 구현합니다. C++ 빌드는 사용자가 진행합니다.
 3. 승인된 에셋 작업은 Unreal Editor 내부 API로 생성·설정·Compile·저장·검사하도록 자동화할 수 있습니다. Python/Editor Utility/Commandlet을 사용할 수 있지만, 에디터 밖의 일반 파일 I/O로 바이너리 에셋을 직접 복사·변조하지 않습니다.
-4. 자동화하지 못한 부분만 정확한 수동 Editor 절차로 전달합니다. 자동 검사와 사용자 PIE·시각·조작감 검증을 구분합니다.
+4. 아래0.4의 비용·작업 분담 기준에 따라 수동으로 진행할 부분은 정확한 Editor 절차로 전달합니다. 자동 검사와 사용자 PIE·시각·조작감 검증을 구분합니다.
 
 ### 0.4 작업 분담·자동화·마감 — 2026-10-05 승인 / 2026-10-18 TODO 승인 / 2026-10-23 직접 작업·서브에이전트 운영 갱신
 
@@ -90,7 +90,7 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 **작업 분담과 승인 단위**
 
 - 사용자: **C++ 빌드, 패키징, 조작감·화면·소리·연출 확인과 GitHub Desktop 커밋·푸시·병합**을 직접 진행합니다. Codex는 별도 지시 없이는 이를 대신 실행하지 않습니다.
-- Codex: 원본 조사, 승인된 코드 작업, **Unreal 내부 에셋 생성·설정·검사 자동화**를 담당합니다. 사용자는 에셋 자동화를 허용했습니다.
+- Codex: 원본 조사, 승인된 코드 작업, 필요한 **Unreal 내부 에셋 생성·설정·검사 자동화**를 담당합니다. 사용자의 자동화 허용을 모든 작업의 자동화 지시로 해석하지 않습니다. 짧은 Editor 작업은 아래2026-10-27 기준에 따라 사용자 직접 조작을 우선합니다.
 - 진행 순서는 **요구사항 → TODO·이해한 동작 보고 → 1차 승인 → 항목별 상세 검토 → 최종 확인 → 직접 작성 또는 독립 작업 병렬 분담 → 통합 검증·결과 보고**입니다. 필요한 사용자 C++ 빌드와 플레이 확인은 기존 분담에 따라 진행합니다.
 - “완료 상태 확인”, “다음 단계 진행”만으로 새로운 코드·Config 수정 범위를 임의 확대하지 않습니다. 문서 수정 요청이면 문서만 수정합니다.
 - 의존성이 강한 여러 R 세부 단계는 묶을 수 있지만, 포함 범위·앞당기는 이유·각 단계의 미검증 항목을 먼저 밝힙니다. 원본 기능의 삭제·축소로 일정을 맞추지 않습니다.
@@ -123,6 +123,20 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - 직접 필요한 코드·에셋 변경과 관련 검증은 한 작업 묶음으로 제시해 사용자 빌드/승인 왕복을 줄입니다. 짧은 수동 Editor 절차가 자동화 개발보다 효율적이면 작업량·보존성·동작 차이를 설명하고 그 대안을 제안합니다.
 - 기능 삭제·원본 동작 축소·무검증 완료 처리는 하지 않습니다. 전체 HUD/장치/복제처럼 현재 연결을 막지 않는 검증은 해당 단계에 미완료로 남깁니다. 기존 구현 제거는 활성 경로 교체와 회귀 검증 후에 합니다.
 - “완료 상태 확인/다음 단계”는 새로운 코드·Config·에셋 변경의 포괄 승인이 아닙니다. 다음 변경안의 정확한 범위·원본 근거·차이를 먼저 제시하는 원칙과 사용자 빌드·패키징 담당은 유지합니다.
+
+**2026-10-27 승인 — 사용자 Editor 작업 우선·자동화 비용·작업 후 정리**
+
+- 작업마다 먼저 기존 에셋·엔진 기능으로 해결되는지 확인합니다. 몇 단계의 속성 변경, 체크 옵션, 참조 지정, UMG 배치·스타일·간단한 애니메이션처럼 **사용자가 Editor에서 직접 작업하는 편이 가장 효율적이면 그 방식을 기본으로 선택**합니다. Codex 직접 작성 원칙은 이러한 수동 Editor 작업을 자동화로 바꾸라는 뜻이 아닙니다.
+- **2026-10-28 사용자 승인 보완:** 이름·계층·값이 정해진 **반복 트리 생성·속성 입력은 제작 자동화 후보**로 검토하고, **화면을 보며 배치·스타일을 조정하는 작업은 사용자가 Editor에서 직접 수행**합니다. 기존 도구·엔진 API 재사용 가능성과 전체 작업 비용을 비교해 분담하며, 전체를 자동화하거나 수동으로 일괄 지정하지 않습니다.
+- Designer 이관과 제작 자동화는 함께 사용할 수 있습니다. 제작 시 자동화로 생성·설정한 Widget Blueprint를 저장한 뒤 Designer에서 편집하도록 하며, 실행 중 C++가 정적 트리·배치·스타일을 다시 만드는 방식과 구분합니다. 불필요한 일회성 도구 정리를 모든 제작 자동화의 금지로 해석하지 않습니다.
+- 해당 제작 자동화를 위해 **새 제작용 C++ 작성과 여러 차례 사용자 빌드가 필요해지면 수동 Editor 작업을 선택**합니다. 이 경우 제약과 정확한 수동 절차를 안내하고, 자동화를 유지하려고 도구·빌드 범위를 확대하지 않습니다.
+- 수동 작업 안내에는 **정확한 에셋 경로 → Editor 탭/메뉴 → 속성·노드와 변경값 → Compile/Save 필요 여부 → 확인할 결과**를 짧게 제시합니다. 사용자가 적용 결과를 알려주면 그 근거로 이어갑니다. 확인되지 않은 메뉴·값을 추정하거나 단순 조작을 위해 새 도구부터 만들지 않습니다.
+- 배치·스타일·애니메이션·조절값은 기존 UMG, 머티리얼 인스턴스, Blueprint, DataAsset 등 Editor의 제작 기능을 우선합니다. 필요한 상태 계산·이벤트 연결·자원 수명은 C++에 남길 수 있습니다. C++로 작성됐다는 이유만으로 불필요한 코드로 분류하거나 모든 런타임 로직을 Blueprint로 옮기지 않습니다.
+- 자동화는 반복·대량 변경이나 수동 실수 위험 때문에 **총 작업 비용이 더 낮을 때** 사용합니다. 비교 비용에는 조사, 작성, 에디터 시작, API 문제 해결, 재시도, 사용자 빌드 왕복, 검증과 정리까지 포함합니다. 기존 도구 재사용을 먼저 검토하고 위 수동 전환 기준을 적용합니다. 그 외 새 범용 도구·검사 체계가 필요한 작업은 실제 제약과 변경 범위를 상세 승인안에 포함합니다.
+- **긴 인라인 명령, Saved 아래 임시 스크립트, Computer Use 반복도 같은 자동화 비용 기준**을 적용합니다. `.py` 파일을 남기지 않았다는 이유만으로 효율적인 작업이라고 판단하지 않습니다. 단순 체크 옵션 하나를 위해 여러 commandlet, 전 프로젝트 해시 조사, 새 캡처·관찰 도구를 개발하지 않습니다. 변경의 실제 위험이나 재현된 문제로 필요한 검사는 그 근거와 범위를 설명합니다.
+- 검증은 변경한 동작과 영향을 받는 경로에 맞춥니다. 단순 설정은 값·저장 상태와 사용자 화면 확인을 중심으로, 코드·수명 변경은 관련 기존 검사를 중심으로 확인합니다. 이미 통과한 검사는 새 변경·실패·남은 우려가 없는 한 반복하지 않으며, 검사 수나 도구 수를 진척으로 보고하지 않습니다.
+- 일회성 도구는 완료 후 실제 호출·import·지원 함수·근거 참조와 복구 필요성을 확인하여 정리합니다. 재사용 도구는 구체적인 사용처가 있을 때 유지하며, 재사용 가능성만을 이유로 새 범용 프레임워크를 만들지 않습니다. **Saved라는 위치나 오래된 날짜만으로 삭제하지 않고**, 로그·보고서·내보내기 결과와 실행 코드의 역할을 구분합니다. 새 일회성 도구의 종료 후 정리는 원래 승인 범위에 포함해 두며, 기존 파일 삭제는 정확한 목록을 최종 확인받습니다.
+- 활성 코드 제거는 대체 경로 연결과 관련 동작 확인 이후에 합니다. 의존성이 강한 UI 연결 변경과 확인된 중복 제거는 함께 검토해 빌드 왕복을 줄입니다. 같은 파일·에셋의 동시 저장 회피, Unreal 내부 API를 통한 바이너리 에셋 처리, 사용자 C++ 빌드·패키징·화면 확인·Git 작업 분담과 두 단계 승인 절차는 유지합니다.
 
 **마감 및 작업 시간**
 
@@ -1596,7 +1610,77 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 
 ---
 
-## 0.143 최신 재개 — 2026-10-25 PV/BGM 두 에셋 적용·재로드·오디오 활성 PIE 통과 / 사용자 청취 대기
+## 0.149 최신 재개 — 2026-10-29 공통 카드·UMG 이관·기존 코드 정리 / 최종 사용자 수용 완료
+
+사용자는 공통 `W_DC_ModeCard` 하나에 UMG `Play Animation Forward / Reverse`를 한 번만 구현하고 크기·여백·기울기를 통일하도록 최종 승인했다. 최종 회신에서 이미지 위치 차이를 허용하며 추가 이미지 처리를 하지 않도록 명시했으므로 투명 여백 사본2개는 만들지 않는다. 기존 ArtworkImage를 사용하고 HoverProgress·native setter·방향 전환마다0.15초 재보간·추가 패널·Blueprint Tick·제작용 C++는 추가하지 않는다.
+
+**자동 적용 완료:** 기존 Story 카드를 Unreal 내부 API로 공통 위젯으로 복제하고 부모 화면의 StoryButton·FreeButton·ChallengeButton을 같은 클래스의 인스턴스로 교체했다. 세 이름과 기존 클릭/키보드 이동 연결·부모 위치는 유지하고 Artwork만 원본3개로 다르게 지정했다. 이미지624×862·버튼380×824와 Shear·여백·중심 Pivot을 통일하고 Hover Scale=1을 설정했다. 프리/챌린지의 기존 표시 위치·비율과 클릭 영역 높이2의 차이는 승인된 통일 결과다. 애니메이션에서는 공통 Scale만 키를 넣으며 고정 Translation을0으로 바꾸지 않는다.
+
+`Saved/Diagnostics/ModeCardCommon20261029/apply.json`의 위젯2개 저장과 `verify.json`의 별도 재로드·Compile·클래스/이미지/배치 비교·저장0이 통과했다. apply_C/verify_A 종료0이며 Python/Blueprint Error·Fatal·ensure는 검출되지 않았다. 초기 A/B는 저장 전 조회 오류로 중단됐고 근거를 보존했다. 다른 위젯 설정·원본 텍스처3개·기존 카드3개·C++2개의 보존을 확인했으며 `result.json` 기록 후 일회성 제작 스크립트는 삭제했다.
+
+**사용자 수용·C++ 정리:** 사용자가 공통 카드에 UMG 애니메이션·Forward/Reverse·복원을 적용·Compile·Save하고 PIE에서 **“적용했고 세 카드 모두 정상”**이라고 확인했다. 이어 승인된 DCModeCardButton.h/.cpp의 확대 전용 Tick·마우스 추적·보간·중심 보정·HoverScale/HoverDuration·상태·lifecycle override 및 불필요한 include를 제거했다. Artwork 바인딩·이미지 설정·CommonUI 계약은 유지한다. 활성 Source/Scripts/Config에 제거한 심볼의 잔여 참조가 없고 diff 공백 검사를 통과했으며 새 제작용 C++·스크립트·테스트는 추가하지 않았다.
+
+**빌드·정리 완료:** 사용자 DreamCatcherEditor / Development Editor / Win64 빌드 **Succeeded /41.97초**, DLL **2026-10-29 18:14:03 KST /6,894,080 bytes**를 확인했다. 새 DLL로 공통/부모 위젯을 Compile·재저장하고, Asset Registry 및 EditorAssetLibrary의 참조 확인이 모두0인 기존 Story/Free/Challenge 카드 Blueprint3개만 Unreal 내부 API로 삭제했다. 별도 재로드·Compile·클래스/원본 이미지 연결·삭제 확인도 성공했으며 verify 저장0이다. HoverScale/HoverDuration은 제거됐고 HoverZoom 및 Forward/Reverse/StopAnimation/SetRenderScale 호출은 유지됐다.
+
+사용자 작성 EventGraph·HoverZoom·WidgetTree 내보내기 블록이 재로드 전후 정확히 일치했다. 전체 텍스트의 차이는 컴파일러 중간 노드 핀 GUID와 생성 함수 그래프6개의 GUID다. `Saved/Diagnostics/ModeCardCommon20261029/cleanup_result.json` 및 cleanup_apply/cleanup_verify가 최신 근거이며 cleanup_apply_C/cleanup_verify_A 종료0·Python/Blueprint Error/Fatal/ensure 검출0이다. 초기 A/B의 enum 변환·보호된 Animations 조회 오류는 저장·삭제 전 중단 이력으로 보존했다. 일회성 postbuild_cleanup.py는 참조 확인 후 삭제했고 로그·JSON·내보내기를 보존했다. 원본 이미지와 C++ 파일은 이 에셋 작업에서 변경하지 않았다.
+
+**최종 사용자 수용 완료:** 새 DLL과 옛 카드 삭제 이후 L_DC_FrontEnd PIE의 확대·복귀·빠른 왕복·클릭·화면 재진입 복원 확인에 대해 사용자가 **“정리 후에도 모두 정상”**이라고 답했다. 공통 카드 통합·UMG 이관·확대 C++ 및 중복 카드 정리는 이 확인까지 포함해 완료됐다. cleanup_result.json의 제거 후 사용자 PIE=false는 자동 검사 당시 기록이며 후속 수용은 이 문서에 기록한다. 추가 빌드·재제작·완료 검사 반복은 필요 없다. 사용자 확인을 Codex의 자동 화면 검사·패키징 확인으로 확대하지 않는다. 근거는 `docs/handoffs/automation-cleanup-2026-10-27.md`의0.149를 따른다. HUD 이관0.148 완료 상태는 유지하며 다른 UI 이관·잔여 정리는 후속 범위다.
+
+## 0.148 완료 이력 — 2026-10-28 HUD Designer 이관 / 사용자 PIE 수용까지 완료
+
+- 사용자가 HUD의 숨겨진 중복 결과 위젯과 보스·미션·결과 UI Designer 이관 상세안을 승인하고 C++ 연결부부터 진행하도록 요청했다. 사용자 직접 Editor 제작·참조 연결을 위해 아래 계약을 준비했다. 코드 작성은 직접 순차 처리했다.
+- `DCStageOverlayWidget`의 StageDisplay 생성·멤버·숨김 갱신을 제거하고 BossDisplay/MissionDisplay를 BindWidget으로 연결한다. 보스·결과 내용 위젯은 Designer 트리·폰트·브러시를 사용하며 C++는 데이터 표시·MID·버튼 이벤트 수명을 유지한다. 보스 DataAsset의 중복 HUDStyle을 제거했다.
+- 미션 HUDStyle은 완료 유지 시간·전환 시간·EntryWidgetClass3개만 남긴다. MissionPanelSize의 Width/Min/Max, Border padding, HeaderSpace 높이와 행 Blueprint의 실제 폰트·여백·아이콘 크기로 높이를 계산한다. 페이지/클래스마다 transient TextBlock 하나를 복제해 실제 텍스트 속성으로 측정하며 저장된 템플릿은 수정하지 않는다. 두 페이지·목록 객체·풀·완료 유지/최신 중간점/취소 처리를 유지한다.
+- `DCStageResultLayer`는 기존 CommonUI 입력·포커스 호스트로 남고 GameMode의 기존 ResultWidgetClass로 내부 Designer 내용을 생성한다. 별도 결과 관리자나 새 결과 레이어 BP는 필요 없다. 기존 GameMode 경로도 같은 클래스 설정을 사용한다. `DCStageUIComponent`·미션 클리어 영상 코드는 수정하지 않았다.
+- 연결 코드 단계에서 C++20파일(보스/미션 기존 검사3개 포함)과 기존 boss_hud/mission_hud/player_status_hud/level_progression Python 검사4개를 조정했다. Python4개 구문 검사와 diff 공백 검사를 통과했으며 당시에는 에셋 저장0개였다. 아래 후속 제작에서는 C++와 기존 검사 스크립트를 추가 수정하지 않았다.
+- 첫 사용자 빌드는 DCMissionObjectiveWidget의 Padding/Slot 지역변수가 상속 멤버를 가리는 C4458로 실패했다.5곳을 PanelPadding/PhasePadding/PhaseSlot으로 교정한 후 **재빌드 Succeeded /9.94초**, DLL **2026-10-28 00:24:29 KST /6,898,688 bytes**를 확인했다. 이전 단계 빌드 결과를 재사용한 것이 아니다. Codex는 C++ 빌드를 실행하지 않았다.
+- **2026-10-28 후속 분담·제작 승인:** 반복 트리·정해진 속성 입력에 설치된 UMGToolSet의 생성/계층/변수/Compile API를 사용했다. 화면을 보며 하는 배치·스타일 조정은 사용자 담당이며, 새 제작용 C++와 여러 차례 빌드가 필요하면 수동으로 전환한다. 이번에는 추가 C++·빌드 없이 적용했다.
+- **제작 순서**는 기존 `/Game/DreamCatcher/UI/HUD/W_DC_MissionEntry` 제작·Compile 후 새 W_DC_BossHealth, W_DC_MissionObjective, W_DC_StageResult, W_DC_StageOverlay다. 미션의 새 MissionPanelSize SizeBox는 Designer에서 폭·최소/최대 높이를 관리하기 위한 필수 컨테이너다. 마지막으로 LAS_DC_StageHUD의 HUD.Slot.ModeStatus 클래스와 StageRun/Level1/Level2/Level3 GameMode의 ResultWidgetClass를 연결한다.
+- **제작·등록 완료:** 위젯5개와 ActionSet1개·GameMode4개, 총10개 에셋 저장. 미션 목록2개의 FactoryRules에는 기존 DCMissionEntryFactory와 DCMissionEntryData→W_DC_MissionEntry 매핑을 지정해 원본 Lyra 목록 Compile 조건을 충족했다. 미션 DataAsset4개는 저장하지 않았고 EntryWidgetClass·0.6/0.4초 설정 및 파일 해시를 보존했다.
+- **검증:** apply_E는 트리 완성 전 기존 MissionEntry의 필수 바인딩 오류가 누적되어 종료1이지만 최종 Compile·10개 저장은 완료됐다. 새 프로세스 verify_B는 저장0·종료0·전체 기록된 트리/속성/연결 일치, Blueprint 오류0이다. native_A의 기존 보스2·미션6·메뉴 입력 소유권1 검사는 성공9·실패/테스트 경고0, 종료0이다. 임시 위젯/월드 검사를 실제 화면·PIE 수용으로 확대하지 않는다.
+- 일회성 `Saved/Diagnostics/HUDDesigner20261028/apply_hud.py`는 호출 참조 확인과 검증 후 삭제했다. 로그·JSON과 `Saved/Automation/HUDDesigner20261028/index.json`은 보존했다. 초기 API 조회 실패와 검증 보고서 tuple/list 비교 교정도 기록했다. 상세 근거는 `Saved/Diagnostics/HUDDesigner20261028/final_result.json`과 [정리 인계](docs/handoffs/automation-cleanup-2026-10-27.md)의0.148이다.
+- **후속 사용자 PIE 수용 완료:** 제작·Compile·Save·연결 완료 회신 후 현재 에셋14개와 재로드 검증본의 SHA256 일치를 확인해 기존 검사9개를 반복하지 않았다. 이어 사용자가 보스 이름·HP, 미션 체크·완료 유지·전환, 실패 결과의 재시작·메인화면 복귀·키보드 포커스가 **“모두 정상 동작함”**이라고 확인했다. 이 이관 묶음은 사용자 수용까지 완료다. 추가 빌드·재제작·완료 검사 반복은 필요 없으며, 사용자 확인을 Codex의 자동 화면 검사나 패키징 검증으로 확대하지 않는다.
+
+## 0.147 이력 — 2026-10-27 Editor 작업 우선 기준 반영·추가 일회성 도구5개 정리
+
+- 사용자는 프로젝트 전반의 불필요한 코드·일회성 자동화 정리를 이어가고, 직접 Editor 작업이 가장 효율적인 경우 그렇게 진행하며 재발 방지 기준을 명세에 반영하도록 요청했다. 후속 TODO1차 승인과 **문서3개·명시한 Saved Python5개 삭제**를 최종 승인했다.
+- 0.4와 기능 명세에 사용자 직접 작업 안내, 기존 Editor 기능 우선, 총 자동화 비용, 긴 인라인 명령·Saved 임시 스크립트에도 같은 기준 적용, 변경 범위에 맞는 검증, 참조 확인 후 정리 기준을 반영했다. 새 감사·자동화 프레임워크는 만들지 않았다.
+- 삭제한5개는 `Saved/Diagnostics/PlayerStatusDesigner20261023/`의 `active_alpha_trace.py`, `mi_readonly_diagnosis.py`, `readonly_material_function.py`와 `Saved/Diagnostics/ShieldDepleted20261025/`의 `inspect.py`, `materials.py`다. 과거 고정 내보내기 조사, 삭제된 제작 도구 의존, 완료된 쉴드 제작/이전 HP 설정 검사를 구분해 확인했고 실행 코드에서 들어오는 참조는 찾지 못했다. 프로젝트 내부의 명시된 일반 파일임을 확인한 후 비재귀 삭제했다.
+- 유지 Python21개·Editor C++의 읽기 전용 레티클 캡처와 로그·JSON·내보내기 결과를 보존했다. Saved 진단 Python은250→245개다. `mission_hud_setup.py`는 `Saved/Diagnostics/Level1Merge20261016/apply_merge.py`를 해시 근거로 읽으므로 Saved 전체를 삭제하지 않는다. 나머지245개의 미사용·삭제 판정은 아직 완료하지 않았다.
+- 활성 UI 조사에서 `DCStageOverlayWidget`의 StageDisplay가 생성되지만 결과 표시 호출이 없고 단계 제목도 매 갱신 숨겨지는 중복을 확인했다. 실제 결과 화면은 `DCStageResultLayer`와 GameMode의 별도 경로에 있으므로 결과 위젯 클래스 전체를 삭제하지 않는다. 이 중복은 다음 UI 변경에 묶어 상세 검토한다.
+- 보스·미션·결과 UI와 상위 표시 계층, 카드 확대, PV/클리어 화면의 표현을 Editor로 이관하는 작업은 미완료다. 레이더 투영·GAS·미디어 수명·필요한 원본 Slate 구현은 단순 배치 코드와 구분한다. **이번 묶음은 문서와 위5개 파일만 변경**했고 C++·Config·에셋 수정·빌드·PIE 재검사를 하지 않았다. 문서 diff 공백 검사와 삭제5개/유지21개 확인으로 마쳤다.
+
+## 0.146 이력 — 2026-10-27 HP 감소 영역 회색 유지 / 사용자 PIE 수용까지 완료
+
+- 사용자는 다음 UI 이관 전에 HP 감소분도 현재 쉴드바처럼 회색으로 남기도록 요청했다. 1차 승인 뒤, **잠시 후 사라지는 잔상이 아니라 감소한 빈 구간을 계속 회색으로 유지하고 회복하면 채우는 동작**을 명시해 최종 승인을 받았다.
+- 현재 쉴드3개는 공유 머티리얼의 기존 `ShowDepletedShield=true`, HP Fill은 false임을 저장 근거·현재 해시 및 Unreal API 조회로 확인했다. 기존 `ShieldDepletedColor=(0.18,0.18,0.18,1)`을 공통으로 사용한다. 위젯·애니메이션·새 C++ 구현 없이 기존 Editor 옵션으로 처리했다.
+- 승인된 `/Game/DreamCatcher/UI/HUD/Art/MI_DC_HUD_HealthArt_Fill` 하나에서 **ShowDepletedShield만 false→true**로 변경·저장했다. 부모·모든 scalar/vector/texture/다른 static switch 값이 같고 쉴드3개의 전체 조회 파라미터도 보존됐다. 저장 전후 다른 Content4,961개 크기·수정시각 불변을 확인했다.
+- apply B와 새 프로세스 verify A가 종료0·Error/ensure/Fatal0으로 통과했다. 저장1·verify 저장0, 최종 SHA256 `a8c4c4106b39055ea8fa4e642329539829fb37fb16ef4bf504c585b75c439889`다. 초기 apply A는 setter 반환 False를 실패로 처리해 저장 전 중단했으며, B에서는 실제 옵션 조회와 전체 파라미터 비교 및 재로드 결과로 적용을 판정했다.
+- 근거는 `Saved/Diagnostics/HPDepleted20261027/result.json`, `Saved/Logs/HPDepletedApply20261027_B.log`, `HPDepletedVerify20261027_A.log`다. 새 스크립트 파일·C++·Config·위젯/마스터 머티리얼 그래프 변경은 없다. 기존 LyraGame import 종료 경고는 남는다.
+- **후속 사용자 PIE 수용 완료:** 사용자가 **“회색 영역과 회복 표시 모두 정상”**이라고 확인했다. HP 감소 구간의 회색 유지·회복 표시는 적용·재로드와 사용자 화면 확인까지 완료다. 추가 빌드·완료 검사 반복은 필요 없다. 사용자 확인을 Codex의 자동 GPU 화면 검사로 표현하지 않는다. 나머지 UI 이관은 후속 범위로 유지한다.
+
+## 0.145 이력 — 2026-10-27 HP·아머 UI Designer 단일화 / 사용자 PIE 수용까지 완료
+
+- 사용자는 1차 정리 완료 확인 후 후속 Editor 이관을 요청했고, HP·아머 UI의 상세 범위를 **최종 승인**했다. 직접 순차 작업이며 새 자동화 스크립트·검사 프레임워크는 추가하지 않는다.
+- 실제 `/Game/DreamCatcher/UI/HUD/W_DC_PlayerStatus`는 이미 Designer 구성이며 기존 검증본 SHA256과 현재 파일이 일치했다. 해당 클래스의 다른 저장된 Widget Blueprint 사용처는 기존 레지스트리 조사에서 없었다.
+- `DCPlayerStatusWidget.h/.cpp`에서 native 위젯 트리 생성, ApplyLayout, HP 자식 동적 생성, Designer 분기 스위치와 배치·폰트·브러시 전용 설정19개를 제거했다. 상태별 색상·glow·갱신 주기7개와 기존 Designer preview는 유지한다. 저장된 트리의 명명된 위젯과 원본 W_Healthbar를 그대로 사용한다.
+- HP/최대HP·아머 갱신, 아머 애니메이션 시간·중단/재시작 처리, 시그니처 상태·쿨다운, Pawn·Controller 연결/해제·월드 종료 처리를 보존했다. 기존 `DCPlayerStatusDesignerAutomationTests.cpp`는 제거한 멤버 호출만 조정하고 검사5개를 유지했다. 코드3개 파일은 순감소197줄이며 정적 diff 검토·공백 검사를 통과했다.
+- **사용자 Development Editor/Win64 빌드 성공(40.54초)**을 확인했다. DLL은 **21:46:59 KST / 6,909,440 bytes**다. 새 DLL로 기존 `DreamCatcher.UI.PlayerStatus.Designer`5개를 실행해 **성공5·실패/테스트경고0**, 프로세스 종료0을 확인했다. 근거는 `Saved/Automation/PlayerStatusDesignerOnly_20261027_A/index.json`이다.
+- **W_DC_PlayerStatus 한 에셋만** Unreal 내부 API로 Compile·재저장했다. 전체 UMG 트리·위젯18개·CDO가 Compile 전후 같고, 별도 프로세스 재로드·메모리 Compile 후에도 일치했다. apply 저장1·verify 저장0, 다른 Content4,961개 크기/수정시각 불변 및 원본 W_Healthbar 해시 보존을 확인했다. 저장본 SHA256은 `377c29b582f0f85172567f88543f9a1783e778a7f26f484d1e279c718ba915b8`이다.
+- 첫 apply A는 인라인 Python 문법 오류로 실행 전 중단·저장0이었다. 문법 확인 후 apply B와 verify A는 종료0·Error/ensure/Fatal0으로 통과했다. 기존 B_LyraGameInstance의 LyraGame import 종료 경고는 남는다. 기존 helper의 내보내기·보존 검사 함수를 재사용했으며 새 스크립트 파일은 없다. 결과는 `Saved/Diagnostics/PlayerStatusDesignerOnly20261027/result.json`과 `Saved/Logs/PlayerStatusDesignerOnly{Native,Apply,Verify}20261027_*.log`를 따른다.
+- **후속 사용자 PIE 수용 완료:** 사용자가 HP·아머 배치와 수치, 피해·회복 애니메이션에 대해 **“기존과 같고 정상 동작함”**을 확인했다. 이 항목은 코드·에셋 적용, 사용자 빌드, 자동 검사와 사용자 화면 확인까지 완료다. 추가 빌드·완료 검사 반복은 필요 없다. native 임시 위젯 검사와 사용자 PIE 수용은 구분하며 패키징 성공으로 확대하지 않는다. 보스·미션·결과, 카드 UMG 애니메이션, 영상 레이아웃 이관은 별도 후속 범위다.
+
+## 0.144 이력 — 2026-10-27 완료 도구·잔여 코드 정리 / 사용자 빌드·카드 검사 통과
+
+- 최초 59개 일괄 퇴역안은 철회했다. 사용자 최종 범위는 완료된 일회성 도구·구형 검사·확실한 미사용 코드·캐시이며, 재사용 검사와 필요한 헬퍼를 보존한다.
+- Python31개·추적 pycache1개·HARU/Inspector 제작용 Editor C++4개, 총36개 파일을 검토 당시 해시·프로젝트 내부 경로 확인 후 삭제했다. Python21개(검사13＋지원8), C++ 테스트49개, `DCReticleLayoutCapture.cpp`는 유지한다.
+- 모드 카드의 실제 트리에 없는 문구·외곽선 처리만 제거했다. 사용자가 확인한 1.03배·0.15초 호버는 유지한다. Build.cs의 제작 도구 전용 Editor 의존성6개 제거와 Python 캐시 ignore를 반영했다.
+- 에셋·맵·게임 Config와 기존 진단 근거는 정리 대상에서 제외했다. 삭제된 스크립트가 과거 문서에 등장하는 것은 이력이며 현재 실행 지침이 아니다.
+- **사용자 빌드 Succeeded/70.51초, DLL 02:43:07 KST/6,929,408bytes 및 카드3개 로드/메모리 Compile 확인 완료**다. `CleanupCardsVerify20261027_A.log` 종료0·저장0·파일 해시 불변, 두 필수 위젯과 호버1.03배/0.15초를 확인했다. Error/Fatal/ensure0이며 기존 LyraGame import 종료 경고는 남는다. Codex 빌드·패키징·커밋·푸시는 없다. 전체 기능/PIE 재검증 완료로 표현하지 않는다.
+- 다음은 Designer/UMG 애니메이션으로 관리할 표현의 이관이다. HP 중복 생성 경로, 보스·미션·결과 UI 배치, 카드 애니메이션, 영상 화면을 대상으로 현재 동작을 보존하며 검토한다. 필요한 GAS·게임플레이·미디어 수명 로직이나 진단 gate를 일괄 제거하지 않는다.
+- 작은 Editor 작업마다 새 장기 보관용 스크립트·검증 프레임워크를 만들지 않는다. 정확한 삭제/유지 목록과 후속 이관 범위는 [정리 인계](docs/handoffs/automation-cleanup-2026-10-27.md)를 따른다.
+
+## 0.143 이력 — 2026-10-25 PV/BGM 두 에셋 적용·재로드·오디오 활성 PIE 통과 / 사용자 청취 대기
 
 - 사용자가 에디터 종료 후 일반 Editor 빌드를 완료했다. 기본 DLL은 **15:09:48 KST·7,308,800바이트**, SHA256 `e4ac0c1e54c14771a1756ed6ad5252552e84bff2cdfc96215500b294a8129452`다. 새 MenuMusic 속성과 조회 API를 실제 적용·native/PIE에서 확인했으며 아래0.142의 Live Coding 대기는 이전 이력이다. 이번 단계에서 C++/Config/Build.cs 변경이나 Codex C++ 빌드는 없다.
 - 승인된 `/Game/DreamCatcher/Maps/L_DC_FrontEnd`의 **BeginPlay→PlaySound2D 실행선1개만 해제**하고 원래 노드/핀/기본값을 보존했다. `/Game/DreamCatcher/Blueprints/UI/BP_DC_FrontendStateComponent`의 MenuMusic만 기존 `/Game/DreamCatcher/Audio/선택화면_Cue`로 연결했다. 최종 apply **D는 저장2개·종료0·complete=true**, 별도 verify D는 **저장0·종료0·complete=true**다. 나머지 그래프·BP CDO·배치 클래스/트랜스폼·WorldSettings와 보호 파일/스테이징이 일치한다.

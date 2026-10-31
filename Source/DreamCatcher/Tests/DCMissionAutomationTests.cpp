@@ -213,8 +213,8 @@ bool FDCMissionEditingTest::RunTest(const FString&)
 	TestFalse(TEXT("Missing default tracked identity rejected"), Data->ValidateDefinitions(Errors));
 	Data->Missions[1].MissionId = NAME_None;
 	TestFalse(TEXT("None identity rejected"), Data->ValidateDefinitions(Errors));
-	Data->HUDStyle.PanelWidth = std::numeric_limits<float>::quiet_NaN();
-	TestFalse(TEXT("Malformed UI geometry is detectable for HUD fallback"), Data->HUDStyle.IsValid());
+	Data->HUDStyle.MissionTransitionDuration = std::numeric_limits<float>::quiet_NaN();
+	TestFalse(TEXT("Malformed UI timing is detectable for HUD fallback"), Data->HUDStyle.IsValid());
 	TestTrue(TEXT("Bad presentation never fails or advances combat"), S->GetRunState() == EDCStageRunState::Running && S->GetCurrentPhaseIndex() == 0);
 	return !HasAnyErrors();
 }

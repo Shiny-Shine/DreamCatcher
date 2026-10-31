@@ -23,6 +23,8 @@ struct FDCMissionBodyPage
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PhaseText;
 	UPROPERTY(Transient) TObjectPtr<USizeBox> ListBox;
 	UPROPERTY(Transient) TObjectPtr<UDCMissionListView> List;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> MeasurementText;
+	UPROPERTY(Transient) TSubclassOf<UUserWidget> MeasuredEntryClass;
 	UPROPERTY(Transient) TArray<TObjectPtr<UDCMissionEntryData>> Items;
 	UPROPERTY(Transient) TArray<FDCMissionProgress> Rows;
 	UPROPERTY(Transient) FDCMissionHUDStyle Style;
@@ -31,7 +33,7 @@ struct FDCMissionBodyPage
 };
 
 /** Passive mission presentation. StageDirector is the sole progress source. */
-UCLASS()
+UCLASS(Blueprintable)
 class DREAMCATCHER_API UDCMissionObjectiveWidget : public UUserWidget
 {
 	GENERATED_BODY()
@@ -75,7 +77,7 @@ private:
 	enum class EBodyState : uint8 { Live, Holding, FadingOut, FadingIn };
 	static FDCMissionHUDStyle ResolveStyle(const FDCMissionHUDStyle& Source);
 	bool ValidatePresentation(const FDCMissionHUDStyle& Style, const TArray<FDCMissionProgress>& Rows);
-	void ApplyPage(int32 Page, int32 PhaseIndex, const FText& Title, const TArray<FDCMissionProgress>& Rows, const FDCMissionHUDStyle& Style);
+	bool ApplyPage(int32 Page, int32 PhaseIndex, const FText& Title, const TArray<FDCMissionProgress>& Rows, const FDCMissionHUDStyle& Style);
 	void SynchronizePage(int32 Page);
 	void SelectActiveAliases();
 	void ClearPage(int32 Page);
@@ -83,15 +85,26 @@ private:
 	void HandleMidpoint(int64 Serial, int32 Page);
 	void HandleFinished(int64 Serial);
 	void Refresh();
+	bool BindDesignerWidgets();
+	bool HasValidDesignerLayout() const;
+	float GetContentWidth() const;
+	float GetPhaseHeight(int32 Page);
 	void RemoveList(int32 Page);
-	UPROPERTY(Transient) TObjectPtr<UBorder> Panel;
-	UPROPERTY(Transient) TObjectPtr<UVerticalBox> Contents;
-	UPROPERTY(Transient) TObjectPtr<UDCMissionTransitionSwitcher> BodySwitcher;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<USizeBox> MissionPanelSize;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UBorder> MissionPanel;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UVerticalBox> MissionContents;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<USizeBox> MissionHeaderSpace;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UDCMissionTransitionSwitcher> MissionBodySwitcher;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UVerticalBox> MissionBodyPage0;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UVerticalBox> MissionBodyPage1;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> MissionStageTitle0;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> MissionStageTitle1;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<USizeBox> MissionListArea0;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<USizeBox> MissionListArea1;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UDCMissionListView> MissionList0;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UDCMissionListView> MissionList1;
 	UPROPERTY(Transient) TArray<FDCMissionBodyPage> Pages;
-	UPROPERTY(Transient) TObjectPtr<USizeBox> HeaderBox;
 	UPROPERTY(Transient) TObjectPtr<USizeBox> ListBox;
-	UPROPERTY(Transient) TObjectPtr<UImage> HeaderIcon;
-	UPROPERTY(Transient) TObjectPtr<UTextBlock> HeaderText;
 	UPROPERTY(Transient) TObjectPtr<UTextBlock> PhaseText;
 	UPROPERTY(Transient) TObjectPtr<UDCMissionListView> MissionList;
 	UPROPERTY(Transient) TArray<FDCMissionProgress> DisplayedMissions;
@@ -102,6 +115,7 @@ private:
 	bool bContentOverflow = false;
 	bool bReportedInvalidConfiguration = false;
 	bool bReportedStyleFallback = false;
+	bool bDesignerTreeReady = false;
 	TWeakObjectPtr<ADCStageDirector> SourceDirector;
 	FTimerHandle HoldTimer;
 	EBodyState State = EBodyState::Live;

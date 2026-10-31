@@ -60,6 +60,11 @@ Plugins/**/Intermediate/*
 # Cache files for the editor to use
 DerivedDataCache/*
 
+# Generated Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
 # Unreal's Content folder and its subfolders
 /Content/ThirdPerson/Input/
 /Content/ThirdPerson/Maps/

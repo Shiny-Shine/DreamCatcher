@@ -1,6 +1,4 @@
 #include "UI/Stage/DCMissionListData.h"
-#include "Engine/Font.h"
-#include "Styling/CoreStyle.h"
 
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
@@ -23,30 +21,8 @@ bool DefinitionIsValid(const FDCMissionDefinition& Value)
 
 bool FDCMissionHUDStyle::IsValid() const
 {
-	return FMath::IsFinite(RightMargin) && RightMargin >= 0.f && FMath::IsFinite(TopOffset) && TopOffset >= 0.f
-		&& FMath::IsFinite(PanelWidth) && FMath::IsFinite(MinHeight) && FMath::IsFinite(MaxHeight)
-		&& FMath::IsFinite(Padding) && Padding >= 0.f && PanelWidth > Padding * 2.f
-		&& FMath::IsFinite(HeaderHeight) && HeaderHeight > 0.f
-		&& FMath::IsFinite(RowMinHeight) && RowMinHeight > 0.f
-		&& FMath::IsFinite(CheckboxSize) && CheckboxSize >= 1.f
-		&& FMath::IsFinite(CheckboxTextGap) && CheckboxTextGap >= 0.f
-		&& PanelWidth > Padding * 2.f + CheckboxSize + CheckboxTextGap
-		&& FMath::IsFinite(CompletedHoldDuration) && CompletedHoldDuration >= 0.f
-		&& FMath::IsFinite(MissionTransitionDuration) && MissionTransitionDuration > 0.f
-		&& MinHeight >= Padding * 2.f + HeaderHeight && MaxHeight >= MinHeight
-		&& FontSize >= 1 && FontSize <= 200 && HeaderFontSize >= 1 && HeaderFontSize <= 200
-		&& StageFontSize >= 1 && StageFontSize <= 200
-		&& FMath::IsFinite(TextColor.R) && FMath::IsFinite(TextColor.G)
-		&& FMath::IsFinite(TextColor.B) && FMath::IsFinite(TextColor.A);
-}
-
-FSlateFontInfo FDCMissionHUDStyle::GetMissionFont() const
-{
-	const float NativeSize = bFontSizeInPixels
-		? static_cast<float>(FontSize) * 72.f / static_cast<float>(FontConstants::RenderDPI)
-		: static_cast<float>(FontSize);
-	return MissionFont ? FSlateFontInfo(MissionFont.Get(), NativeSize, FName(TEXT("Default")))
-		: FCoreStyle::GetDefaultFontStyle("Regular", NativeSize);
+	return FMath::IsFinite(CompletedHoldDuration) && CompletedHoldDuration >= 0.f
+		&& FMath::IsFinite(MissionTransitionDuration) && MissionTransitionDuration > 0.f;
 }
 
 const FDCMissionDefinition* UDCMissionListData::FindEnabledMission(FName MissionId) const
@@ -92,7 +68,7 @@ EDataValidationResult UDCMissionListData::IsDataValid(FDataValidationContext& Co
 	const EDataValidationResult ParentResult = Super::IsDataValid(Context);
 	TArray<FText> Errors;
 	ValidateDefinitions(Errors);
-	if (!HUDStyle.IsValid()) { Errors.Add(FText::FromString(TEXT("Mission HUD geometry/text settings are invalid; the HUD will use its safe layout fallback."))); }
+	if (!HUDStyle.IsValid()) { Errors.Add(FText::FromString(TEXT("Mission HUD transition timing is invalid; the HUD will use its safe timing defaults."))); }
 	for (const FText& Error : Errors) { Context.AddError(Error); }
 	return ParentResult == EDataValidationResult::Invalid || !Errors.IsEmpty()
 		? EDataValidationResult::Invalid : EDataValidationResult::Valid;

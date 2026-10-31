@@ -12,16 +12,14 @@ class APlayerController;
 class UDCBossHealthWidget;
 class UDCMissionObjectiveWidget;
 class UDCRadarWidget;
-class UDCStageResultWidget;
 class USceneComponent;
 
 /** Registered only in the R13 HUD extension slot. Owns no gameplay state. */
-UCLASS()
+UCLASS(Blueprintable)
 class DREAMCATCHER_API UDCStageOverlayWidget : public UUserWidget
 {
 	GENERATED_BODY()
 protected:
-	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 private:
@@ -35,9 +33,8 @@ private:
 	UFUNCTION() void MissionPhaseStarted(ADCStageDirector* Director, int32 Index, const FText& Title, EDCStagePhaseType Type);
 	UFUNCTION() void MissionStageEnded(ADCStageDirector* Director, bool bSucceeded);
 	UFUNCTION() void MissionSourceDestroyed(AActor* Director);
-	UPROPERTY(Transient) TObjectPtr<UDCStageResultWidget> StageDisplay;
-	UPROPERTY(Transient) TObjectPtr<UDCBossHealthWidget> BossDisplay;
-	UPROPERTY(Transient) TObjectPtr<UDCMissionObjectiveWidget> MissionDisplay;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UDCBossHealthWidget> BossDisplay;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UDCMissionObjectiveWidget> MissionDisplay;
 	TWeakObjectPtr<ADCBossCharacter> Boss;
 	TWeakObjectPtr<UDCRadarWidget> ConnectedRadar;
 	TWeakObjectPtr<USceneComponent> ConnectedObjective;

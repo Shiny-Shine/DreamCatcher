@@ -29,7 +29,6 @@
 
 ADCStageRunGameMode::ADCStageRunGameMode(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	ResultWidgetClass = UDCStageResultWidget::StaticClass();
 	PhaseTitle = LOCTEXT("Preparing", "준비 중");
 }
 
@@ -211,7 +210,7 @@ void ADCStageRunGameMode::EnsureStageWidget()
 {
 	if (bUseExperienceUI) { return; }
 	APlayerController* PC = RunPlayer.Get();
-	if (StageWidget || !PC || !PC->GetLocalPlayer() || !ResultWidgetClass || GetNetMode() == NM_DedicatedServer) { return; }
+	if (StageWidget || !PC || !PC->GetLocalPlayer() || !ResultWidgetClass || ResultWidgetClass.Get() == UDCStageResultWidget::StaticClass() || GetNetMode() == NM_DedicatedServer) { return; }
 	StageWidget = CreateWidget<UDCStageResultWidget>(PC, ResultWidgetClass);
 	if (StageWidget)
 	{

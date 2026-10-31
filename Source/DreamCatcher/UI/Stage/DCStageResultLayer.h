@@ -5,6 +5,7 @@
 
 class ADCStageRunGameMode;
 class UDCStageResultWidget;
+class USizeBox;
 
 /** R13 CommonUI layer wrapper; uses the accepted result buttons and stage travel API. */
 UCLASS()
@@ -23,10 +24,12 @@ protected:
 	virtual void NativeOnInitialized() override;
 private:
 	void Refresh();
+	void EnsureContent();
+	void UnbindContent();
 	void ConsumeEscape() {}
 	UFUNCTION() void Retry();
 	UFUNCTION() void ExitStage();
 	TWeakObjectPtr<ADCStageRunGameMode> Mode;
-	UPROPERTY(Transient)
-	TObjectPtr<UDCStageResultWidget> Content;
+	UPROPERTY(Transient) TObjectPtr<USizeBox> ContentHost;
+	UPROPERTY(Transient) TObjectPtr<UDCStageResultWidget> Content;
 };

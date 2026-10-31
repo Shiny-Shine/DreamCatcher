@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Blueprint/UserWidget.h"
-#include "Fonts/SlateFontInfo.h"
 #include "Styling/SlateBrush.h"
 #include "TimerManager.h"
 #include "DCPlayerStatusWidget.generated.h"
@@ -28,32 +27,11 @@ enum class EDCPlayerSignatureState : uint8
 	Cooldown
 };
 
-/** Presentation values only. No health, armor, or ability balance is written by this widget. */
+/** Dynamic state appearance only. Layout, fonts and brushes belong to the Designer hierarchy. */
 USTRUCT(BlueprintType)
 struct FDCPlayerStatusStyle
 {
 	GENERATED_BODY()
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float BarWidth = 440.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float ArmorHeight = 24.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float ArmorHealthGap = 8.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float HealthHeight = 32.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float BottomMargin = 72.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float HorizontalOffset = 0.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float ArmorSegmentGap = 8.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float StarSize = 80.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float StarGap = 40.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Layout") float StarIconScale = .6f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Text") int32 FontSize = 18;
-	/** Empty preserves the original HP font; the armor label uses the engine fallback. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Text") FSlateFontInfo TextFont;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Text") FLinearColor TextColor = FLinearColor::White;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Armor") FLinearColor ArmorColor = FLinearColor::White;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Armor") FSlateBrush ArmorBorderBrush;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Armor") FSlateBrush ArmorFillBrush;
-	/** Optional left/center/right fills. Empty preserves the common ArmorFillBrush. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Armor") TArray<FSlateBrush> ArmorSegmentFillBrushes;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Signature") FSlateBrush StarBrush;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Signature") FSlateBrush SignatureRingBrush;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Signature") FLinearColor ReadyColor = FLinearColor::White;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Signature") FLinearColor ActiveColor = FLinearColor(.6f, .85f, 1.f, 1.f);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Signature") FLinearColor CooldownColor = FLinearColor(.35f, .35f, .35f, 1.f);
@@ -85,7 +63,7 @@ struct FDCPlayerArmorSegment
 	bool bHealing = false;
 };
 
-/** Passive Stage HUD wrapper around the original Lyra W_Healthbar. */
+/** Passive Designer-authored Stage HUD around the original Lyra W_Healthbar. */
 UCLASS(BlueprintType, Blueprintable)
 class DREAMCATCHER_API UDCPlayerStatusWidget : public UUserWidget
 {
@@ -95,8 +73,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status") FDCPlayerStatusStyle StatusStyle;
 	/** The existing W_Healthbar Blueprint, after its three denominator/initial-value edits. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status") TSubclassOf<UUserWidget> HealthWidgetClass;
-	/** Uses the saved Designer hierarchy. Geometry, fonts and colors stay owned by Designer. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Player Status|Designer") bool bUseDesignerLayout = false;
 	/** Editor presentation only; these values never write to a Pawn or ability system. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status|Designer", meta=(ClampMin="0")) float PreviewHealth = 100.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Player Status|Designer", meta=(ClampMin="1")) float PreviewMaxHealth = 100.f;
@@ -133,7 +109,6 @@ private:
 	static FDCPlayerStatusStyle ResolveStyle(const FDCPlayerStatusStyle& Source);
 	bool BindDesignerWidgets();
 	void ApplyDesignerPreview();
-	void ApplyLayout();
 	void EnsureHealthWidget();
 	void ReleaseHealthWidget();
 	void NotifyOriginalHealthPawnChanged(APawn* OldPawn, APawn* NewPawn);
@@ -206,7 +181,6 @@ private:
 	bool bNeedsHealthMaterialSync = true;
 	bool bNeedsHealthNumberSync = true;
 	bool bReportedInvalidStyle = false;
-	bool bReportedInvalidHealthClass = false;
 	bool bDiagnosticVolatile = false;
 	bool bSavedVolatility = false;
 	bool bDesignerTreeReady = false;

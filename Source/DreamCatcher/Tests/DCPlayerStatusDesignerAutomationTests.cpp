@@ -25,7 +25,6 @@
 struct FDCPlayerStatusDesignerTestAccess
 {
 	static bool Bind(UDCPlayerStatusWidget* W) { return W->BindDesignerWidgets(); }
-	static void Layout(UDCPlayerStatusWidget* W) { W->ApplyLayout(); }
 	static void Release(UDCPlayerStatusWidget* W) { W->ReleaseHealthWidget(); }
 	static void Ensure(UDCPlayerStatusWidget* W) { W->EnsureHealthWidget(); }
 	static void Destruct(UDCPlayerStatusWidget* W) { W->NativeDestruct(); }
@@ -73,7 +72,7 @@ struct FFixture
 	UImage* Fill = nullptr;
 	explicit FFixture(bool bDesignTime = true)
 	{
-		Status->Initialize(); Status->bUseDesignerLayout = true;
+		Status->Initialize();
 		if (bDesignTime) { Status->SetDesignerFlags(EWidgetDesignFlags::Designing); }
 		if (!Status->WidgetTree) { Status->WidgetTree = NewObject<UWidgetTree>(Status.Get(), TEXT("WidgetTree"), RF_Transient); }
 		UWidgetTree* Tree = Status->WidgetTree;
@@ -138,11 +137,10 @@ bool FDCPlayerStatusDesignerLayoutTest::RunTest(const FString&)
 	if (!TestTrue(TEXT("Typed authored hierarchy binds"), FDCPlayerStatusDesignerTestAccess::Bind(F.Status.Get()))) { return false; }
 	const FSlateFontInfo ShieldFont = F.Shield->GetFont(), HealthFont = F.Number->GetFont();
 	const FSlateColor ShieldColor = F.Shield->GetColorAndOpacity(), HealthColor = F.Number->GetColorAndOpacity();
-	F.Status->StatusStyle.BarWidth = 999; F.Status->StatusStyle.FontSize = 65;
 	for (const FVector2D Values : {FVector2D(100, 150), FVector2D(50, 75), FVector2D(0, 0), FVector2D(100, 150)})
 	{
 		F.Status->PreviewHealth = static_cast<float>(Values.X); F.Status->PreviewArmor = static_cast<float>(Values.Y);
-		F.Status->SynchronizeProperties(); FDCPlayerStatusDesignerTestAccess::Layout(F.Status.Get());
+		F.Status->SynchronizeProperties();
 		F.Status->RefreshPlayerStatus();
 		TestEqual(TEXT("Preview current HP"), F.Number->GetTargetValue(), static_cast<float>(Values.X));
 		TestEqual(TEXT("Preview armor text"), F.Shield->GetText().ToString(), FString::FromInt(FMath::RoundToInt(Values.Y)));

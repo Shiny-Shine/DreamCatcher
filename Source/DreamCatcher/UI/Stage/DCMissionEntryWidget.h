@@ -2,6 +2,7 @@
 
 #include "Blueprint/IUserObjectListEntry.h"
 #include "Blueprint/UserWidget.h"
+#include "Styling/SlateBrush.h"
 #include "UI/Common/DCLyraListView.h"
 #include "UI/Common/DCLyraWidgetFactory_Class.h"
 #include "UI/Stage/DCMissionListData.h"
@@ -11,6 +12,7 @@ class UImage;
 class USizeBox;
 class UTextBlock;
 class STableViewBase;
+class UWidgetTree;
 
 DECLARE_MULTICAST_DELEGATE(FDCMissionEntryChanged);
 
@@ -20,7 +22,7 @@ class DREAMCATCHER_API UDCMissionEntryData : public UObject
 {
 	GENERATED_BODY()
 public:
-	void Update(const FDCMissionProgress& InProgress, const FDCMissionHUDStyle& InStyle);
+	void Update(const FDCMissionProgress& InProgress, float InWidth, float InHeight);
 	void SetPaintContext(const FString& Source, int32 Phase, int32 Page, int64 Serial)
 	{ PaintSource = Source; PaintPhase = Phase; PaintPage = Page; PaintSerial = Serial; }
 	FString PaintSource;
@@ -29,12 +31,12 @@ public:
 	int64 PaintSerial = 0;
 	UFUNCTION(BlueprintPure, Category="Mission|HUD")
 	FDCMissionProgress GetProgress() const { return Progress; }
-	const FDCMissionHUDStyle& GetStyle() const { return Appearance; }
+	float GetAvailableWidth() const { return AvailableWidth; }
 	float GetRowHeight() const { return RowHeight; }
 	FDCMissionEntryChanged OnChanged;
 private:
 	UPROPERTY(Transient) FDCMissionProgress Progress;
-	UPROPERTY(Transient) FDCMissionHUDStyle Appearance;
+	float AvailableWidth = 0.f;
 	float RowHeight = 48.f;
 };
 
@@ -62,16 +64,20 @@ protected:
 #endif
 };
 
-/** Native contents of the thin W_DC_MissionEntry Blueprint used by Lyra's pool. */
+/** Designer-authored row used by the existing Lyra list pool. */
 UCLASS(Blueprintable)
 class DREAMCATCHER_API UDCMissionEntryWidget : public UUserWidget, public IUserObjectListEntry
 {
 	GENERATED_BODY()
 public:
 	static FText FormatProgress(const FDCMissionProgress& Progress);
-	static float MeasureTextHeight(const FText& Text, int32 FontSize, float Width);
-	static float MeasureTextHeight(const FText& Text, const FSlateFontInfo& Font, float Width);
-	static float MeasureRowHeight(const FDCMissionProgress& Progress, const FDCMissionHUDStyle& Style);
+	static const UWidgetTree* GetDesignerTree(TSubclassOf<UUserWidget> EntryClass);
+	static UTextBlock* CreateMeasurementText(const UWidgetTree* Design, UObject* Outer);
+	static float MeasureTextHeight(UTextBlock* TextWidget, const FText& Text, float Width);
+	static float MeasureRowHeight(const FDCMissionProgress& Progress, const UWidgetTree* Design, UTextBlock* MeasurementText, float Width);
+	/** Completed-state art. The unchecked brush is authored on MissionCheckbox. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Mission|Appearance")
+	FSlateBrush CompletedBrush;
 	UFUNCTION(BlueprintPure, Category="Mission|HUD")
 	FText GetDisplayedText() const;
 	UFUNCTION(BlueprintPure, Category="Mission|HUD")
@@ -87,11 +93,14 @@ protected:
 		FSlateWindowElementList& Elements, int32 LayerId, const FWidgetStyle& Style, bool bParentEnabled) const override;
 private:
 	void UnbindEntry();
+	void BindDesignerWidgets();
 	void Refresh();
-	UPROPERTY(Transient) TObjectPtr<USizeBox> RowBox;
-	UPROPERTY(Transient) TObjectPtr<USizeBox> CheckboxBox;
-	UPROPERTY(Transient) TObjectPtr<UImage> Checkbox;
-	UPROPERTY(Transient) TObjectPtr<UTextBlock> Label;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<USizeBox> MissionRow;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<USizeBox> MissionCheckboxBox;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UImage> MissionCheckbox;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> MissionText;
+	UPROPERTY(Transient) FSlateBrush UncheckedBrush;
+	bool bBrushCached = false;
 	TWeakObjectPtr<UDCMissionEntryData> Entry;
 	FDelegateHandle ChangeHandle;
 	bool bDiagnosticVolatility = false;

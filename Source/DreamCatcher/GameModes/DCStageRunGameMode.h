@@ -31,6 +31,7 @@ public:
 	bool WasRunSuccessful() const { return bRunEnded && bRunSucceeded; }
 	UFUNCTION(BlueprintPure, Category="Stage")
 	UDCStageResultWidget* GetStageWidget() const { return StageWidget; }
+	TSubclassOf<UDCStageResultWidget> GetResultWidgetClass() const { return ResultWidgetClass; }
 	UFUNCTION(BlueprintPure, Category="Stage|UI")
 	bool UsesExperienceUI() const { return bUseExperienceUI; }
 	UFUNCTION(BlueprintPure, Category="Stage|UI")

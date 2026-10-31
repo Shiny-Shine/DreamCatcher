@@ -56,12 +56,10 @@ public class DreamCatcher : ModuleRules
 		if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.Add("MessageLog");
-			// Narrow editor repair for the HARU dash montage/profile connection.
-			PrivateDependencyModuleNames.AddRange(new[] { "UnrealEd", "BlueprintGraph" });
+			// Existing editor validation and read-only layout capture.
+			PrivateDependencyModuleNames.Add("UnrealEd");
 			// Opt-in, unsaved Inspector FK pose preflight; no runtime module dependencies.
 			PrivateDependencyModuleNames.AddRange(new[] { "IKRig", "IKRigEditor", "AnimationBlueprintLibrary" });
-			// Inspector-only editor setup: private rig/physics/Blueprint copies.
-			PrivateDependencyModuleNames.AddRange(new[] { "SkeletalMeshModifiers", "ControlRig", "ControlRigDeveloper", "RigVMDeveloper", "RigVM" });
 		}
 
 		PublicIncludePaths.AddRange(new string[] {

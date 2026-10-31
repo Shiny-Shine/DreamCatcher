@@ -9,8 +9,8 @@ class UTextBlock;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDCStageResultAction);
 
-/** Temporary R11 presentation only; the final Lyra HUD/layout work remains R13. */
-UCLASS()
+/** Designer-authored result content shared by the legacy and CommonUI hosts. */
+UCLASS(Blueprintable)
 class DREAMCATCHER_API UDCStageResultWidget : public UUserWidget
 {
 	GENERATED_BODY()
@@ -20,6 +20,7 @@ public:
 	void SetTravelPending(bool bPending);
 	void SetStageTitleVisible(bool bVisible);
 	UWidget* GetResultFocusTarget() const;
+	bool HasDesignerContent() const;
 	UFUNCTION(BlueprintPure, Category="Stage")
 	bool IsResultVisible() const { return bResultVisible; }
 	UPROPERTY(BlueprintAssignable, Category="Stage")
@@ -27,24 +28,25 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Stage")
 	FDCStageResultAction OnExitRequested;
 protected:
-	virtual TSharedRef<SWidget> RebuildWidget() override;
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 private:
 	void RefreshText();
 	UFUNCTION()
 	void RetryClicked();
 	UFUNCTION()
 	void ExitClicked();
-	UPROPERTY(Transient)
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> StageTitle;
-	UPROPERTY(Transient)
-	TObjectPtr<UBorder> TitlePanel;
-	UPROPERTY(Transient)
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UBorder> PhasePanel;
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> ResultTitle;
-	UPROPERTY(Transient)
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UBorder> ResultPanel;
-	UPROPERTY(Transient)
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> RetryButton;
-	UPROPERTY(Transient)
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ExitButton;
 	FText CurrentTitle;
 	bool bResultVisible = false;

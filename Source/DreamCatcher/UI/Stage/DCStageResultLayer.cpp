@@ -2,6 +2,7 @@
 #include "UI/Stage/DCStageResultWidget.h"
 #include "GameModes/DCStageRunGameMode.h"
 #include "Blueprint/WidgetTree.h"
+#include "Components/SizeBox.h"
 #include "Input/CommonUIInputTypes.h"
 #include "NativeGameplayTags.h"
 
@@ -24,24 +25,61 @@ void UDCStageResultLayer::NativeOnInitialized()
 TSharedRef<SWidget> UDCStageResultLayer::RebuildWidget()
 {
 	if (!WidgetTree) { WidgetTree = NewObject<UWidgetTree>(this, TEXT("WidgetTree")); }
-	if (!WidgetTree->RootWidget)
+	if (!ContentHost)
 	{
-		Content = WidgetTree->ConstructWidget<UDCStageResultWidget>(UDCStageResultWidget::StaticClass(), TEXT("StageResult"));
-		WidgetTree->RootWidget = Content;
-		Content->SetStageTitleVisible(false);
+		// A native host only; the selected Blueprint owns every visible result element.
+		ContentHost = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("ResultHost"));
+		WidgetTree->RootWidget = ContentHost;
 	}
+	EnsureContent();
 	return Super::RebuildWidget();
 }
 
-void UDCStageResultLayer::BindStage(ADCStageRunGameMode* InMode) { Mode = InMode; Refresh(); }
+void UDCStageResultLayer::UnbindContent()
+{
+	if (Content)
+	{
+		Content->OnRetryRequested.RemoveDynamic(this, &ThisClass::Retry);
+		Content->OnExitRequested.RemoveDynamic(this, &ThisClass::ExitStage);
+	}
+}
+
+void UDCStageResultLayer::EnsureContent()
+{
+	if (!ContentHost || !Mode.IsValid()) { return; }
+	const TSubclassOf<UDCStageResultWidget> DesiredClass = Mode->GetResultWidgetClass();
+	if (Content && Content->GetClass() != DesiredClass.Get())
+	{
+		UnbindContent(); ContentHost->SetContent(nullptr); Content = nullptr;
+	}
+	if (!DesiredClass || DesiredClass.Get() == UDCStageResultWidget::StaticClass()) { return; }
+	if (!Content)
+	{
+		Content = WidgetTree->ConstructWidget<UDCStageResultWidget>(DesiredClass,
+			MakeUniqueObjectName(WidgetTree, DesiredClass.Get(), TEXT("StageResult")));
+		if (!Content) { return; }
+		if (!Content->HasDesignerContent())
+		{
+			UE_LOG(LogTemp, Error, TEXT("Result Widget Class requires the named Designer panel, texts and buttons."));
+			Content = nullptr; return;
+		}
+		ContentHost->SetContent(Content);
+	}
+	Content->SetOwningPlayer(GetOwningPlayer());
+	Content->SetStageTitleVisible(false);
+	Content->OnRetryRequested.AddUniqueDynamic(this, &ThisClass::Retry);
+	Content->OnExitRequested.AddUniqueDynamic(this, &ThisClass::ExitStage);
+}
+
+void UDCStageResultLayer::BindStage(ADCStageRunGameMode* InMode)
+{
+	Mode = InMode; EnsureContent(); Refresh();
+}
 
 void UDCStageResultLayer::NativeConstruct()
 {
 	Super::NativeConstruct();
-	Content->SetOwningPlayer(GetOwningPlayer());
-	Content->OnRetryRequested.AddUniqueDynamic(this, &ThisClass::Retry);
-	Content->OnExitRequested.AddUniqueDynamic(this, &ThisClass::ExitStage);
-	Refresh();
+	EnsureContent(); Refresh();
 }
 
 void UDCStageResultLayer::Refresh()
@@ -70,11 +108,7 @@ void UDCStageResultLayer::ExitStage()
 
 void UDCStageResultLayer::NativeDestruct()
 {
-	if (Content)
-	{
-		Content->OnRetryRequested.RemoveDynamic(this, &ThisClass::Retry);
-		Content->OnExitRequested.RemoveDynamic(this, &ThisClass::ExitStage);
-	}
+	UnbindContent();
 	Mode.Reset();
 	Super::NativeDestruct();
 }

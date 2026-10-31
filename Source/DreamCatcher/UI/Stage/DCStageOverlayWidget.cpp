@@ -1,5 +1,4 @@
 #include "UI/Stage/DCStageOverlayWidget.h"
-#include "UI/Stage/DCStageResultWidget.h"
 #include "UI/Stage/DCMissionObjectiveWidget.h"
 #include "UI/Boss/DCBossHealthWidget.h"
 #include "UI/Radar/DCRadarWidget.h"
@@ -8,9 +7,6 @@
 #include "AI/Boss/DCBossPhaseComponent.h"
 #include "Character/DCLyraHealthComponent.h"
 #include "GameModes/DCStageRunGameMode.h"
-#include "Blueprint/WidgetTree.h"
-#include "Components/CanvasPanel.h"
-#include "Components/CanvasPanelSlot.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -18,29 +14,12 @@
 #include "GameFramework/PlayerController.h"
 #include "Stage/DCStageDirector.h"
 
-TSharedRef<SWidget> UDCStageOverlayWidget::RebuildWidget()
-{
-	if (!WidgetTree) { WidgetTree = NewObject<UWidgetTree>(this, TEXT("WidgetTree")); }
-	if (!WidgetTree->RootWidget)
-	{
-		UCanvasPanel* Root = WidgetTree->ConstructWidget<UCanvasPanel>(); WidgetTree->RootWidget = Root;
-		StageDisplay = WidgetTree->ConstructWidget<UDCStageResultWidget>();
-		BossDisplay = WidgetTree->ConstructWidget<UDCBossHealthWidget>();
-		MissionDisplay = WidgetTree->ConstructWidget<UDCMissionObjectiveWidget>();
-		for (UWidget* Child : TArray<UWidget*> { StageDisplay.Get(), BossDisplay.Get(), MissionDisplay.Get() })
-		{
-			UCanvasPanelSlot* ChildSlot = Root->AddChildToCanvas(Child);
-			ChildSlot->SetAnchors(FAnchors(0,0,1,1)); ChildSlot->SetOffsets(FMargin(0));
-		}
-		SetVisibility(ESlateVisibility::HitTestInvisible);
-		BossDisplay->SetVisibility(ESlateVisibility::Collapsed);
-	}
-	return Super::RebuildWidget();
-}
-
 void UDCStageOverlayWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	SetIsFocusable(false); SetVisibility(ESlateVisibility::HitTestInvisible);
+	if (!BossDisplay || !MissionDisplay) { return; }
+	BossDisplay->SetVisibility(ESlateVisibility::Collapsed);
 	if (MissionDisplay) { MissionDisplay->RequestLatestLive.BindUObject(this, &ThisClass::Refresh); }
 	if (GetWorld()) { GetWorld()->GetTimerManager().SetTimer(UpdateTimer, this, &ThisClass::Refresh, .1f, true); }
 	Refresh();
@@ -51,12 +30,11 @@ void UDCStageOverlayWidget::Refresh()
 	const ADCStageRunGameMode* Mode = GetWorld() ? GetWorld()->GetAuthGameMode<ADCStageRunGameMode>() : nullptr;
 	if (!Mode || !Mode->UsesExperienceUI())
 	{
+		if (BossDisplay) { BossDisplay->SetVisibility(ESlateVisibility::Collapsed); }
 		if (MissionDisplay) { MissionDisplay->ClearMissionStatus(); }
 		DisconnectMissionSource(); ClearRadarBinding(); return;
 	}
-	if (!StageDisplay || !BossDisplay || !MissionDisplay) { return; }
-	StageDisplay->SetStageTitle(Mode->GetStageTitle());
-	StageDisplay->SetStageTitleVisible(false);
+	if (!BossDisplay || !MissionDisplay) { return; }
 	if (!Boss.IsValid() && !Mode->HasRunEnded())
 	{
 		for (TActorIterator<ADCBossCharacter> It(GetWorld()); It; ++It)

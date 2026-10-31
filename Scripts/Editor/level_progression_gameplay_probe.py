@@ -132,9 +132,11 @@ def arm():
         spec = gas.call_method('AssignTagSetByCallerMagnitude', args=(spec, tag('SetByCaller.Damage'), 1000000.0))
         source_asc.apply_gameplay_effect_spec_to_target(spec, target_asc)
 
+    math_library = u.get_default_object(u.load_class(None, '/Script/Engine.KismetMathLibrary'))
+
     def widgets(pc, name):
         kind = cls(name)
-        return [value for value in u.ObjectIterator(u.UserWidget) if value.get_class() == kind
+        return [value for value in u.ObjectIterator(u.UserWidget) if math_library.call_method('ClassIsChildOf', args=(value.get_class(), kind))
                 and value.get_owning_player() == pc and not value.get_name().startswith('Default__')]
 
     def finish(ok):

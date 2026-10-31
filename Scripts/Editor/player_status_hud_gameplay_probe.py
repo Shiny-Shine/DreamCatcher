@@ -306,7 +306,7 @@ def child(owner, name):
 
 
 def widgets(pc, world, cls):
-    return [w for w in ue.ObjectIterator(ue.UserWidget) if valid(w) and w.get_class() == cls
+    return [w for w in ue.ObjectIterator(ue.UserWidget) if valid(w) and math_library.call_method('ClassIsChildOf', args=(w.get_class(), cls))
             and w.get_owning_player() == pc and w.get_world() == world and not w.get_name().startswith('Default__') and w.is_activated()]
 
 
@@ -330,7 +330,7 @@ def context(pc, world):
         return None
     assert status.get_status_pawn() == pc.get_controlled_pawn()
     point = child(layout, 'ExtensionPoint_ModeStatus')
-    entries = [e for e in point.get_all_entries() if valid(e) and e.get_class() == OVERLAY]
+    entries = [e for e in point.get_all_entries() if valid(e) and math_library.call_method('ClassIsChildOf', args=(e.get_class(), OVERLAY))]
     assert len(entries) == 1
     return dict(layout=layout, status=status, overlay=entries[0], radar=child(layout, 'Radar'))
 
