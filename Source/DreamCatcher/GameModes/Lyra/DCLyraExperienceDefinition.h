@@ -46,15 +46,25 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category=Gameplay)
 	TObjectPtr<const UDCPawnData> BotPawnData = nullptr;
 
-	/** Opt in to separate initial combat attributes for human players and player bots. */
+	/**
+	 * Initialize separate CombatSet.BaseDamage attributes for human players and player bots.
+	 * These supply fallback damage when no matching story difficulty override applies.
+	 * Tune supported story attacks in the active Difficulty Preset instead.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage")
 	bool bUseRoleBasedBaseDamage = false;
 
-	/** Initial player CombatSet.BaseDamage. The weapon's execution modifier still applies. */
+	/**
+	 * Initial player CombatSet.BaseDamage, combined with the weapon's execution modifier.
+	 * Supported story attacks replace this combined damage with the active Difficulty Preset value.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage", meta = (EditCondition = "bUseRoleBasedBaseDamage", EditConditionHides, ClampMin = "0.0", UIMin = "0.0"))
 	float PlayerBaseDamage = 0.0f;
 
-	/** Initial player-bot CombatSet.BaseDamage. Rifle bonus is excluded by its source-tag condition. */
+	/**
+	 * Initial player-bot CombatSet.BaseDamage. Rifle bonus is excluded by its source-tag condition.
+	 * Supported story attacks use the active Difficulty Preset's Enemy Damage instead.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Damage", meta = (EditCondition = "bUseRoleBasedBaseDamage", EditConditionHides, ClampMin = "0.0", UIMin = "0.0"))
 	float EnemyBaseDamage = 12.0f;
 

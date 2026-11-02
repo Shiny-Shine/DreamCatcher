@@ -8,6 +8,8 @@
 #include "Engine/World.h"
 #include "DCLogChannels.h"
 #include "Teams/DCTeamSubsystem.h"
+#include "System/DCDifficultySubsystem.h"
+#include "AbilitySystemComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCLyraDamageExecution)
 
@@ -49,6 +51,14 @@ void UDCLyraDamageExecution::Execute_Implementation(const FGameplayEffectCustomE
 
 	float BaseDamage = 0.0f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().BaseDamageDef, EvaluateParameters, BaseDamage);
+	if (const UAbilitySystemComponent* SourceASC = ExecutionParams.GetSourceAbilitySystemComponent())
+	{
+		if (const UDCDifficultySubsystem* Difficulty = UDCDifficultySubsystem::GetForStage(SourceASC->GetWorld()))
+		{
+			// Replace the combined base once. Keep the shared attribute and all later damage rules.
+			Difficulty->TryOverrideBaseDamage(SourceASC->GetAvatarActor(), Spec, BaseDamage);
+		}
+	}
 
 	const AActor* EffectCauser = TypedContext->GetEffectCauser();
 	const FHitResult* HitActorResult = TypedContext->GetHitResult();

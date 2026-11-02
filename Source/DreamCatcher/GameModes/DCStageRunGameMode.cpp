@@ -7,6 +7,9 @@
 #include "Character/DCLyraHealthComponent.h"
 #include "Character/DCPawnExtensionComponent.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
+#include "GameModes/DCDifficultyData.h"
+#include "System/DCDifficultySubsystem.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "GameFramework/GameStateBase.h"
@@ -30,6 +33,19 @@
 ADCStageRunGameMode::ADCStageRunGameMode(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PhaseTitle = LOCTEXT("Preparing", "준비 중");
+}
+
+void ADCStageRunGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+	if (DifficultyCatalog && GetNetMode() == NM_Standalone && ErrorMessage.IsEmpty())
+	{
+		UGameInstance* Instance = GetGameInstance();
+		UDCDifficultySubsystem* Difficulty = Instance ? Instance->GetSubsystem<UDCDifficultySubsystem>() : nullptr;
+		if (!Difficulty) { ErrorMessage = TEXT("Difficulty subsystem is unavailable."); }
+		else { Difficulty->EnsureStoryRun(DifficultyCatalog, ErrorMessage); }
+		if (!ErrorMessage.IsEmpty()) { UE_LOG(LogDreamCatcher, Error, TEXT("[Difficulty] %s"), *ErrorMessage); }
+	}
 }
 
 void ADCStageRunGameMode::InitGameState()

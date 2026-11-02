@@ -18,6 +18,7 @@
 #include "Inventory/DCInventoryManagerComponent.h"
 #include "Player/DCPlayerState.h"
 #include "TimerManager.h"
+#include "System/DCDifficultySubsystem.h"
 #include "UI/Weapons/Lyra/DCLyraWeaponUserInterface.h"
 #include "Weapon/Lyra/DCLyraWeaponInstance.h"
 #include "Weapon/Lyra/DCLyraWeaponStateComponent.h"
@@ -107,6 +108,15 @@ void ADCRifleIntegrationController::TryEquipWhenReady()
 		if (!GrantedPistol)
 		{
 			UE_LOG(LogDCRifleIntegration, Error, TEXT("[R5-R6] Pistol inventory item grant failed; removing the granted loadout."));
+			ClearIntegrationRifle();
+			return;
+		}
+	}
+	if (const UDCDifficultySubsystem* Difficulty = UDCDifficultySubsystem::GetForStage(GetWorld()))
+	{
+		if (!Difficulty->ApplyStartingAmmo(GrantedRifle) || (GrantedPistol && !Difficulty->ApplyStartingAmmo(GrantedPistol)))
+		{
+			UE_LOG(LogDCRifleIntegration, Error, TEXT("[Difficulty] Starting ammo exceeds the granted weapon capacity."));
 			ClearIntegrationRifle();
 			return;
 		}

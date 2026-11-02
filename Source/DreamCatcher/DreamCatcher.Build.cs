@@ -58,8 +58,6 @@ public class DreamCatcher : ModuleRules
 			PrivateDependencyModuleNames.Add("MessageLog");
 			// Existing editor validation and read-only layout capture.
 			PrivateDependencyModuleNames.Add("UnrealEd");
-			// Opt-in, unsaved Inspector FK pose preflight; no runtime module dependencies.
-			PrivateDependencyModuleNames.AddRange(new[] { "IKRig", "IKRigEditor", "AnimationBlueprintLibrary" });
 		}
 
 		PublicIncludePaths.AddRange(new string[] {

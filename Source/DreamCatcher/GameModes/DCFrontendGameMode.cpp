@@ -3,6 +3,10 @@
 #include "CommonPlayerController.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
+#include "GameModes/DCDifficultyData.h"
+#include "System/DCDifficultySubsystem.h"
+#include "DreamCatcher.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/PackageName.h"
@@ -23,6 +27,10 @@ ADCFrontendGameMode::ADCFrontendGameMode(const FObjectInitializer& ObjectInitial
 
 void ADCFrontendGameMode::StartPlay()
 {
+	if (UGameInstance* Instance = GetGameInstance(); Instance && DifficultyCatalog)
+	{
+		Instance->GetSubsystem<UDCDifficultySubsystem>()->EndStoryRun();
+	}
 	if (GEngine)
 	{
 		TravelFailureHandle = GEngine->OnTravelFailure().AddUObject(this, &ThisClass::HandleTravelFailure);
@@ -38,6 +46,17 @@ bool ADCFrontendGameMode::RequestStartStory()
 	if (bEndingPlay || bTravelPending || GetNetMode() != NM_Standalone || StoryMap.IsNull()) { return false; }
 	const FString PackageName = StoryMap.ToSoftObjectPath().GetLongPackageName();
 	if (!FPackageName::IsValidLongPackageName(PackageName) || !FPackageName::DoesPackageExist(PackageName)) { return false; }
+	if (DifficultyCatalog)
+	{
+		UGameInstance* Instance = GetGameInstance();
+		UDCDifficultySubsystem* Difficulty = Instance ? Instance->GetSubsystem<UDCDifficultySubsystem>() : nullptr;
+		FString Error;
+		if (!Difficulty || !Difficulty->BeginStoryRun(DifficultyCatalog, Error))
+		{
+			UE_LOG(LogDreamCatcher, Error, TEXT("[Difficulty] Cannot start story: %s"), *Error);
+			return false;
+		}
+	}
 	bTravelPending = true;
 	PendingDestination = FName(*PackageName);
 	TravelTimer = GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::ExecuteStoryTravel);

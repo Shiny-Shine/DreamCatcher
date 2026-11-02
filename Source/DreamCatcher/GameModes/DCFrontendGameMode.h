@@ -4,6 +4,8 @@
 #include "Engine/EngineBaseTypes.h"
 #include "DCFrontendGameMode.generated.h"
 
+class UDCDifficultyCatalog;
+
 DECLARE_MULTICAST_DELEGATE_OneParam(FDCFrontendTravelFailed, const FText&);
 
 /** UI-only, standalone entry point. Does not use the stage's PawnData/spawn flow. */
@@ -22,6 +24,7 @@ public:
 	UFUNCTION(BlueprintPure, Category="Frontend")
 	bool IsStoryTravelPending() const { return bTravelPending; }
 	FDCFrontendTravelFailed OnStoryTravelFailed;
+	const UDCDifficultyCatalog* GetDifficultyCatalog() const { return DifficultyCatalog; }
 
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -29,6 +32,8 @@ protected:
 	void HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& Error);
 	UPROPERTY(EditDefaultsOnly, Category="Frontend")
 	TSoftObjectPtr<UWorld> StoryMap;
+	UPROPERTY(EditDefaultsOnly, Category="Frontend|Difficulty")
+	TObjectPtr<UDCDifficultyCatalog> DifficultyCatalog;
 
 private:
 	void ExecuteStoryTravel();

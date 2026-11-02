@@ -202,7 +202,7 @@ bool FDCBaseDamageRifleExecutionTest::RunTest(const FString&)
 	using namespace DCBaseDamageTests;
 	FFixture Fixture;
 	if (!Fixture.Start(*this)) { return false; }
-	// Run AFTER base_damage_setup.py apply + fresh verify. Do not patch the asset in a test.
+	// Exercise the saved GE fallback path; this fixture has no story difficulty override.
 	UClass* RifleClass = LoadClass<UGameplayEffect>(nullptr, TEXT("/Game/Weapons/Rifle/GE_Damage_RifleAuto.GE_Damage_RifleAuto_C"));
 	if (!TestNotNull(TEXT("Saved real Rifle GE"), RifleClass)) { return false; }
 	const UGameplayEffect* Rifle = GetDefault<UGameplayEffect>(RifleClass);
@@ -215,6 +215,15 @@ bool FDCBaseDamageRifleExecutionTest::RunTest(const FString&)
 	TestTrue(TEXT("BaseDamage source capture"), Bonus.CapturedAttribute == FGameplayEffectAttributeCaptureDefinition(
 		UDCCombatSet::GetBaseDamageAttribute(), EGameplayEffectAttributeCaptureSource::Source, true));
 	TestTrue(TEXT("Original additive operation"), Bonus.ModifierOp == EGameplayModOp::Additive);
+	constexpr float EffectLevel = 1.0f;
+	float SavedRifleBonus = 0.0f;
+	if (!TestTrue(TEXT("Saved Rifle bonus is readable at the tested effect level"),
+		Bonus.ModifierMagnitude.GetStaticMagnitudeIfPossible(EffectLevel, SavedRifleBonus))
+		|| !TestTrue(TEXT("Saved Rifle bonus is finite and non-negative"), FMath::IsFinite(SavedRifleBonus) && SavedRifleBonus >= 0.0f))
+	{
+		return false;
+	}
+	AddInfo(FString::Printf(TEXT("Saved Rifle fallback bonus at level %.0f: %.2f"), EffectLevel, SavedRifleBonus));
 
 	ADCPlayerState* Target = Fixture.Spawn<ADCPlayerState>();
 	if (!TestNotNull(TEXT("Independent target"), Target)) { return false; }
@@ -222,7 +231,13 @@ bool FDCBaseDamageRifleExecutionTest::RunTest(const FString&)
 	UDCAbilitySystemComponent* TargetASC = Target->GetDCAbilitySystemComponent();
 	TargetASC->InitAbilityActorInfo(Target, Target);
 	struct FCase { bool bBot; float PlayerBase; float EnemyBase; float Expected; };
-	const FCase Cases[] = {{false,0,12,24},{true,0,12,12},{false,8,8,32},{true,8,8,8},{true,8,0,0}};
+	const FCase Cases[] = {
+		{false, 0, 12, SavedRifleBonus},
+		{true, 0, 12, 12},
+		{false, 8, 8, 8 + SavedRifleBonus},
+		{true, 8, 8, 8},
+		{true, 8, 0, 0}
+	};
 	for (const FCase& Case : Cases)
 	{
 		AController* Controller = Case.bBot ? static_cast<AController*>(Fixture.Spawn<ADCLyraPlayerBotController>())
@@ -237,7 +252,7 @@ bool FDCBaseDamageRifleExecutionTest::RunTest(const FString&)
 		Data->EnemyBaseDamage = Case.EnemyBase;
 		if (!TestTrue(TEXT("Case initializes via production helper"), FDCBaseDamageTestAccess::Initialize(Source, Data.Get()))) { return false; }
 		UDCAbilitySystemComponent* SourceASC = Source->GetDCAbilitySystemComponent();
-		FGameplayEffectSpecHandle Handle = SourceASC->MakeOutgoingSpec(RifleClass, 1.0f, SourceASC->MakeEffectContext());
+		FGameplayEffectSpecHandle Handle = SourceASC->MakeOutgoingSpec(RifleClass, EffectLevel, SourceASC->MakeEffectContext());
 		if (!TestTrue(TEXT("Actual Rifle spec"), Handle.IsValid())) { return false; }
 		FGameplayEffectSpec& Spec = *Handle.Data.Get();
 		Spec.CaptureAttributeDataFromTarget(TargetASC);
@@ -247,7 +262,7 @@ bool FDCBaseDamageRifleExecutionTest::RunTest(const FString&)
 		const TArray<FGameplayModifierEvaluatedData>& Modifiers = Output.GetOutputModifiers();
 		if (Case.Expected == 0.0f)
 		{
-			TestEqual(TEXT("Zero enemy base emits no damage modifier"), Modifiers.Num(), 0);
+			TestEqual(TEXT("Zero fallback damage emits no damage modifier"), Modifiers.Num(), 0);
 		}
 		else if (TestEqual(TEXT("Actual damage output count"), Modifiers.Num(), 1))
 		{

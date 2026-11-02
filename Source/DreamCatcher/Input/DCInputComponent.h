@@ -36,11 +36,6 @@ public:
 	void BindAbilityActions(const UDCInputConfig* InputConfig, UserClass* Object, PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc, TArray<uint32>& BindHandles);
 
 	void RemoveBinds(TArray<uint32>& BindHandles);
-	
-	// 과도기 연결: 기존 Started / Completed / Canceled 입력을 유지합니다.
-	// Hero 및 조준 입력의 대체 연결이 검증된 뒤 제거합니다.
-	template <class UserClass,typename PressedFuncType,typename ReleasedFuncType,typename CanceledFuncType>
-	void BindLegacyAbilityActions(const UDCInputConfig* InputConfig,UserClass* Object,PressedFuncType PressedFunc,ReleasedFuncType ReleasedFunc,CanceledFuncType CanceledFunc,TArray<uint32>& BindHandles);
 };
 
 
@@ -72,36 +67,6 @@ void UDCInputComponent::BindAbilityActions(const UDCInputConfig* InputConfig, Us
 			{
 				BindHandles.Add(BindAction(Action.InputAction, ETriggerEvent::Completed, Object, ReleasedFunc, Action.InputTag).GetHandle());
 			}
-		}
-	}
-}
-
-template <class UserClass,typename PressedFuncType,typename ReleasedFuncType,typename CanceledFuncType>
-void UDCInputComponent::BindLegacyAbilityActions(const UDCInputConfig* InputConfig,UserClass* Object,PressedFuncType PressedFunc,ReleasedFuncType ReleasedFunc,CanceledFuncType CanceledFunc,TArray<uint32>& BindHandles)
-{
-	check(InputConfig);
-	check(Object);
-
-	for (const FDCInputAction& Action : InputConfig->AbilityInputActions)
-	{
-		if (!Action.InputAction || !Action.InputTag.IsValid())
-		{
-			continue;
-		}
-
-		if (PressedFunc)
-		{
-			BindHandles.Add(BindAction(Action.InputAction,ETriggerEvent::Started,Object,PressedFunc,Action.InputTag).GetHandle());
-		}
-
-		if (ReleasedFunc)
-		{
-			BindHandles.Add(BindAction(Action.InputAction,ETriggerEvent::Completed,Object,ReleasedFunc,Action.InputTag).GetHandle());
-		}
-
-		if (CanceledFunc)
-		{
-			BindHandles.Add(BindAction(Action.InputAction,ETriggerEvent::Canceled,Object,CanceledFunc,Action.InputTag).GetHandle());
 		}
 	}
 }

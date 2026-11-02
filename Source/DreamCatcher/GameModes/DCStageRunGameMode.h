@@ -10,6 +10,7 @@ class UDCLyraHealthComponent;
 class UDCStageResultWidget;
 class UDCMissionClearWidget;
 class UMediaSource;
+class UDCDifficultyCatalog;
 
 /** Opt-in, standalone R11 stage adapter. Original Lyra match modes are unchanged. */
 UCLASS()
@@ -18,6 +19,8 @@ class DREAMCATCHER_API ADCStageRunGameMode : public ADCLyraGameMode
 	GENERATED_BODY()
 public:
 	ADCStageRunGameMode(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
+	const UDCDifficultyCatalog* GetDifficultyCatalog() const { return DifficultyCatalog; }
 	virtual void InitGameState() override;
 	virtual void StartPlay() override;
 	virtual void GenericPlayerInitialization(AController* NewPlayer) override;
@@ -53,6 +56,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Stage")
 	bool RequestExitStage();
 protected:
+	UPROPERTY(EditDefaultsOnly, Category="Stage|Difficulty")
+	TObjectPtr<UDCDifficultyCatalog> DifficultyCatalog;
 	UPROPERTY(EditDefaultsOnly, Category="Stage|UI")
 	bool bUseExperienceUI = false;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
