@@ -10,7 +10,7 @@
 #include "GameplayEffect.h"
 #include "Inventory/DCInventoryItemDefinition.h"
 #include "Inventory/DCInventoryItemInstance.h"
-#include "Player/Lyra/DCLyraPlayerBotController.h"
+#include "AI/DCLyraPlayerBotController.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCDifficultySubsystem)
 

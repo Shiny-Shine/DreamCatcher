@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GameModes/Lyra/DCLyraGameMode.h"
+#include "GameModes/DCLyraGameMode.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Stage/DCStageDirector.h"
 #include "DCStageRunGameMode.generated.h"

@@ -2,7 +2,7 @@
 #pragma once
 
 #include "Character/DCHeroComponent.h"
-#include "Weapon/Lyra/DCLyraGameplayAbility_RangedWeapon.h"
+#include "Weapon/DCLyraGameplayAbility_RangedWeapon.h"
 #include "DCMergeReviewTestTypes.generated.h"
 
 UCLASS(NotBlueprintable, Transient, HideDropDown)

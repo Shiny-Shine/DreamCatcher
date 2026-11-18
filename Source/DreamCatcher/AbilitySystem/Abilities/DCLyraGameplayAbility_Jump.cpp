@@ -3,7 +3,7 @@
 #include "DCLyraGameplayAbility_Jump.h"
 
 #include "AbilitySystem/Abilities/DCGameplayAbility.h"
-#include "DreamCatcherCharacter.h"
+#include "Character/DreamCatcherCharacter.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCLyraGameplayAbility_Jump)
 

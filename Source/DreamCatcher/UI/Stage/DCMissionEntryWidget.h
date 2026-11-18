@@ -5,7 +5,7 @@
 #include "Styling/SlateBrush.h"
 #include "UI/Common/DCLyraListView.h"
 #include "UI/Common/DCLyraWidgetFactory_Class.h"
-#include "UI/Stage/DCMissionListData.h"
+#include "Data/Stage/DCMissionListData.h"
 #include "DCMissionEntryWidget.generated.h"
 
 class UImage;

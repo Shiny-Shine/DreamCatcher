@@ -10,7 +10,7 @@
 #include "DreamCatcher.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/World.h"
-#include "GameModes/Lyra/DCLyraExperienceManagerComponent.h"
+#include "GameModes/Experience/DCLyraExperienceManagerComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NativeGameplayTags.h"
 #include "PrimaryGameLayout.h"

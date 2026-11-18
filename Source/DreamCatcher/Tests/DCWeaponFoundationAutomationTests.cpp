@@ -6,8 +6,8 @@
 
 #include "AbilitySystem/Abilities/DCLyraAbilityCost_ItemTagStack.h"
 #include "AbilitySystem/DCAbilitySystemComponent.h"
-#include "Equipment/Lyra/DCLyraEquipmentInstance.h"
-#include "Equipment/Lyra/DCLyraGameplayAbility_FromEquipment.h"
+#include "Equipment/DCLyraEquipmentInstance.h"
+#include "Equipment/DCLyraGameplayAbility_FromEquipment.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/WorldSettings.h"
@@ -19,7 +19,7 @@
 #include "Tests/AutomationCommon.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
-#include "Weapon/Lyra/DCLyraRangedWeaponInstance.h"
+#include "Weapon/DCLyraRangedWeaponInstance.h"
 
 namespace DCWeaponFoundationTests
 {

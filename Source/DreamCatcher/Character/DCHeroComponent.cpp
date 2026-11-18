@@ -5,7 +5,7 @@
 #include "Logging/MessageLog.h"
 #include "DCLogChannels.h"
 #include "EnhancedInputSubsystems.h"
-#include "DreamCatcherPlayerController.h"
+#include "Player/DreamCatcherPlayerController.h"
 #include "Player/DCPlayerState.h"
 #include "Engine/LocalPlayer.h"
 #include "Character/DCPawnExtensionComponent.h"

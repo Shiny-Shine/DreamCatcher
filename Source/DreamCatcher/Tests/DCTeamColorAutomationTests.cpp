@@ -4,7 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
-#include "DreamCatcherPlayerController.h"
+#include "Player/DreamCatcherPlayerController.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
 #include "Misc/AutomationTest.h"

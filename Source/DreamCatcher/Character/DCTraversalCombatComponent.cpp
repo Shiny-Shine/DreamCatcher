@@ -10,15 +10,15 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
-#include "Equipment/Lyra/DCLyraEquipmentInstance.h"
-#include "Equipment/Lyra/DCLyraEquipmentManagerComponent.h"
+#include "Equipment/DCLyraEquipmentInstance.h"
+#include "Equipment/DCLyraEquipmentManagerComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "NativeGameplayTags.h"
 #include "System/DCAssetManager.h"
 #include "System/DCGameData.h"
-#include "Weapon/Lyra/DCLyraWeaponInstance.h"
+#include "Weapon/DCLyraWeaponInstance.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCTraversalCombatComponent)
 

@@ -21,7 +21,7 @@
 #include "Tests/DCStageFlowTestTypes.h"
 #include "Tests/DCEnemyGASTestTypes.h"
 #include "TimerManager.h"
-#include "UI/Stage/DCMissionListData.h"
+#include "Data/Stage/DCMissionListData.h"
 #include "UObject/StrongObjectPtr.h"
 #include <limits>
 

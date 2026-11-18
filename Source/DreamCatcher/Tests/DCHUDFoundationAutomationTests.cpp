@@ -26,7 +26,7 @@
 #include "Misc/DataValidation.h"
 #include "Misc/Parse.h"
 #include "Tests/AutomationCommon.h"
-#include "UI/Lyra/DCLyraHUD.h"
+#include "UI/HUD/DCLyraHUD.h"
 #include "UObject/Class.h"
 #include "UObject/CoreRedirects.h"
 #include "UObject/Package.h"

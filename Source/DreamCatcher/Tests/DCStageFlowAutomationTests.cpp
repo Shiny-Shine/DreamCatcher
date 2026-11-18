@@ -33,7 +33,7 @@ void UDCR11Observer::StageEnded(ADCStageDirector*, bool bSucceeded) { ++EndCalls
 #include "Misc/AutomationTest.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
-#include "Player/Lyra/DCLyraPlayerBotController.h"
+#include "AI/DCLyraPlayerBotController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/DCLyraAIAssemblyTestTypes.h"
 #include "Tests/DCLyraFiniteSpawnerTestTypes.h"

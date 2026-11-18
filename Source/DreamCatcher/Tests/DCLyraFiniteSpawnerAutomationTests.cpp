@@ -4,7 +4,7 @@
 #include "Character/DCLyraHealthComponent.h"
 #include "Engine/World.h"
 #include "Player/DCPlayerState.h"
-#include "Player/Lyra/DCLyraPlayerBotController.h"
+#include "AI/DCLyraPlayerBotController.h"
 #include "TimerManager.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCLyraFiniteSpawnerTestTypes)
@@ -54,7 +54,7 @@ APawn* ADCR10FiniteFailureGameModeFixture::SpawnDefaultPawnAtTransform_Implement
 #include "Components/SceneComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/WorldSettings.h"
-#include "GameModes/Lyra/DCLyraGameState.h"
+#include "GameModes/DCLyraGameState.h"
 #include "Misc/App.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/CommandLine.h"

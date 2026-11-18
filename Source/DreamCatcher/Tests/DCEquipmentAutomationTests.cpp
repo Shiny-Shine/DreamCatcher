@@ -7,11 +7,11 @@
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
-#include "Equipment/Lyra/DCLyraEquipmentDefinition.h"
-#include "Equipment/Lyra/DCLyraEquipmentInstance.h"
-#include "Equipment/Lyra/DCLyraEquipmentManagerComponent.h"
-#include "Equipment/Lyra/DCLyraGameplayAbility_FromEquipment.h"
-#include "Equipment/Lyra/DCLyraQuickBarComponent.h"
+#include "Equipment/DCLyraEquipmentDefinition.h"
+#include "Equipment/DCLyraEquipmentInstance.h"
+#include "Equipment/DCLyraEquipmentManagerComponent.h"
+#include "Equipment/DCLyraGameplayAbility_FromEquipment.h"
+#include "Equipment/DCLyraQuickBarComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
@@ -26,7 +26,7 @@
 #include "Tests/AutomationCommon.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
-#include "Weapon/Lyra/DCLyraWeaponInstance.h"
+#include "Weapon/DCLyraWeaponInstance.h"
 
 namespace DCEquipmentTests
 {

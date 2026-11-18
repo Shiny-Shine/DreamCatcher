@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "DCTeamCreationComponent.h"
-#include "GameModes/Lyra/DCLyraExperienceManagerComponent.h"
+#include "GameModes/Experience/DCLyraExperienceManagerComponent.h"
 #include "DCTeamPublicInfo.h"
 #include "DCTeamPrivateInfo.h"
 #include "Player/DCPlayerState.h"
@@ -9,7 +9,7 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/GameStateBase.h"
 #include "DCTeamDisplayAsset.h"
-#include "GameModes/Lyra/DCLyraGameMode.h"
+#include "GameModes/DCLyraGameMode.h"
 
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"

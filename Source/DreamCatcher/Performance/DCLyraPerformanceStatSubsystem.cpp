@@ -6,7 +6,7 @@
 #include "Engine/NetConnection.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerState.h"
-#include "GameModes/Lyra/DCLyraGameState.h"
+#include "GameModes/DCLyraGameState.h"
 #include "Performance/DCLyraPerformanceStatTypes.h"
 #include "Performance/LatencyMarkerModule.h"
 #include "ProfilingDebugging/CsvProfiler.h"

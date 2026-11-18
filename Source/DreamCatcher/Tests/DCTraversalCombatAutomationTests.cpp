@@ -13,9 +13,9 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
-#include "Equipment/Lyra/DCLyraEquipmentInstance.h"
-#include "Equipment/Lyra/DCLyraEquipmentManagerComponent.h"
-#include "Equipment/Lyra/DCLyraQuickBarComponent.h"
+#include "Equipment/DCLyraEquipmentInstance.h"
+#include "Equipment/DCLyraEquipmentManagerComponent.h"
+#include "Equipment/DCLyraQuickBarComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameModeBase.h"
@@ -31,7 +31,7 @@
 #include "Tests/DCDashDefenseTestTypes.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
-#include "Weapon/Lyra/DCLyraWeaponInstance.h"
+#include "Weapon/DCLyraWeaponInstance.h"
 
 // Test only the attachment sub-operation independently of montage/ability setup.
 struct FDCTraversalCombatTestAccessor

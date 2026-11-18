@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UI/Lyra/DCLyraActivatableWidget.h"
+#include "UI/Foundation/DCLyraActivatableWidget.h"
 #include "DCMissionClearWidget.generated.h"
 
 class ADCStageRunGameMode;

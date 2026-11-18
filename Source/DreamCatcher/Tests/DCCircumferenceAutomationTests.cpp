@@ -7,7 +7,7 @@
 
 #include "Framework/Application/SlateApplication.h"
 #include "Misc/AutomationTest.h"
-#include "UI/Weapons/Lyra/DCLyraCircumferenceMarkerWidget.h"
+#include "UI/Weapons/DCLyraCircumferenceMarkerWidget.h"
 #include "UObject/Class.h"
 #include "UObject/CoreRedirects.h"
 #include "UObject/SoftObjectPath.h"

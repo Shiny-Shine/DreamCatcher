@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UI/Lyra/DCLyraActivatableWidget.h"
+#include "UI/Foundation/DCLyraActivatableWidget.h"
 #include "InputCoreTypes.h"
 #include "DCFrontendIntroScreen.generated.h"
 

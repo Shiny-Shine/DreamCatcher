@@ -10,7 +10,7 @@
 #include "GameFeatures/GameFeatureAction_WorldActionBase.h"
 #include "GameFeaturesSubsystemSettings.h"
 #include "CommonUIExtensions.h"
-#include "UI/Lyra/DCLyraHUD.h"
+#include "UI/HUD/DCLyraHUD.h"
 
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"

@@ -1,7 +1,7 @@
 #include "UI/Frontend/DCFrontendScreen.h"
 
 #include "UI/Frontend/DCModeCardButton.h"
-#include "UI/DCLyraSettingScreen.h"
+#include "UI/Settings/DCLyraSettingScreen.h"
 #include "GameModes/DCFrontendGameMode.h"
 #include "CommonButtonBase.h"
 #include "Components/TextBlock.h"

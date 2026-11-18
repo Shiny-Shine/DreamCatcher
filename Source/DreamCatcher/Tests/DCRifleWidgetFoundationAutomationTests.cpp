@@ -12,15 +12,15 @@
 #include "GameplayTagContainer.h"
 #include "Misc/App.h"
 #include "Misc/AutomationTest.h"
-#include "UI/Lyra/DCLyraTaggedWidget.h"
-#include "UI/Weapons/Lyra/DCLyraWeaponUserInterface.h"
+#include "UI/Foundation/DCLyraTaggedWidget.h"
+#include "UI/Weapons/DCLyraWeaponUserInterface.h"
 #include "UObject/Class.h"
 #include "UObject/CoreRedirects.h"
 #include "UObject/EnumProperty.h"
 #include "UObject/SoftObjectPath.h"
 #include "UObject/UObjectGlobals.h"
 #include "UObject/UnrealType.h"
-#include "Weapon/Lyra/DCLyraWeaponInstance.h"
+#include "Weapon/DCLyraWeaponInstance.h"
 
 namespace DCRifleWidgetFoundationTests
 {

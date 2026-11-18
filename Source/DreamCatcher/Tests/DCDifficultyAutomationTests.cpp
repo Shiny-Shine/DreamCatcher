@@ -15,7 +15,7 @@
 #include "Misc/AutomationTest.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
-#include "Player/Lyra/DCLyraPlayerBotController.h"
+#include "AI/DCLyraPlayerBotController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/DCBossTestTypes.h"
 #include "UObject/StrongObjectPtr.h"

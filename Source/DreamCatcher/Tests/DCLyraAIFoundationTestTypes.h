@@ -3,8 +3,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "Player/Lyra/DCLyraPlayerBotController.h"
-#include "Weapon/Lyra/DCLyraWeaponSpawner.h"
+#include "AI/DCLyraPlayerBotController.h"
+#include "Weapon/DCLyraWeaponSpawner.h"
 #include "DCLyraAIFoundationTestTypes.generated.h"
 
 UCLASS(NotBlueprintable, Transient, HideDropDown)

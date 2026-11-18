@@ -2,7 +2,7 @@
 
 #include "DCLyraAbilityCost_ItemTagStack.h"
 
-#include "Equipment/Lyra/DCLyraGameplayAbility_FromEquipment.h"
+#include "Equipment/DCLyraGameplayAbility_FromEquipment.h"
 #include "Inventory/DCInventoryItemInstance.h"
 #include "NativeGameplayTags.h"
 

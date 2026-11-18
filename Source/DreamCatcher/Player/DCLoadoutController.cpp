@@ -8,9 +8,9 @@
 #include "Character/DCLyraHealthComponent.h"
 #include "Engine/World.h"
 #include "Engine/LocalPlayer.h"
-#include "Equipment/Lyra/DCLyraEquipmentInstance.h"
-#include "Equipment/Lyra/DCLyraEquipmentManagerComponent.h"
-#include "Equipment/Lyra/DCLyraQuickBarComponent.h"
+#include "Equipment/DCLyraEquipmentInstance.h"
+#include "Equipment/DCLyraEquipmentManagerComponent.h"
+#include "Equipment/DCLyraQuickBarComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/HUD.h"
 #include "Inventory/DCInventoryItemDefinition.h"
@@ -19,9 +19,9 @@
 #include "Player/DCPlayerState.h"
 #include "TimerManager.h"
 #include "System/DCDifficultySubsystem.h"
-#include "UI/Weapons/Lyra/DCLyraWeaponUserInterface.h"
-#include "Weapon/Lyra/DCLyraWeaponInstance.h"
-#include "Weapon/Lyra/DCLyraWeaponStateComponent.h"
+#include "UI/Weapons/DCLyraWeaponUserInterface.h"
+#include "Weapon/DCLyraWeaponInstance.h"
+#include "Weapon/DCLyraWeaponStateComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCLoadoutController)
 

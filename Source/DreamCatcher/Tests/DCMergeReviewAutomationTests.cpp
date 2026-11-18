@@ -1,6 +1,6 @@
 #include "Tests/DCMergeReviewTestTypes.h"
 
-#include "Weapon/Lyra/DCLyraRangedWeaponInstance.h"
+#include "Weapon/DCLyraRangedWeaponInstance.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(DCMergeReviewTestTypes)
 

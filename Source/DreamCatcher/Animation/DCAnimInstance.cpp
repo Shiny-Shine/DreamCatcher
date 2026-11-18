@@ -2,7 +2,7 @@
 
 #include "DCAnimInstance.h"
 #include "AbilitySystemGlobals.h"
-#include "DreamCatcherCharacter.h"
+#include "Character/DreamCatcherCharacter.h"
 #include "Character/DCCharacterMovementComponent.h"
 
 #if WITH_EDITOR

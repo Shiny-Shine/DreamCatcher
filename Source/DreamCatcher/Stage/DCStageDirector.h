@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "UI/Stage/DCMissionListData.h"
+#include "Data/Stage/DCMissionListData.h"
 #include "DCStageDirector.generated.h"
 
 class ADCEncounterController;

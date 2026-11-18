@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UI/Lyra/DCLyraActivatableWidget.h"
+#include "UI/Foundation/DCLyraActivatableWidget.h"
 #include "Data/Difficulty/DCDifficultyData.h"
 #include "DCFrontendScreen.generated.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Blueprint/UserWidget.h"
-#include "UI/Stage/DCMissionListData.h"
+#include "Data/Stage/DCMissionListData.h"
 #include "TimerManager.h"
 #include "DCMissionObjectiveWidget.generated.h"
 

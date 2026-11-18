@@ -9,7 +9,7 @@
 #include "HAL/IConsoleManager.h"
 #include "AbilitySystem/DCGameplayTags.h"
 #include "Misc/Paths.h"
-#include "DreamCatcherPlayerController.h"
+#include "Player/DreamCatcherPlayerController.h"
 #include "Player/DCLocalPlayer.h"
 #include "GameFramework/PlayerState.h"
 

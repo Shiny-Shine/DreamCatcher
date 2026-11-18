@@ -1,7 +1,7 @@
 #include "UI/Stage/DCStageUIComponent.h"
 #include "UI/Stage/DCStageResultLayer.h"
 #include "UI/Stage/DCMissionClearWidget.h"
-#include "UI/DCLyraSettingScreen.h"
+#include "UI/Settings/DCLyraSettingScreen.h"
 #include "AbilitySystem/Abilities/DCGameplayAbility.h"
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "AbilitySystem/DCGameplayTags.h"

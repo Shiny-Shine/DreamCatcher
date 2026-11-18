@@ -17,7 +17,7 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/GameplayMessageSubsystem.h"
 #include "GameFramework/WorldSettings.h"
-#include "GameModes/Lyra/DCLyraExperienceDefinition.h"
+#include "GameModes/Experience/DCLyraExperienceDefinition.h"
 #include "GameplayEffect.h"
 #include "Messages/DCVerbMessage.h"
 #include "Misc/App.h"
@@ -26,15 +26,15 @@
 #include "Misc/DataValidation.h"
 #include "Misc/Parse.h"
 #include "Player/DCPlayerState.h"
-#include "Player/Lyra/DCLyraExperiencePlayerState.h"
-#include "Player/Lyra/DCLyraPlayerBotController.h"
+#include "Player/DCLyraExperiencePlayerState.h"
+#include "AI/DCLyraPlayerBotController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/DCEnemyGASTestTypes.h"
 #include "Tests/DCStageFlowTestTypes.h"
 #include "Tests/DCLyraAIAssemblyTestTypes.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/UnrealType.h"
-#include "Weapon/Lyra/DCLyraRangedWeaponInstance.h"
+#include "Weapon/DCLyraRangedWeaponInstance.h"
 #include <limits>
 
 struct FDCArmorTestAccess
