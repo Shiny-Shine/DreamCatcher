@@ -35,6 +35,7 @@ void UDCAbilitySystemComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 		GlobalAbilitySystem->UnregisterASC(this);
 	}
 
+	ResetAbilityInputSuppression();
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -45,6 +46,10 @@ void UDCAbilitySystemComponent::InitAbilityActorInfo(AActor* InOwnerActor, AActo
 	check(InOwnerActor);
 
 	const bool bHasNewPawnAvatar = Cast<APawn>(InAvatarActor) && (InAvatarActor != ActorInfo->AvatarActor);
+	if (InAvatarActor != ActorInfo->AvatarActor.Get())
+	{
+		ResetAbilityInputSuppression();
+	}
 
 	Super::InitAbilityActorInfo(InOwnerActor, InAvatarActor);
 
@@ -189,6 +194,16 @@ void UDCAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Input
 {
 	if (InputTag.IsValid())
 	{
+		RoutedHeldInputTags.Add(InputTag);
+		if (IsAbilityInputSuppressed())
+		{
+			InputTagsRequiringRelease.Add(InputTag);
+			return;
+		}
+		if (IsAbilityInputTagAwaitingRelease(InputTag))
+		{
+			return;
+		}
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
 			if (AbilitySpec.Ability && (AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag)))
@@ -204,6 +219,8 @@ void UDCAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& Inpu
 {
 	if (InputTag.IsValid())
 	{
+		RoutedHeldInputTags.Remove(InputTag);
+		InputTagsRequiringRelease.Remove(InputTag);
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
 			if (AbilitySpec.Ability && (AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag)))
@@ -235,7 +252,7 @@ void UDCAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGameP
 	{
 		if (const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
-			if (AbilitySpec->Ability && !AbilitySpec->IsActive())
+			if (AbilitySpec->Ability && !AbilitySpec->IsActive() && !IsSpecInputSuppressed(*AbilitySpec))
 			{
 				const UDCGameplayAbility* DCAbilityCDO = Cast<UDCGameplayAbility>(AbilitySpec->Ability);
 				if (DCAbilityCDO && DCAbilityCDO->GetActivationPolicy() == EDCAbilityActivationPolicy::WhileInputActive)
@@ -253,7 +270,7 @@ void UDCAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGameP
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
-			if (AbilitySpec->Ability)
+			if (AbilitySpec->Ability && !IsSpecInputSuppressed(*AbilitySpec))
 			{
 				AbilitySpec->InputPressed = true;
 
@@ -282,7 +299,12 @@ void UDCAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGameP
 	//
 	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
 	{
-		TryActivateAbility(AbilitySpecHandle);
+		// An earlier activation/input callback can start a suppression scope this frame.
+		if (const FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(AbilitySpecHandle);
+			Spec && !IsSpecInputSuppressed(*Spec))
+		{
+			TryActivateAbility(AbilitySpecHandle);
+		}
 	}
 
 	//
@@ -317,6 +339,61 @@ void UDCAbilitySystemComponent::ClearAbilityInput()
 	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
 	InputHeldSpecHandles.Reset();
+}
+
+void UDCAbilitySystemComponent::BeginAbilityInputSuppression(UObject* Source)
+{
+	if (!IsValid(Source)) { return; }
+	for (auto It = AbilityInputSuppressionSources.CreateIterator(); It; ++It)
+	{
+		if (!It->IsValid()) { It.RemoveCurrent(); }
+	}
+	const TWeakObjectPtr<UObject> Key(Source);
+	if (AbilityInputSuppressionSources.Contains(Key)) { return; }
+	AbilityInputSuppressionSources.Add(Key);
+	InputTagsRequiringRelease.Append(RoutedHeldInputTags);
+	// Do not mutate input arrays here: this can be called from an input callback.
+}
+
+void UDCAbilitySystemComponent::EndAbilityInputSuppression(UObject* Source)
+{
+	AbilityInputSuppressionSources.Remove(TWeakObjectPtr<UObject>(Source));
+	// Held inputs stay latched until their release, including presses during the scope.
+}
+
+bool UDCAbilitySystemComponent::IsAbilityInputSuppressed() const
+{
+	for (const TWeakObjectPtr<UObject>& Source : AbilityInputSuppressionSources)
+	{
+		if (Source.IsValid()) { return true; }
+	}
+	return false;
+}
+
+bool UDCAbilitySystemComponent::IsAbilityInputTagAwaitingRelease(const FGameplayTag& InputTag) const
+{
+	return InputTagsRequiringRelease.Contains(InputTag);
+}
+
+bool UDCAbilitySystemComponent::IsSpecInputSuppressed(const FGameplayAbilitySpec& Spec) const
+{
+	if (IsAbilityInputSuppressed()) { return true; }
+	for (const FGameplayTag& Tag : InputTagsRequiringRelease)
+	{
+		if (Spec.GetDynamicSpecSourceTags().HasTagExact(Tag)) { return true; }
+	}
+	return false;
+}
+
+void UDCAbilitySystemComponent::ResetAbilityInputSuppression()
+{
+	if (!AbilityInputSuppressionSources.IsEmpty() || !InputTagsRequiringRelease.IsEmpty())
+	{
+		ClearAbilityInput();
+	}
+	AbilityInputSuppressionSources.Reset();
+	RoutedHeldInputTags.Reset();
+	InputTagsRequiringRelease.Reset();
 }
 
 void UDCAbilitySystemComponent::NotifyAbilityActivated(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability)
@@ -572,6 +649,19 @@ void UDCAbilitySystemComponent::CancelAimInputAndState()
 
 		// WaitDelay와 WaitInputRelease도 Ability 종료와 함께 정리됨.
 		CancelAbilityHandle(Handle);
+	}
+
+	// Hero owns the physical aim-button release gate. These two tags are logical
+	// presses from its tap/hold router, and cancellation ends that logical press.
+	// Keeping them latched would reject the next new gesture after traversal.
+	const FGameplayTag LogicalADSTags[] = {
+		DCGameplayTags::InputTag_Weapon_ADS_Shoulder,
+		DCGameplayTags::InputTag_Weapon_ADS_Scope
+	};
+	for (const FGameplayTag& InputTag : LogicalADSTags)
+	{
+		RoutedHeldInputTags.Remove(InputTag);
+		InputTagsRequiringRelease.Remove(InputTag);
 	}
 
 	// Compatibility only: the old Scope GE outlives its ability. New ADS owned tags end with the ability.

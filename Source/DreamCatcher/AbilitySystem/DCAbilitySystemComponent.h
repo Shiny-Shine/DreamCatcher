@@ -50,6 +50,15 @@ public:
 	UE_API void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
 	UE_API void ClearAbilityInput();
 
+	// Opt-in scopes suppress new input without discarding releases for active abilities.
+	UE_API void BeginAbilityInputSuppression(UObject* Source);
+	UE_API void EndAbilityInputSuppression(UObject* Source);
+
+	UFUNCTION(BlueprintPure, Category = "DC|Input")
+	UE_API bool IsAbilityInputSuppressed() const;
+
+	UE_API bool IsAbilityInputTagAwaitingRelease(const FGameplayTag& InputTag) const;
+
 	UE_API bool IsActivationGroupBlocked(EDCAbilityActivationGroup Group) const;
 	UE_API void AddAbilityToActivationGroup(EDCAbilityActivationGroup Group, UDCGameplayAbility* DCAbility);
 	UE_API void RemoveAbilityFromActivationGroup(EDCAbilityActivationGroup Group, UDCGameplayAbility* DCAbility);
@@ -119,6 +128,11 @@ protected:
 	int32 ActivationGroupCounts[(uint8)EDCAbilityActivationGroup::MAX];
 
 private:
+	bool IsSpecInputSuppressed(const FGameplayAbilitySpec& Spec) const;
+	void ResetAbilityInputSuppression();
+	TSet<TWeakObjectPtr<UObject>> AbilityInputSuppressionSources;
+	TSet<FGameplayTag> RoutedHeldInputTags;
+	TSet<FGameplayTag> InputTagsRequiringRelease;
 	bool bCancelingAimInputAndState = false;
 };
 

@@ -7,6 +7,7 @@
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
+#include "Equipment/Lyra/DCLyraEquipmentDefinition.h"
 #include "Equipment/Lyra/DCLyraEquipmentInstance.h"
 #include "Equipment/Lyra/DCLyraEquipmentManagerComponent.h"
 #include "Equipment/Lyra/DCLyraGameplayAbility_FromEquipment.h"
@@ -23,6 +24,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Tests/AutomationCommon.h"
+#include "UObject/StrongObjectPtr.h"
+#include "UObject/UnrealType.h"
 #include "Weapon/Lyra/DCLyraWeaponInstance.h"
 
 namespace DCEquipmentTests
@@ -234,6 +237,109 @@ bool FDCEquipmentQuickBarLifecycleTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Inventory cleanup"), Inventory->GetAllItems().Num(), 0);
 
 	AddInfo(TEXT("Scope: standalone transient game world; no production PawnData, PIE, client replication, visuals, or device feedback validation."));
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCEquipmentTemplateOwnerLifecycleTest,
+	"DreamCatcher.R5.Equipment.TemplateOwnerLifecycle",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FDCEquipmentTemplateOwnerLifecycleTest::RunTest(const FString& Parameters)
+{
+	if (!FParse::Param(FCommandLine::Get(), TEXT("DCR5IsolatedAutomation")))
+	{
+		AddError(TEXT("Run in a separate UnrealEditor-Cmd process with -DCR5IsolatedAutomation."));
+		return false;
+	}
+	FTestWorldWrapper Fixture;
+	if (!Fixture.CreateTestWorld(EWorldType::Game))
+	{
+		Fixture.ForwardErrorMessages(this);
+		return false;
+	}
+	UWorld* World = Fixture.GetTestWorld();
+	World->GetWorldSettings()->DefaultGameMode = AGameModeBase::StaticClass();
+	if (!Fixture.BeginPlayInTestWorld())
+	{
+		Fixture.ForwardErrorMessages(this);
+		return false;
+	}
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.ObjectFlags |= RF_Transient;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ACharacter* Pawn = World->SpawnActor<ACharacter>(SpawnParameters);
+	if (!TestNotNull(TEXT("Transient equipment owner"), Pawn)) { return false; }
+
+	const FStructProperty* ListProperty = FindFProperty<FStructProperty>(
+		UDCLyraEquipmentManagerComponent::StaticClass(), TEXT("EquipmentList"));
+	const FObjectPropertyBase* OwnerProperty = ListProperty
+		? FindFProperty<FObjectPropertyBase>(ListProperty->Struct, TEXT("OwnerComponent")) : nullptr;
+	if (!TestNotNull(TEXT("Equipment list reflection"), ListProperty)
+		|| !TestNotNull(TEXT("List owner reflection"), OwnerProperty)) { return false; }
+	auto ListAddress = [ListProperty](UDCLyraEquipmentManagerComponent* Component)
+	{
+		return ListProperty->ContainerPtrToValuePtr<void>(Component);
+	};
+	auto ListOwner = [OwnerProperty, &ListAddress](UDCLyraEquipmentManagerComponent* Component)
+	{
+		return OwnerProperty->GetObjectPropertyValue_InContainer(ListAddress(Component));
+	};
+
+	// Native CDO creation alone does not exercise a Blueprint/component template copy.
+	// Use an ownerless archetype, like an SCS template, without changing any asset/CDO.
+	TStrongObjectPtr<UDCLyraEquipmentManagerComponent> ComponentTemplate(
+		NewObject<UDCLyraEquipmentManagerComponent>(GetTransientPackage(), NAME_None, RF_Transient | RF_ArchetypeObject));
+	TestTrue(TEXT("Template back-reference starts on the template"), ListOwner(ComponentTemplate.Get()) == ComponentTemplate.Get());
+	TestNull(TEXT("Template has no actor owner"), ComponentTemplate->GetOwner());
+	// Only the native definition CDO is read; the spawned instance is concrete and asset-free.
+	const TSubclassOf<UDCLyraEquipmentDefinition> Definition = UDCLyraEquipmentDefinition::StaticClass();
+	AddExpectedError(TEXT("[Equipment] Refusing equip on an invalid component or mismatched list owner."),
+		EAutomationExpectedErrorFlags::Contains, 4, false);
+
+	for (int32 Lifetime = 0; Lifetime < 2; ++Lifetime)
+	{
+		UDCLyraEquipmentManagerComponent* Equipment = NewObject<UDCLyraEquipmentManagerComponent>(
+			Pawn, NAME_None, RF_Transient, ComponentTemplate.Get());
+		AddInfo(FString::Printf(TEXT("Template copy before initialization: Component=%s ListOwner=%s"),
+			*Equipment->GetPathName(), *GetPathNameSafe(ListOwner(Equipment))));
+		if (Lifetime == 1)
+		{
+			// Fault injection: normal instancing may remap the reference correctly. This
+			// verifies recovery from a stale template reference, not the historical PIE trigger.
+			OwnerProperty->SetObjectPropertyValue_InContainer(ListAddress(Equipment), ComponentTemplate.Get());
+		}
+		Pawn->AddInstanceComponent(Equipment);
+		Equipment->RegisterComponent();
+		if (!TestTrue(TEXT("Runtime component initialized"), Equipment->HasBeenInitialized())
+			|| !TestTrue(TEXT("Initialized list belongs to the runtime instance"), ListOwner(Equipment) == Equipment)) { return false; }
+
+		UDCLyraEquipmentInstance* Instance = Equipment->EquipItem(Definition);
+		if (!TestNotNull(TEXT("Template-created component actually equips"), Instance)) { return false; }
+		TestTrue(TEXT("Equipment belongs to the live pawn"), Instance->GetPawn() == Pawn);
+		TestEqual(TEXT("One runtime equipment entry"), Equipment->GetEquipmentInstancesOfType(UDCLyraEquipmentInstance::StaticClass()).Num(), 1);
+		Equipment->UnequipItem(Instance);
+		TestEqual(TEXT("Unequip removes the entry"), Equipment->GetEquipmentInstancesOfType(UDCLyraEquipmentInstance::StaticClass()).Num(), 0);
+
+		// A later bad reference must be diagnosed, not silently grant into an archetype.
+		OwnerProperty->SetObjectPropertyValue_InContainer(ListAddress(Equipment), ComponentTemplate.Get());
+		TestNull(TEXT("Mismatched owner is rejected without a crash"), Equipment->EquipItem(Definition));
+		TestEqual(TEXT("Rejected request creates no entry"), Equipment->GetEquipmentInstancesOfType(UDCLyraEquipmentInstance::StaticClass()).Num(), 0);
+		OwnerProperty->SetObjectPropertyValue_InContainer(ListAddress(Equipment), Equipment);
+		TestEqual(TEXT("Template entries remain untouched"), ComponentTemplate->GetEquipmentInstancesOfType(UDCLyraEquipmentInstance::StaticClass()).Num(), 0);
+
+		// Leave equipment present to cover normal teardown, then recreate from the same template.
+		TestNotNull(TEXT("Valid owner can equip after the rejected request"), Equipment->EquipItem(Definition));
+		Equipment->DestroyComponent();
+		TestEqual(TEXT("Teardown removes equipment"), Equipment->GetEquipmentInstancesOfType(UDCLyraEquipmentInstance::StaticClass()).Num(), 0);
+		TestNull(TEXT("Destroyed component refuses new equipment"), Equipment->EquipItem(Definition));
+	}
+
+	TStrongObjectPtr<UDCLyraEquipmentManagerComponent> Ownerless(
+		NewObject<UDCLyraEquipmentManagerComponent>(GetTransientPackage(), NAME_None, RF_Transient));
+	AddExpectedError(TEXT("[Equipment] Refusing equip without a live authoritative owner."), EAutomationExpectedErrorFlags::Contains, 1, false);
+	TestNull(TEXT("Ownerless component refuses new equipment"), Ownerless->EquipItem(Definition));
+	TestEqual(TEXT("Ownerless request creates no entry"), Ownerless->GetEquipmentInstancesOfType(UDCLyraEquipmentInstance::StaticClass()).Num(), 0);
+	AddInfo(TEXT("Transient template-copy/ownership regression only; the intermittent PIE crash still requires first/repeated PIE validation."));
 	return !HasAnyErrors();
 }
 

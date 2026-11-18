@@ -47,8 +47,8 @@ assert match, 'Explicit probe run id required'
 FAILURE = '-dcfrontendintrofailure' in ue.SystemLibrary.get_command_line().lower()
 OUT = REPORTS / ('pie_' + match.group(1) + '.json')
 assert not OUT.exists(), 'Preserve existing probe evidence'
-intro_class = ue.load_class(None, '/Game/DreamCatcher/UI/Frontend/W_DC_FrontendIntro.W_DC_FrontendIntro_C')
-menu_class = ue.load_class(None, '/Game/DreamCatcher/UI/Frontend/W_DC_Frontend.W_DC_Frontend_C')
+intro_class = ue.load_class(None, '/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_FrontendIntro.W_DC_FrontendIntro_C')
+menu_class = ue.load_class(None, '/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend.W_DC_Frontend_C')
 assert intro_class and menu_class
 cdo = ue.get_default_object(intro_class)
 original_source = cdo.get_editor_property('IntroMediaSource')
@@ -60,9 +60,9 @@ if FAILURE:
     cdo.set_editor_property('IntroMediaSource', invalid)
 
 protected = [PROJECT / p for p in ('Config/DefaultGame.ini', 'Config/DefaultEngine.ini', '.git/HEAD', '.git/index',
-    'Binaries/Win64/UnrealEditor-DreamCatcher.dll', 'Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1.umap',
-    'Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_2.umap', 'Content/DreamCatcher/Screens/DREAMCATCHER_PV.uasset',
-    'Content/DreamCatcher/UI/Frontend/W_DC_FrontendIntro.uasset',
+    'Binaries/Win64/UnrealEditor-DreamCatcher.dll', 'Content/DreamCatcher/Maps/Story/Level_1.umap',
+    'Content/DreamCatcher/Maps/Story/Level_2.umap', 'Content/DreamCatcher/Media/Frontend/DREAMCATCHER_PV.uasset',
+    'Content/DreamCatcher/Blueprints/UI/Frontend/W_DC_FrontendIntro.uasset',
     'Content/DreamCatcher/Blueprints/UI/BP_DC_FrontendStateComponent.uasset')]
 before = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in protected}
 state = dict(step='opening', started=time.monotonic(), step_started=time.monotonic(), busy=False, done=False)

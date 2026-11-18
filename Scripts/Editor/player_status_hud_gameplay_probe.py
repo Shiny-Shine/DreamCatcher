@@ -53,8 +53,8 @@ def inventory():
 def protected_hashes():
     names = ['.git/HEAD', '.git/index', 'DreamCatcher.uproject', 'AGENTS.md',
              'Binaries/Win64/UnrealEditor-DreamCatcher.dll',
-             'Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1.umap',
-             'Content/DreamCatcher/UI/HUD/W_DC_PlayerStatus.uasset',
+             'Content/DreamCatcher/Maps/Story/Level_1.umap',
+             'Content/DreamCatcher/Blueprints/UI/HUD/W_DC_PlayerStatus.uasset',
              'Content/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/W_Healthbar.uasset',
              'Content/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout.uasset',
              'Content/DreamCatcher/Experiences/B_DC_StageUIExperience.uasset',
@@ -239,7 +239,7 @@ def bp(path):
 
 
 HUD = bp('/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout')
-FRONTEND = bp('/Game/DreamCatcher/UI/Frontend/W_DC_Frontend')
+FRONTEND = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend')
 DAMAGE = bp('/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller')
 HEALTH = native('DCLyraHealthComponent')
 BOT = native('DCLyraPlayerBotController')
@@ -260,7 +260,7 @@ def tag(name):
 
 IMMUNITY = ue.GameplayTagContainer()
 assert IMMUNITY.import_text('(GameplayTags=((TagName="Gameplay.DamageImmunity")))')
-INPUT_DATA = ue.load_asset('/Game/DreamCatcher/Input/DA_DC_RifleInput')
+INPUT_DATA = ue.load_asset('/Game/DreamCatcher/Input/Configs/DA_DC_RifleInput')
 FIRE = INPUT_DATA.find_ability_input_action_for_tag(tag('InputTag.Weapon.FireAuto'), True)
 ULTIMATE = INPUT_DATA.find_ability_input_action_for_tag(tag('InputTag.Ultimate'), True)
 assert FIRE and ULTIMATE

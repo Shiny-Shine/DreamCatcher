@@ -110,9 +110,9 @@ void BuildRow(UDCMissionEntryWidget* Row, UFont* Font = nullptr)
 	CastChecked<UHorizontalBoxSlot>(IconBox->Slot)->SetPadding(FMargin(0, 0, 15, 0));
 	UImage* Icon = Child<UImage>(Tree, TEXT("MissionCheckbox"), IconBox);
 	FSlateBrush Brush; Brush.DrawAs = ESlateBrushDrawType::Image;
-	Brush.SetResourceObject(LoadObject<UTexture2D>(nullptr, TEXT("/Game/DreamCatcher/Screens/InGame_UI/Check_False.Check_False")));
+	Brush.SetResourceObject(LoadObject<UTexture2D>(nullptr, TEXT("/Game/DreamCatcher/Textures/UI/HUD/Mission/Check_False.Check_False")));
 	Icon->SetBrush(Brush);
-	Brush.SetResourceObject(LoadObject<UTexture2D>(nullptr, TEXT("/Game/DreamCatcher/Screens/InGame_UI/Check_True.Check_True")));
+	Brush.SetResourceObject(LoadObject<UTexture2D>(nullptr, TEXT("/Game/DreamCatcher/Textures/UI/HUD/Mission/Check_True.Check_True")));
 	Row->CompletedBrush = Brush;
 	UTextBlock* Label = Child<UTextBlock>(Tree, TEXT("MissionText"), Body);
 	Label->SetFont(Font ? FSlateFontInfo(Font, 12.f, FName(TEXT("Default"))) : FCoreStyle::GetDefaultFontStyle("Regular", 12));
@@ -124,7 +124,7 @@ void BuildRow(UDCMissionEntryWidget* Row, UFont* Font = nullptr)
 
 TSubclassOf<UUserWidget> EntryClass(FAutomationTestBase& Test)
 {
-	TSubclassOf<UUserWidget> Class = LoadClass<UUserWidget>(nullptr, TEXT("/Game/DreamCatcher/UI/HUD/W_DC_MissionEntry.W_DC_MissionEntry_C"));
+	TSubclassOf<UUserWidget> Class = LoadClass<UUserWidget>(nullptr, TEXT("/Game/DreamCatcher/Blueprints/UI/HUD/W_DC_MissionEntry.W_DC_MissionEntry_C"));
 	Test.TestTrue(TEXT("The existing mission entry must be authored/compiled in Designer first"),
 		UDCMissionObjectiveWidget::IsEntryClassUsable(Class));
 	return Class;
@@ -243,7 +243,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCMissionArtTypographyTest, "DreamCatcher.UI.M
 bool FDCMissionArtTypographyTest::RunTest(const FString&)
 {
 	if (!DCMissionHUDTests::Context(*this)) { return false; }
-	UFont* Font = LoadObject<UFont>(nullptr, TEXT("/Game/DreamCatcher/UI/Font/Paperlogy-6SemiBold_Font.Paperlogy-6SemiBold_Font"));
+	UFont* Font = LoadObject<UFont>(nullptr, TEXT("/Game/DreamCatcher/Fonts/UI/Paperlogy-6SemiBold_Font.Paperlogy-6SemiBold_Font"));
 	if (!TestNotNull(TEXT("Existing font family"), Font)) { return false; }
 	TStrongObjectPtr<UDCMissionEntryWidget> Row(NewObject<UDCMissionEntryWidget>(GetTransientPackage(), NAME_None, RF_Transient));
 	DCMissionHUDTests::BuildRow(Row.Get(), Font); TSharedPtr<SWidget> Slate = Row->TakeWidget();
@@ -301,7 +301,7 @@ struct FFixture
 		World.GetTestWorld()->GetWorldSettings()->DefaultGameMode = ADCR11ModeFixture::StaticClass();
 		if (!World.BeginPlayInTestWorld()) { World.ForwardErrorMessages(&Test); return false; }
 		Data->HUDStyle.EntryWidgetClass = LoadClass<UUserWidget>(nullptr,
-			TEXT("/Game/DreamCatcher/UI/HUD/W_DC_MissionEntry.W_DC_MissionEntry_C"));
+			TEXT("/Game/DreamCatcher/Blueprints/UI/HUD/W_DC_MissionEntry.W_DC_MissionEntry_C"));
 		if (!Test.TestTrue(TEXT("Existing real BP entry is available, without generating/saving an asset"),
 			UDCMissionObjectiveWidget::IsEntryClassUsable(Data->HUDStyle.EntryWidgetClass))) { return false; }
 		FDCMissionDefinition Defeat; Defeat.MissionId = TEXT("Defeat"); Defeat.DisplayText = FText::FromString(TEXT("악몽 처치하기"));

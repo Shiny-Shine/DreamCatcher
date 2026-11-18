@@ -1,7 +1,7 @@
 #pragma once
 
 #include "UI/Lyra/DCLyraActivatableWidget.h"
-#include "GameModes/DCDifficultyData.h"
+#include "Data/Difficulty/DCDifficultyData.h"
 #include "DCFrontendScreen.generated.h"
 
 class ADCFrontendGameMode;

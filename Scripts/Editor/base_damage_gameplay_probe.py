@@ -75,7 +75,7 @@ RUN, MODE = RUN_MATCH.group(1), MODE_MATCH.group(1)
 OUTPUT.mkdir(parents=True, exist_ok=True)
 OUT = OUTPUT / ('pie_' + RUN + '.json')
 assert not OUT.exists(), 'Do not overwrite a previous run'
-MAP = '/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1'
+MAP = '/Game/DreamCatcher/Maps/Story/Level_1'
 EXPERIENCE = '/Game/DreamCatcher/Experiences/B_DC_StageUIExperience'
 EXPECTED = {'defaults': (0.0, 12.0), 'equal8': (8.0, 8.0), 'zero_enemy': (8.0, 0.0)}[MODE]
 state = dict(step='ready', wall=time.monotonic(), done=False, busy=False, index=0, inputs={})
@@ -150,7 +150,7 @@ def ammo():
 math = u.get_default_object(u.load_class(None, '/Script/Engine.KismetMathLibrary'))
 gas = u.get_default_object(u.load_class(None, '/Script/GameplayAbilities.AbilitySystemBlueprintLibrary'))
 subs = u.get_default_object(u.load_class(None, '/Script/Engine.SubsystemBlueprintLibrary'))
-input_data = u.load_asset('/Game/DreamCatcher/Input/DA_DC_RifleInput')
+input_data = u.load_asset('/Game/DreamCatcher/Input/Configs/DA_DC_RifleInput')
 fire = input_data.find_ability_input_action_for_tag(tag('InputTag.Weapon.FireAuto'), True)
 aim = input_data.find_native_input_action_for_tag(tag('InputTag.Aim'), True)
 ammo_tag = tag('Lyra.ShooterGame.Weapon.MagazineAmmo')

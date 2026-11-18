@@ -21,7 +21,7 @@ import traceback
 sys.dont_write_bytecode = True
 PROJECT = Path(__file__).resolve().parents[2]
 ROOT = PROJECT / 'Saved/Diagnostics/SpawnerRegistration20261024'
-MAPS = ['/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_' + str(i) for i in (1, 2)]
+MAPS = ['/Game/DreamCatcher/Maps/Story/Level_' + str(i) for i in (1, 2)]
 SPAWNER = '/Game/DreamCatcher/Blueprints/AI/BP_DC_LyraFiniteSpawner'
 MISSION = '/Game/DreamCatcher/Data/Stage/DA_DC_MissionList_Level2'
 MISSION_SOURCE = '/Game/DreamCatcher/Data/Stage/DA_DC_MissionList_LevelExample'
@@ -378,10 +378,10 @@ def configure_map(world, index, mission):
         start.set_actor_transform(transform, False, True)
         set_property(start, 'PlayerStartTag', tag)
         assert start.get_actor_transform().export_text() == old_controls['start_transform']
-        encounter = progression.spawn(world, ue.load_class(None, '/Game/Blueprint/Stage/BP_EncounterController.BP_EncounterController_C'), NEW_NAMES[1], [0, 0, 0])
+        encounter = progression.spawn(world, ue.load_class(None, '/Game/DreamCatcher/Blueprints/Stage/BP_EncounterController.BP_EncounterController_C'), NEW_NAMES[1], [0, 0, 0])
         set_property(encounter, 'Spawners', [table[label(i)] for i in range(1, 18)])
         set_property(encounter, 'bAutoStartOnBeginPlay', False)
-        director = progression.spawn(world, ue.load_class(None, '/Game/Blueprint/Stage/BP_StageDirector.BP_StageDirector_C'), NEW_NAMES[2], [0, 0, 0])
+        director = progression.spawn(world, ue.load_class(None, '/Game/DreamCatcher/Blueprints/Stage/BP_StageDirector.BP_StageDirector_C'), NEW_NAMES[2], [0, 0, 0])
         set_property(director, 'bAutoStartStage', False)
         phase = ue.DCStagePhaseDefinition(); assert phase.import_text('(PhaseType=Encounter,PhaseTitle="전투")')
         phase.set_editor_property('Encounter', encounter); phase.set_editor_property('MissionList', mission)

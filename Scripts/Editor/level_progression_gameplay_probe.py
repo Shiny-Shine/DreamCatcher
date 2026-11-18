@@ -93,7 +93,7 @@ def arm():
     input_class = u.load_class(None, '/Script/EnhancedInput.EnhancedInputLocalPlayerSubsystem')
     damage_class = u.load_class(None, '/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
     assert damage_class and cls('DCMissionClearWidget')
-    input_data = u.load_asset('/Game/DreamCatcher/Input/DA_DC_RifleInput')
+    input_data = u.load_asset('/Game/DreamCatcher/Input/Configs/DA_DC_RifleInput')
 
     def tag(name):
         value = u.GameplayTag(); assert value.import_text('(TagName="' + name + '")'); return value
@@ -409,7 +409,7 @@ if __name__ == '__main__':
             assert not directory.exists()
             print(subprocess.list2cmdline([
                 'E:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe', str(PROJECT / 'DreamCatcher.uproject'),
-                '/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_' + ('1' if case == 'chain' else '2'),
+                '/Game/DreamCatcher/Maps/Story/Level_' + ('1' if case == 'chain' else '2'),
                 '-unattended', '-SCCProvider=None', '-RenderOffscreen', '-NoSplash', '-NoAutoSave', '-NoSaveConfig',
                 '-DCProgressionProbe=' + run + '_' + case, '-DCProgressionCase=' + case,
                 '-ExecutePythonScript=' + str(Path(__file__).resolve()),

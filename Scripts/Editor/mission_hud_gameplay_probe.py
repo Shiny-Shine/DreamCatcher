@@ -45,11 +45,11 @@ def inventory():
 def protected_hashes():
     names = ('.git/HEAD', '.git/index', 'DreamCatcher.uproject', 'AGENTS.md',
         'Binaries/Win64/UnrealEditor-DreamCatcher.dll',
-        'Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1.umap',
+        'Content/DreamCatcher/Maps/Story/Level_1.umap',
         'Content/DreamCatcher/Data/Boss/DA_DC_Boss.uasset',
         'Content/DreamCatcher/Data/Stage/DA_DC_MissionList_Example.uasset',
-        'Content/DreamCatcher/UI/HUD/W_DC_MissionEntry.uasset',
-        'Content/DreamCatcher/UI/HUD/W_DC_Radar.uasset',
+        'Content/DreamCatcher/Blueprints/UI/HUD/W_DC_MissionEntry.uasset',
+        'Content/DreamCatcher/Blueprints/UI/HUD/W_DC_Radar.uasset',
         'Saved/Config/WindowsEditor/GameUserSettings.ini', 'Saved/Config/Windows/GameUserSettings.ini')
     return {name: sha(PROJECT / name) if (PROJECT / name).is_file() else None for name in names}
 
@@ -294,7 +294,7 @@ CLASSES = {name: native(name) for name in ('DCStageOverlayWidget', 'DCMissionObj
     'DCMissionListView', 'DCMissionListData', 'DCBossHealthWidget', 'DCLyraHealthComponent',
     'DCStageResultLayer', 'DCBossCharacter', 'DCBossPhaseComponent', 'DCEnemySpawner', 'DCEncounterController')}
 HUD = bp('/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout')
-FRONTEND = bp('/Game/DreamCatcher/UI/Frontend/W_DC_Frontend')
+FRONTEND = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend')
 MENU = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/W_LyraGameMenu')
 DIALOG = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Foundation/Dialogs/W_ConfirmationDefault')
 DAMAGE = bp('/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller')

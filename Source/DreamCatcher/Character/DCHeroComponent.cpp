@@ -848,6 +848,7 @@ bool UDCHeroComponent::CanRouteOriginalADSInput() const
 	return UsesOriginalADSInputRouting() && Pawn && Pawn->IsLocallyControlled() && GetWorld() &&
 		!GetWorld()->IsPaused() && ASC && ASC->GetAvatarActor() == Pawn && PawnExt &&
 		!PawnExt->IsAbilitySystemUninitializing() &&
+		!ASC->IsAbilityInputSuppressed() &&
 		!ASC->HasMatchingGameplayTag(TAG_Gameplay_AbilityInputBlocked) &&
 		!ASC->HasMatchingGameplayTag(DCGameplayTags::Status_Death) &&
 		!ASC->HasMatchingGameplayTag(DCGameplayTags::State_Dead) &&

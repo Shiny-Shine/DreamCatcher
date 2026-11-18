@@ -19,7 +19,7 @@ sys.dont_write_bytecode = True
 PROJECT = Path(__file__).resolve().parents[2]
 ROOT = PROJECT / 'Saved/Diagnostics/SpawnerProximity'
 TARGET = '/Game/DreamCatcher/Blueprints/AI/BP_DC_LyraFiniteSpawner'
-MAP = '/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1'
+MAP = '/Game/DreamCatcher/Maps/Story/Level_1'
 FIELDS = dict(bRequirePlayerProximity=True, PlayerTriggerRadius=2000.0,
               ProximityCheckInterval=0.1, SpawnCount=1)
 TARGET_FILE = PROJECT / ('Content/' + TARGET[6:] + '.uasset')

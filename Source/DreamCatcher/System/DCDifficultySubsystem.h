@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GameModes/DCDifficultyData.h"
+#include "Data/Difficulty/DCDifficultyData.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "DCDifficultySubsystem.generated.h"
 

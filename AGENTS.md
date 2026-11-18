@@ -8,7 +8,7 @@
 > **작업 분담·자동화·마감 기준 갱신:** 2026-10-05 KST / **TODO 승인 갱신:** 2026-10-18 KST / **서브에이전트 운영 갱신:** 2026-10-23 KST
 > **Computer Use 권한 승인 갱신:** 2026-11-03 KST — 대상·범위를 명시한 질문창 승인 허용
 > **권장 위치:** 리포지토리 루트 `/AGENTS.md`
-> **최신 재개:** 2026-10-29, 아래 **0.149** — **공통 모드 카드 통합·UMG 확대/복귀 이관·기존 C++/카드 정리를 최종 사용자 PIE 수용까지 완료**했다. 사용자 빌드41.97초 성공, 옛 카드 Blueprint3개 참조0 확인·삭제·별도 재로드 후 사용자가 **“정리 후에도 모두 정상”**을 확인했다. 사용자 작성 EventGraph·HoverZoom·WidgetTree와 원본 이미지3개는 보존했고 일회성 도구는 삭제했다. 추가 빌드·재제작·완료 검사 반복은 필요 없다. 정확한 근거는 `docs/handoffs/automation-cleanup-2026-10-27.md`의0.149를 따른다. HUD 이관0.148도 완료 상태이며 남은 정리·다른 UI 이관은 후속 범위다.
+> **최신 재개:** 2026-11-18, 아래 **0.151** — **사용자 일반 Editor 빌드 후 장비 검사2건과 GASP 테스트맵·Level_1의 첫 PIE/재실행 총4회를 통과**했다. 실제 장착·해제·재장착·탄약 유지·종료 정리를 확인했으며 최종 실행의 크래시/Error/ensure0이다. 다른 세션 종료 후 순차 실행했고 보호 대상30개 파일·스테이징 상태를 보존했다. 추가 C++ 변경·빌드는 없다. 남은 애니메이션/NavMesh/디버그 조회 경고와 수동 플레이 확인은 별도이며 프로젝트 전체 안정성 완료로 확대하지 않는다. 상세는 `docs/handoffs/project-stability-2026-11-17.md`를 따른다. 공통 카드0.149와 HUD0.148의 완료 상태는 유지한다.
 
 ---
 
@@ -1616,6 +1616,27 @@ Blueprint, UMG, Animation Blueprint, Input Action, 맵, 레벨 에셋 수정이 
 - 원본 두 개와 공통 기준의 실제 LFS 해시를 보존했고 refs/codex-recovery/level1-20261016 아래4개 복구 참조를 추가했다. Stash d02c1c9는 그대로이며 재적용할 필요가 없다. 복구 맵 하나만 Git 충돌 해결 표시하고 커밋/푸시·빌드/패키징은 사용자에게 남긴다. 상세와 최종 해시는`docs/handoffs/level1-merge-recovery-2026-10-16.md`를 따른다.
 
 ---
+
+## 0.151 최신 재개 — 2026-11-18 장비 검사·두 맵 반복 PIE 통과
+
+- 사용자 일반 Editor 빌드 DLL/PDB는11/17 23:36:23 KST, DLL6,939,648 bytes / SHA256 `89d01932d3b681aa20a6a5a5bb04112a268b99b85f6ba4b96178cbb1dc1b55c5`다. 빌드 후 C++ 변경은 없다.
+- 다른 채팅의 조준/Traversal 검증 완료·idle 및 Unreal 프로세스 부재를 확인한 뒤 별도 프로세스를 순차 실행했다. native `QuickBarLifecycle`·`TemplateOwnerLifecycle` **2건 성공·실패/테스트 경고0**이다. 정상 템플릿 복사 직후 이전 템플릿 소유 참조가 남는 경우를 실제로 관찰했고 초기화 후 보정·장착을 확인했다. 역사적 간헐 PIE 발생 조건 전체를 확정한 것은 아니다.
+- `Project.Maps.PIE -TestLoops=2`로 GASP 테스트맵과 Level_1 각각 같은 프로세스의 첫 PIE·종료 후 재실행을 검증했다. **총4회**에서 실제 Pawn/장비/아이템 연결, 장착→해제→재장착, 탄약30 유지, EndPIE 후 무기 액터 제거를 확인했다. 최종 Native_A/GASP_E/Level1_A는 종료0·Error/ensure/Fatal0이다.
+- 관찰기 초기 A~D의 자동 종료·Python API명·보호 속성·GC 후 wrapper 조회 실패는 보존했다. 게임 코드는 변경하지 않고 관찰기만 교정했다. 성공은 최종 E/Level1_A 결과에만 부여한다.
+- 보호 대상30개 파일과 Git 스테이징 상태는 동일하다. Content/Config 저장0·Git 변경0, 임시 `equipment_pie_probe.py`는 검증 후 삭제하고 로그/JSON/Automation 보고서는 보존했다.
+- GASP의 PoseAsset/Lyra import·디버그 CVar 반복 조회, Level_1의 NavMesh origin/tile 불일치·EndPIE 중 CrowdManager 경고가 남는다. Automation JSON은 마지막 pass만 담으므로 마지막 warnings0을 전체 실행 경고0으로 읽지 않는다. 기존 NavMesh 이관을 반복하거나 에셋을 수정하지 않았다.
+- 결과: `Saved/Diagnostics/ProjectStability20261117/final_result.json`. 사용자 화면·조작감 확인 및 후속 최적화는 미완료다. 추가 빌드나 동일 자동 검사를 반복하지 말고 [안정성 인계](docs/handoffs/project-stability-2026-11-17.md)의 남은 범위를 따른다.
+
+## 0.150 이력 — 2026-11-17 장비 초기 장착 안정성 / 코드 준비·사용자 빌드 대기
+
+- 사용자 TODO1~5 1차 승인 후 A~D(장비 소유 관계·Loadout 준비 조건·관련 검사·문서)를 최종 승인했다. C++ 빌드는 사용자 담당이며 다른 세션의 진행 중 작업과 미커밋 변경을 보존한다.
+- 11/17 `L_GASPMovementTest`의 `GameplayReady` 직후 `TryEquipWhenReady → QuickBar → Equipment.AddEntry`에서 소유 액터 권한 조회 중 접근 위반이 발생했다. 동일 스택·주소는 GASP 병합 전 10/15·10/16 Level_1 PIE에도 있다. Python/애니메이션 캐시 자동화 크래시와 별도로 분류한다.
+- `DCLyraEquipmentManagerComponent.cpp`: 초기화 시 목록의 소유 참조를 실제 컴포넌트로 재연결한다. 템플릿·파괴 중 컴포넌트·소유 참조 불일치와 무효/파괴 중/권한 없는 액터에 대한 장착 요청은 진단 후 거부한다. 장비 목록·Ability·복제·해제의 기존 경로는 유지한다.
+- `DCLoadoutController.cpp`: 현재 Possession, PawnExtension/장비의 동일 Pawn 소유, 장비 등록·초기화 완료를 확인하고 종료/파괴 중 요청을 차단한다. 기존 대기 간격·한도·아이템·탄약 수치는 유지한다.
+- `DCEquipmentAutomationTests.cpp`: 기존 QuickBarLifecycle을 보존하고 `TemplateOwnerLifecycle`을 추가했다. 정상 템플릿 복사와 의도적인 오래된 참조 주입을 구분하며 실제 장착·해제·재생성·잘못된 소유 상태 거부를 확인한다. 엔진의 정상 instancing은 소유 참조를 자동 보정할 수 있다. **오류 주입 검사는 과거 PIE 크래시 발생 조건의 재현 증명이 아니다.**
+- 정적 diff/엔진 API 검토까지 진행했다. **사용자 빌드, 새 DLL 검사 실행, GASP 테스트맵 및 Level_1 첫 PIE·재실행 회귀는 미완료**다. 기존 다른 세션의 PIE 성공을 이번 코드 검증으로 사용하지 않는다.
+- 이번 세션의 쓰기 범위는 위 C++3개와 AGENTS/기능 명세/신규 안정성 인계 문서3개다. 에셋·Config·플러그인 삭제/변경0, 새 자동화 스크립트0, UE 실행0이다. 물리 비용·Cook 범위·애니메이션 경고·샘플 정리는 후속 조사이며 미승인 수정에 포함하지 않는다.
+- 상세 근거와 빌드 후 순서는 [안정성 인계](docs/handoffs/project-stability-2026-11-17.md)를 따른다. 완료된0.149/0.148 이관은 반복하지 않는다.
 
 ## 0.149 최신 재개 — 2026-10-29 공통 카드·UMG 이관·기존 코드 정리 / 최종 사용자 수용 완료
 

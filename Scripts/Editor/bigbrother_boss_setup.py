@@ -17,23 +17,23 @@ import traceback
 sys.dont_write_bytecode = True
 P = Path(__file__).resolve().parents[2]
 ROOT = P / 'Saved/Diagnostics/BigBrotherBoss20261024'
-MAP = '/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_3'
+MAP = '/Game/DreamCatcher/Maps/Story/Level_3'
 PATHS = {
     'boss': '/Game/DreamCatcher/Blueprints/AI/Boss/BP_DC_BigBrotherBoss',
     'spawner': '/Game/DreamCatcher/Blueprints/AI/Boss/BP_DC_BigBrotherBossSpawner',
     'data': '/Game/DreamCatcher/Data/Boss/DA_DC_BigBrotherBoss',
-    'line': '/Game/DreamCatcher/GAS/Abilities/Boss/GA_DC_BigBrotherLineShot',
-    'ground': '/Game/DreamCatcher/GAS/Abilities/Boss/GA_DC_BigBrotherGroundStrike',
-    'set': '/Game/DreamCatcher/GAS/AbilitySets/AS_DC_BigBrotherBoss',
+    'line': '/Game/DreamCatcher/Blueprints/Gameplay/Abilities/Boss/GA_DC_BigBrotherLineShot',
+    'ground': '/Game/DreamCatcher/Blueprints/Gameplay/Abilities/Boss/GA_DC_BigBrotherGroundStrike',
+    'set': '/Game/DreamCatcher/Data/AbilitySets/AS_DC_BigBrotherBoss',
     'mission': '/Game/DreamCatcher/Data/Stage/DA_DC_MissionList_Level3Boss',
 }
 SOURCE = {
     'boss': '/Game/DreamCatcher/Blueprints/AI/Boss/BP_DC_Boss',
     'spawner': '/Game/DreamCatcher/Blueprints/AI/Boss/BP_DC_BossSpawner',
     'data': '/Game/DreamCatcher/Data/Boss/DA_DC_Boss',
-    'line': '/Game/DreamCatcher/GAS/Abilities/Boss/GA_DC_BossLineShot',
-    'ground': '/Game/DreamCatcher/GAS/Abilities/Boss/GA_DC_BossGroundStrike',
-    'set': '/Game/DreamCatcher/GAS/AbilitySets/AS_DC_Boss',
+    'line': '/Game/DreamCatcher/Blueprints/Gameplay/Abilities/Boss/GA_DC_BossLineShot',
+    'ground': '/Game/DreamCatcher/Blueprints/Gameplay/Abilities/Boss/GA_DC_BossGroundStrike',
+    'set': '/Game/DreamCatcher/Data/AbilitySets/AS_DC_Boss',
     'mission': '/Game/DreamCatcher/Data/Stage/DA_DC_MissionList_LevelExample',
 }
 MESH = '/Game/DreamCatcher/Main_Charcher/Big_Brother/BigBrother'

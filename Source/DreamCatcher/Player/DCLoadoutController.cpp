@@ -68,11 +68,22 @@ void ADCRifleIntegrationController::EquipIntegrationRifle()
 void ADCRifleIntegrationController::TryEquipWhenReady()
 {
 	APawn* ControlledPawn = GetPawn();
+	// A queued readiness check must not grant a loadout during teardown or to a new possession.
+	if (!HasAuthority() || IsActorBeingDestroyed() || bClearingLoadout
+		|| !IsValid(ControlledPawn) || ControlledPawn->IsActorBeingDestroyed()
+		|| ControlledPawn->GetController() != this)
+	{
+		if (GetWorld()) { GetWorldTimerManager().ClearTimer(EquipTimer); }
+		return;
+	}
 	UDCPawnExtensionComponent* Extension = BoundPawnExtension.Get();
 	UDCAbilitySystemComponent* ASC = GetDCAbilitySystemComponent();
-	UDCLyraEquipmentManagerComponent* Equipment = ControlledPawn ? ControlledPawn->FindComponentByClass<UDCLyraEquipmentManagerComponent>() : nullptr;
-	if (!IsValid(ControlledPawn) || !ControlledPawn->HasActorBegunPlay() || !Extension || Extension->IsAbilitySystemUninitializing()
-		|| !ASC || ASC->GetAvatarActor() != ControlledPawn || !Equipment || RifleQuickBar->GetSlots().IsEmpty()
+	UDCLyraEquipmentManagerComponent* Equipment = ControlledPawn->FindComponentByClass<UDCLyraEquipmentManagerComponent>();
+	if (!ControlledPawn->HasActorBegunPlay() || !IsValid(Extension) || Extension->GetOwner() != ControlledPawn
+		|| Extension->IsAbilitySystemUninitializing() || !IsValid(ASC) || ASC->GetAvatarActor() != ControlledPawn
+		|| !IsValid(Equipment) || Equipment->IsBeingDestroyed() || Equipment->IsTemplate()
+		|| Equipment->GetOwner() != ControlledPawn || !Equipment->IsRegistered() || !Equipment->HasBeenInitialized()
+		|| RifleQuickBar->GetSlots().IsEmpty()
 		|| !Extension->HasReachedInitState(DCGameplayTags::InitState_GameplayReady))
 	{
 		if (--RemainingReadinessChecks <= 0)

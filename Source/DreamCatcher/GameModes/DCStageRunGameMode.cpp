@@ -8,7 +8,7 @@
 #include "Character/DCPawnExtensionComponent.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
-#include "GameModes/DCDifficultyData.h"
+#include "Data/Difficulty/DCDifficultyData.h"
 #include "System/DCDifficultySubsystem.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"

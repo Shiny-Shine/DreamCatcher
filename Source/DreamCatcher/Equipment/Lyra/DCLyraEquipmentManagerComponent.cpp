@@ -4,6 +4,7 @@
 
 #include "AbilitySystem/DCAbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "DCLogChannels.h"
 #include "Engine/ActorChannel.h"
 #include "GameFramework/Actor.h"
 #include "DCLyraEquipmentDefinition.h"
@@ -61,9 +62,10 @@ void FDCLyraEquipmentList::PostReplicatedChange(const TArrayView<int32> ChangedI
 
 UDCAbilitySystemComponent* FDCLyraEquipmentList::GetAbilitySystemComponent() const
 {
-	check(OwnerComponent);
-	AActor* OwningActor = OwnerComponent->GetOwner();
-	return Cast<UDCAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OwningActor));
+	AActor* OwningActor = IsValid(OwnerComponent) ? OwnerComponent->GetOwner() : nullptr;
+	return IsValid(OwningActor)
+		? Cast<UDCAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OwningActor))
+		: nullptr;
 }
 
 UDCLyraEquipmentInstance* FDCLyraEquipmentList::AddEntry(TSubclassOf<UDCLyraEquipmentDefinition> EquipmentDefinition)
@@ -71,8 +73,13 @@ UDCLyraEquipmentInstance* FDCLyraEquipmentList::AddEntry(TSubclassOf<UDCLyraEqui
 	UDCLyraEquipmentInstance* Result = nullptr;
 
 	check(EquipmentDefinition != nullptr);
- 	check(OwnerComponent);
-	check(OwnerComponent->GetOwner()->HasAuthority());
+	AActor* OwningActor = IsValid(OwnerComponent) ? OwnerComponent->GetOwner() : nullptr;
+	if (!IsValid(OwningActor) || OwningActor->IsActorBeingDestroyed() || !OwningActor->HasAuthority())
+	{
+		UE_LOG(LogDC, Warning, TEXT("[Equipment] Refusing equip without a live authoritative owner. Component=%s Owner=%s"),
+			*GetPathNameSafe(OwnerComponent), *GetPathNameSafe(OwningActor));
+		return nullptr;
+	}
 
 	const UDCLyraEquipmentDefinition* EquipmentCDO = GetDefault<UDCLyraEquipmentDefinition>(EquipmentDefinition);
 
@@ -84,7 +91,7 @@ UDCLyraEquipmentInstance* FDCLyraEquipmentList::AddEntry(TSubclassOf<UDCLyraEqui
 
 	FDCLyraAppliedEquipmentEntry& NewEntry = Entries.AddDefaulted_GetRef();
 	NewEntry.EquipmentDefinition = EquipmentDefinition;
-	NewEntry.Instance = NewObject<UDCLyraEquipmentInstance>(OwnerComponent->GetOwner(), InstanceType);  //@TODO: Using the actor instead of component as the outer due to UE-127172
+	NewEntry.Instance = NewObject<UDCLyraEquipmentInstance>(OwningActor, InstanceType);  //@TODO: Using the actor instead of component as the outer due to UE-127172
 	Result = NewEntry.Instance;
 
 	if (UDCAbilitySystemComponent* ASC = GetAbilitySystemComponent())
@@ -151,6 +158,13 @@ UDCLyraEquipmentInstance* UDCLyraEquipmentManagerComponent::EquipItem(TSubclassO
 	UDCLyraEquipmentInstance* Result = nullptr;
 	if (EquipmentClass != nullptr)
 	{
+		// A serialized/template self-reference must never route grants through another component.
+		if (!IsValid(this) || IsTemplate() || IsBeingDestroyed() || EquipmentList.OwnerComponent != this)
+		{
+			UE_LOG(LogDC, Warning, TEXT("[Equipment] Refusing equip on an invalid component or mismatched list owner. Component=%s ListOwner=%s"),
+				*GetPathName(), *GetPathNameSafe(EquipmentList.OwnerComponent));
+			return nullptr;
+		}
 		Result = EquipmentList.AddEntry(EquipmentClass);
 		if (Result != nullptr)
 		{
@@ -199,6 +213,14 @@ bool UDCLyraEquipmentManagerComponent::ReplicateSubobjects(UActorChannel* Channe
 void UDCLyraEquipmentManagerComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
+	// Template property copies happen after the native constructor. This back-reference
+	// belongs to the initialized instance, not to its Blueprint/component archetype.
+	if (EquipmentList.OwnerComponent != this)
+	{
+		UE_LOG(LogDC, Verbose, TEXT("[Equipment] Rebinding list owner. Component=%s Previous=%s"),
+			*GetPathName(), *GetPathNameSafe(EquipmentList.OwnerComponent));
+	}
+	EquipmentList.OwnerComponent = this;
 }
 
 void UDCLyraEquipmentManagerComponent::UninitializeComponent()

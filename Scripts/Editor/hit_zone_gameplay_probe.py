@@ -10,7 +10,7 @@ import unreal as u
 P=Path('E:/Epic Games/UEProjects/DreamCatcher');D=P/'Saved/Diagnostics/HitZones20261018'
 RUN=re.search(r'-DCHitZoneProbe=([A-Za-z0-9_]+)',u.SystemLibrary.get_command_line()).group(1)
 OUT=D/('pie_'+RUN+'.json');assert not OUT.exists()
-MAP='/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1'
+MAP='/Game/DreamCatcher/Maps/Story/Level_1'
 state=dict(step='ready',wall=time.monotonic(),done=False,busy=False,index=0,inputs={})
 result=dict(complete=False,shots=[],events=[],failures=[],asset_saves=0,physical_input_visual_audio_verified=False)
 protected={str(p):[p.stat().st_size,p.stat().st_mtime_ns] for root in ['Content','Source','Config','Plugins/GameFeatures/DCStageUI/Content','Saved/SaveGames'] for p in (P/root).rglob('*') if p.is_file()}
@@ -25,7 +25,7 @@ def event(n,**kw):
 def inject(action,on):
  state['inputs'][action]=u.Vector(1 if on else 0,0,0)
  state['input'].inject_input_vector_for_action(action,state['inputs'][action],[],[])
-data=u.load_asset('/Game/DreamCatcher/Input/DA_DC_RifleInput')
+data=u.load_asset('/Game/DreamCatcher/Input/Configs/DA_DC_RifleInput')
 fire=data.find_ability_input_action_for_tag(tag('InputTag.Weapon.FireAuto'),True)
 aim=data.find_native_input_action_for_tag(tag('InputTag.Aim'),True)
 ammo_tag=tag('Lyra.ShooterGame.Weapon.MagazineAmmo')

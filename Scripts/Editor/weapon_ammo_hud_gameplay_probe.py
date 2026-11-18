@@ -42,7 +42,10 @@ def sha(path):
 
 def protection():
     baseline = json.loads(BASELINE.read_text(encoding='utf-8-sig'))
-    names = list(baseline['protected']) + list(baseline['approved_assets'])
+    # The October baseline records Level_1 at its former location.
+    relocated = {'Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1.umap':
+                 'Content/DreamCatcher/Maps/Story/Level_1.umap'}
+    names = [relocated.get(name, name) for name in baseline['protected']] + list(baseline['approved_assets'])
     names += [file.relative_to(PROJECT).as_posix() for file in (PROJECT / 'Saved/SaveGames').rglob('*') if file.is_file()]
     files = {}
     for root in ('Content', 'Plugins', 'Source', 'Config', 'Scripts', 'docs', 'Saved/SaveGames'):

@@ -152,14 +152,14 @@ bool FDCFrontendTravelTest::RunTest(const FString&)
 	Mode->SetStoryDestination(TEXT("/Game/DreamCatcher/Maps/Missing_Frontend_Test.Missing_Frontend_Test"));
 	TestFalse(TEXT("Missing map does not disable menu"), Mode->RequestStartStory());
 	TestFalse(TEXT("Rejected request does not latch"), Mode->IsStoryTravelPending());
-	Mode->SetStoryDestination(TEXT("/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1.Level_1"));
+	Mode->SetStoryDestination(TEXT("/Game/DreamCatcher/Maps/Story/Level_1.Level_1"));
 	TestTrue(TEXT("Existing story map accepted without loading its world"), Mode->RequestStartStory());
 	TestFalse(TEXT("Double click rejected"), Mode->RequestStartStory());
 	TestEqual(TEXT("UI callback never changes the world synchronously"), Mode->TravelCalls, 0);
 	Fixture.TickTestWorld(.02f); Fixture.TickTestWorld(.02f);
 	TestEqual(TEXT("Exactly one travel request"), Mode->TravelCalls, 1);
 	TestEqual(TEXT("Full production package destination"), Mode->LastDestination,
-		FName(TEXT("/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1")));
+		FName(TEXT("/Game/DreamCatcher/Maps/Story/Level_1")));
 	int32 FailureNotifications = 0;
 	Mode->OnStoryTravelFailed.AddLambda([&FailureNotifications](const FText&) { ++FailureNotifications; });
 	Mode->SimulateTravelFailure();

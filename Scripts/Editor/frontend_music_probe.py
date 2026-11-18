@@ -56,11 +56,11 @@ def bp(path):
     return ue.load_class(None, path + '.' + path.rsplit('/', 1)[1] + '_C')
 
 
-intro_cls = bp('/Game/DreamCatcher/UI/Frontend/W_DC_FrontendIntro')
-menu_cls = bp('/Game/DreamCatcher/UI/Frontend/W_DC_Frontend')
+intro_cls = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_FrontendIntro')
+menu_cls = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend')
 settings_cls = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Settings/W_LyraSettingScreen')
 component_cls = ue.load_class(None, '/Script/DreamCatcher.DCLyraFrontendStateComponent')
-cue = ue.load_asset('/Game/DreamCatcher/Audio/선택화면_Cue')
+cue = ue.load_asset('/Game/DreamCatcher/Audio/Music/Frontend/선택화면_Cue')
 assert intro_cls and menu_cls and settings_cls and component_cls and cue
 cdo = ue.get_default_object(intro_cls)
 original_source = cdo.get_editor_property('IntroMediaSource')
@@ -82,10 +82,10 @@ protected_paths = ['.git/HEAD', 'Binaries/Win64/UnrealEditor-DreamCatcher.dll',
     'Source/DreamCatcher/UI/Frontend/DCFrontendIntroScreen.cpp',
     'Content/DreamCatcher/Maps/L_DC_FrontEnd.umap',
     'Content/DreamCatcher/Blueprints/UI/BP_DC_FrontendStateComponent.uasset',
-    'Content/DreamCatcher/Audio/선택화면_Cue.uasset', 'Content/DreamCatcher/Audio/선택화면.uasset',
-    'Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1.umap',
-    'Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_2.umap',
-    'Content/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_3.umap']
+    'Content/DreamCatcher/Audio/Music/Frontend/선택화면_Cue.uasset', 'Content/DreamCatcher/Audio/Music/Frontend/선택화면.uasset',
+    'Content/DreamCatcher/Maps/Story/Level_1.umap',
+    'Content/DreamCatcher/Maps/Story/Level_2.umap',
+    'Content/DreamCatcher/Maps/Story/Level_3.umap']
 before = {p: hashlib.sha256((PROJECT / p).read_bytes()).hexdigest() for p in protected_paths}
 staged_before = staged_entries()
 state = dict(step='pv', started=time.monotonic(), step_started=time.monotonic(), done=False, busy=False)

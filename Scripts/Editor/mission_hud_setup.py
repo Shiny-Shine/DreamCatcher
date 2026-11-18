@@ -31,8 +31,8 @@ REPORTS = PROJECT / 'Saved/Diagnostics/MissionHUD20261019'
 SCHEMA = 2  # Every brush now has independent full-model geometry coverage.
 PATHS = {
     'list': '/Game/DreamCatcher/Data/Stage/DA_DC_MissionList_Example',
-    'entry': '/Game/DreamCatcher/UI/HUD/W_DC_MissionEntry',
-    'map': '/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1',
+    'entry': '/Game/DreamCatcher/Blueprints/UI/HUD/W_DC_MissionEntry',
+    'map': '/Game/DreamCatcher/Maps/Story/Level_1',
     'boss': '/Game/DreamCatcher/Data/Boss/DA_DC_Boss',
 }
 NEW = ('list', 'entry')
@@ -40,7 +40,7 @@ MARKERS = ('DC_MissionTarget_Combat1', 'DC_MissionTarget_Combat2', 'DC_MissionTa
 ART = {
     'panel': '/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/Art/MI_UI_AccoladeBorder',
     'text_panel': '/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/Art/MI_UI_AccoladeBorder_Text',
-    'circle': '/Game/DreamCatcher/UI/Textures/Crosshair/T_Circle_Filled',
+    'circle': '/Game/DreamCatcher/Textures/UI/HUD/Shared/T_Circle_Filled',
 }
 STYLE = dict(RightMargin=64, TopOffset=288, PanelWidth=360, MinHeight=132,
              MaxHeight=392, Padding=16, HeaderHeight=40, RowMinHeight=48,

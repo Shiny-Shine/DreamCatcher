@@ -20,7 +20,7 @@ import traceback
 sys.dont_write_bytecode = True
 PROJECT = Path(__file__).resolve().parents[2]
 ROOT = PROJECT / 'Saved/Diagnostics/SpawnerProximity'
-MAP = '/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1'
+MAP = '/Game/DreamCatcher/Maps/Story/Level_1'
 
 
 def setup_support():

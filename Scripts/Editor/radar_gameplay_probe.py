@@ -68,7 +68,7 @@ assert not editor.get_game_world(), 'Arm before Project.Maps.PIE starts'
 EDITOR_WORLD = editor.get_editor_world()
 assert EDITOR_WORLD and ue.SystemLibrary.is_valid(EDITOR_WORLD), 'No Editor world available for the foreign-world fixture before PIE'
 assert 'UEDPIE_' not in EDITOR_WORLD.get_path_name()
-STORY = '/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_1'
+STORY = '/Game/DreamCatcher/Maps/Story/Level_1'
 MENU = '/Game/DreamCatcher/Maps/L_DC_FrontEnd'
 
 
@@ -109,9 +109,9 @@ def bp(path):
     return cls
 
 
-radar_class = bp('/Game/DreamCatcher/UI/HUD/W_DC_Radar')
+radar_class = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_DC_Radar')
 hud_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout')
-frontend_class = bp('/Game/DreamCatcher/UI/Frontend/W_DC_Frontend')
+frontend_class = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend')
 menu_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/W_LyraGameMenu')
 dialog_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Foundation/Dialogs/W_ConfirmationDefault')
 boss_class = bp('/Game/DreamCatcher/Blueprints/AI/Boss/BP_DC_Boss')

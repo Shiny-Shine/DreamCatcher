@@ -22,12 +22,12 @@ import traceback
 sys.dont_write_bytecode = True
 PROJECT = Path(__file__).resolve().parents[2]
 ROOT = PROJECT / 'Saved/Diagnostics/LevelProgression20261023'
-MAP_ROOT = '/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/'
+MAP_ROOT = '/Game/DreamCatcher/Maps/Story/'
 MAPS = [MAP_ROOT + 'Level_' + str(i) for i in (1, 2, 3)]
 FRONTEND = '/Game/DreamCatcher/Maps/L_DC_FrontEnd'
 MODE_ROOT = '/Game/DreamCatcher/Blueprints/Core/'
 MODES = [MODE_ROOT + 'BP_DC_Level' + str(i) + 'GameMode' for i in (1, 2, 3)]
-VIDEO = '/Game/DreamCatcher/Screens/Dreamcatcher_Mission_Clear'
+VIDEO = '/Game/DreamCatcher/Media/Stage/Dreamcatcher_Mission_Clear'
 MISSION = '/Game/DreamCatcher/Data/Stage/DA_DC_MissionList_LevelExample'
 MISSION_SOURCE = '/Game/DreamCatcher/Data/Stage/DA_DC_MissionList_Example'
 EXPERIENCE = '/Game/DreamCatcher/Experiences/B_DC_StageUIExperience'
@@ -294,12 +294,12 @@ def configure_map(world, plan, mode, mission):
         spawner.set_actor_location(spawner.get_actor_location() + offset, False, True)
     for name, value in dict(SpawnCount=1, MaxAliveAtOnce=1, bActivateOnBeginPlay=False).items():
         spawner.set_editor_property(name, value, notify_mode=ue.PropertyAccessChangeNotifyMode.NEVER)
-    encounter = spawn(world, ue.load_class(None, '/Game/Blueprint/Stage/BP_EncounterController.BP_EncounterController_C'),
+    encounter = spawn(world, ue.load_class(None, '/Game/DreamCatcher/Blueprints/Stage/BP_EncounterController.BP_EncounterController_C'),
                       'DC_ExampleEncounter', plan['enemy'])
     encounter.set_editor_property('Spawners', [spawner], notify_mode=ue.PropertyAccessChangeNotifyMode.NEVER)
     encounter.set_editor_property('bAutoStartOnBeginPlay', False, notify_mode=ue.PropertyAccessChangeNotifyMode.NEVER)
     encounter.set_editor_property('StartDelay', 0.0, notify_mode=ue.PropertyAccessChangeNotifyMode.NEVER)
-    director = spawn(world, ue.load_class(None, '/Game/Blueprint/Stage/BP_StageDirector.BP_StageDirector_C'),
+    director = spawn(world, ue.load_class(None, '/Game/DreamCatcher/Blueprints/Stage/BP_StageDirector.BP_StageDirector_C'),
                      'DC_ExampleStageDirector', plan['player'])
     director.set_editor_property('bAutoStartStage', False, notify_mode=ue.PropertyAccessChangeNotifyMode.NEVER)
     phase = ue.DCStagePhaseDefinition()

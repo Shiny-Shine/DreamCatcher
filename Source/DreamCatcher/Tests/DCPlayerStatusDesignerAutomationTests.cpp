@@ -116,7 +116,7 @@ struct FFixture
 bool BindArmorMaterials(FAutomationTestBase& Test, FFixture& Fixture)
 {
 	UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr,
-		TEXT("/Game/DreamCatcher/UI/HUD/Art/MI_DC_HUD_ArmorArt_Left.MI_DC_HUD_ArmorArt_Left"));
+		TEXT("/Game/DreamCatcher/Materials/UI/HUD/HealthAndArmor/MI_DC_HUD_ArmorArt_Left.MI_DC_HUD_ArmorArt_Left"));
 	if (!Test.TestNotNull(TEXT("Saved shield material supplies the animation parameters"), Material)) { return false; }
 	for (int32 Index = 0; Index < 3; ++Index)
 	{
@@ -177,7 +177,7 @@ bool FDCPlayerStatusDesignerLifecycleTest::RunTest(const FString&)
 	if (!DCPlayerStatusDesignerTests::Context(*this)) { return false; }
 	DCPlayerStatusDesignerTests::FFixture F;
 	UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr,
-		TEXT("/Game/DreamCatcher/UI/HUD/Art/MI_DC_HUD_ArmorArt_Left.MI_DC_HUD_ArmorArt_Left"));
+		TEXT("/Game/DreamCatcher/Materials/UI/HUD/HealthAndArmor/MI_DC_HUD_ArmorArt_Left.MI_DC_HUD_ArmorArt_Left"));
 	if (!TestNotNull(TEXT("Existing shield material"), Material)) { return false; }
 	FSlateBrush Brush = F.Fill->GetBrush(); Brush.SetResourceObject(Material); F.Fill->SetBrush(Brush);
 	F.Status->SynchronizeProperties();

@@ -253,8 +253,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCStageMissionClearTravelTest, "DreamCatcher.R
 bool FDCStageMissionClearTravelTest::RunTest(const FString&)
 {
 	const TCHAR* Destinations[] = {
-		TEXT("/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_2.Level_2"),
-		TEXT("/Game/DreamCatcher/DreamCatcher_ENV/Map/Main/Level_3.Level_3"),
+		TEXT("/Game/DreamCatcher/Maps/Story/Level_2.Level_2"),
+		TEXT("/Game/DreamCatcher/Maps/Story/Level_3.Level_3"),
 		TEXT("/Game/DreamCatcher/Maps/L_DC_FrontEnd.L_DC_FrontEnd") };
 	for (const TCHAR* Destination : Destinations)
 	{
