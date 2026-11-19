@@ -20,7 +20,7 @@ PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
 REPORTS = PROJECT / 'Saved/Diagnostics/BossHUD20261019'
 ASSET = '/Game/DreamCatcher/Data/Boss/DA_DC_Boss'
 DISK = PROJECT / ('Content/' + ASSET[6:] + '.uasset')
-HEALTHBAR = '/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/W_Healthbar'
+HEALTHBAR = '/Game/DreamCatcher/Blueprints/UI/HUD/W_Healthbar'
 ART = '/Game/DreamCatcher/Lyra/UI/Shared/Equipment/LyraStarterGame/UI/Hud/Art/'
 BRUSHES = {'BarBorderBrush': ('BarBorder', ART + 'MI_UI_HealthBar_BarBorder'),
            'BarFillBrush': ('BarFill', ART + 'MI_UI_HealthBar_Fill')}

@@ -125,7 +125,7 @@ bool FDCArmorAllocationTest::RunTest(const FString&)
 	using namespace DCArmorTests;
 	FFixture F; if (!F.Start(*this)) { return false; }
 	UClass* RifleClass = LoadClass<UDCLyraRangedWeaponInstance>(nullptr,
-		TEXT("/Game/DreamCatcher/Lyra/Weapons/Rifle/B_WeaponInstance_Rifle.B_WeaponInstance_Rifle_C"));
+		TEXT("/Game/DreamCatcher/Blueprints/Weapons/Rifle/B_WeaponInstance_Rifle.B_WeaponInstance_Rifle_C"));
 	if (!TestNotNull(TEXT("Existing actual rifle instance BP"), RifleClass)) { return false; }
 	FFloatProperty* RatioProperty = FindFProperty<FFloatProperty>(RifleClass, TEXT("DamageToArmorRatio"));
 	if (!TestNotNull(TEXT("Editable ratio property"), RatioProperty)) { return false; }

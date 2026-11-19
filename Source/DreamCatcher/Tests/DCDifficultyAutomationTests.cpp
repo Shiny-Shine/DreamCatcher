@@ -45,8 +45,8 @@ UDCDifficultyCatalog* MakeCatalog(UObject* Outer)
 	Catalog->Hard->Values.PistolLoadedAmmo = 8;
 	Catalog->Hard->Values.PistolSpareAmmo = 120;
 	// Only read the two real item definitions; never edit CDOs or save packages.
-	Catalog->SMGItem = LoadClass<UDCInventoryItemDefinition>(nullptr, TEXT("/Game/DreamCatcher/Lyra/Weapons/Rifle/ID_Rifle.ID_Rifle_C"));
-	Catalog->PistolItem = LoadClass<UDCInventoryItemDefinition>(nullptr, TEXT("/Game/DreamCatcher/Lyra/Weapons/Pistol/ID_Pistol.ID_Pistol_C"));
+	Catalog->SMGItem = LoadClass<UDCInventoryItemDefinition>(nullptr, TEXT("/Game/DreamCatcher/Blueprints/Inventory/ItemDefinitions/ID_Rifle.ID_Rifle_C"));
+	Catalog->PistolItem = LoadClass<UDCInventoryItemDefinition>(nullptr, TEXT("/Game/DreamCatcher/Blueprints/Inventory/ItemDefinitions/ID_Pistol.ID_Pistol_C"));
 	Catalog->SMGDamageEffect = UGameplayEffect::StaticClass();
 	Catalog->PistolDamageEffect = UDCR10AttackDamageFixture::StaticClass();
 	return Catalog;

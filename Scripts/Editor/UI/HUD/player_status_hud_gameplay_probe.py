@@ -55,9 +55,9 @@ def protected_hashes():
              'Binaries/Win64/UnrealEditor-DreamCatcher.dll',
              'Content/DreamCatcher/Maps/Story/Level_1.umap',
              'Content/DreamCatcher/Blueprints/UI/HUD/W_DC_PlayerStatus.uasset',
-             'Content/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/W_Healthbar.uasset',
-             'Content/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout.uasset',
-             'Content/DreamCatcher/Experiences/B_DC_StageUIExperience.uasset',
+             'Content/DreamCatcher/Blueprints/UI/HUD/W_Healthbar.uasset',
+             'Content/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout.uasset',
+             'Content/DreamCatcher/Blueprints/Experiences/B_DC_StageUIExperience.uasset',
              'Saved/Config/WindowsEditor/GameUserSettings.ini', 'Saved/Config/Windows/GameUserSettings.ini']
     return {name: sha(PROJECT / name) if (PROJECT / name).is_file() else None for name in names}
 
@@ -238,9 +238,9 @@ def bp(path):
     return value
 
 
-HUD = bp('/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout')
+HUD = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout')
 FRONTEND = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend')
-DAMAGE = bp('/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller')
+DAMAGE = bp('/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller')
 HEALTH = native('DCLyraHealthComponent')
 BOT = native('DCLyraPlayerBotController')
 WEAPON = native('DCLyraRangedWeaponInstance')

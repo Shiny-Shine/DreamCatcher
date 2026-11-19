@@ -94,7 +94,7 @@ state = dict(step='menu_initial', started=time.monotonic(), at=0., busy=False, d
 report = dict(run=RUN, complete=False, probe_passed=False, events=[], failures=[],
     asset_saves=0, cpp_build=False, physical_input_verified=False, visual_acceptance=False,
     weapon_or_balance_verified=False, full_stage_or_packaging_verified=False,
-    diagnostic_damage_effect='/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller')
+    diagnostic_damage_effect='/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller')
 
 
 def native(name):
@@ -113,11 +113,11 @@ phase_class = native('DCBossPhaseComponent')
 widget_class = native('DCBossHealthWidget')
 overlay_class = native('DCStageOverlayWidget')
 result_class = native('DCStageResultLayer')
-hud_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout')
+hud_class = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout')
 frontend_class = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend')
-menu_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/W_LyraGameMenu')
-dialog_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Foundation/Dialogs/W_ConfirmationDefault')
-damage_class = bp('/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller')
+menu_class = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_LyraGameMenu')
+dialog_class = bp('/Game/DreamCatcher/Blueprints/UI/Dialogs/W_ConfirmationDefault')
+damage_class = bp('/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller')
 ui = ue.get_default_object(ue.load_class(None, '/Script/CommonGame.CommonUIExtensions'))
 gas = ue.get_default_object(ue.load_class(None, '/Script/GameplayAbilities.AbilitySystemBlueprintLibrary'))
 game = ue.get_default_object(ue.load_class(None, '/Script/Engine.GameplayStatics'))

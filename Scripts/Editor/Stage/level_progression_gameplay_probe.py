@@ -91,7 +91,7 @@ def arm():
     gas = u.get_default_object(u.load_class(None, '/Script/GameplayAbilities.AbilitySystemBlueprintLibrary'))
     subs = u.get_default_object(u.load_class(None, '/Script/Engine.SubsystemBlueprintLibrary'))
     input_class = u.load_class(None, '/Script/EnhancedInput.EnhancedInputLocalPlayerSubsystem')
-    damage_class = u.load_class(None, '/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
+    damage_class = u.load_class(None, '/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
     assert damage_class and cls('DCMissionClearWidget')
     input_data = u.load_asset('/Game/DreamCatcher/Input/Configs/DA_DC_RifleInput')
 

@@ -72,7 +72,7 @@ def arm():
     assert not editor.get_game_world()
     cls = lambda name: u.load_class(None, '/Script/DreamCatcher.' + name)
     gas = u.get_default_object(u.load_class(None, '/Script/GameplayAbilities.AbilitySystemBlueprintLibrary'))
-    damage_class = u.load_class(None, '/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
+    damage_class = u.load_class(None, '/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
     assert damage_class
     state = dict(done=False, busy=False, wall=time.monotonic(), level=None, step='ready', at=0,
                  immunity=None, phase=None, phase_kills=0, nav_done=False, cleared={}, last_event=-10)

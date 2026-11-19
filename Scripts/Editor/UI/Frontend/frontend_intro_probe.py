@@ -41,7 +41,7 @@ import unreal as ue
 
 PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
 REPORTS = PROJECT / 'Saved/Diagnostics/FrontendPV20261024'
-MENU = '/Game/DreamCatcher/Maps/L_DC_FrontEnd'
+MENU = '/Game/DreamCatcher/Maps/Frontend/L_DC_FrontEnd'
 match = re.search(r'-DCFrontendIntroProbe=([A-Za-z0-9_]+)\b', ue.SystemLibrary.get_command_line())
 assert match, 'Explicit probe run id required'
 FAILURE = '-dcfrontendintrofailure' in ue.SystemLibrary.get_command_line().lower()

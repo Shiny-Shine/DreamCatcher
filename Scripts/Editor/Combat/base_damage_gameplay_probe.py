@@ -76,7 +76,7 @@ OUTPUT.mkdir(parents=True, exist_ok=True)
 OUT = OUTPUT / ('pie_' + RUN + '.json')
 assert not OUT.exists(), 'Do not overwrite a previous run'
 MAP = '/Game/DreamCatcher/Maps/Story/Level_1'
-EXPERIENCE = '/Game/DreamCatcher/Experiences/B_DC_StageUIExperience'
+EXPERIENCE = '/Game/DreamCatcher/Blueprints/Experiences/B_DC_StageUIExperience'
 EXPECTED = {'defaults': (0.0, 12.0), 'equal8': (8.0, 8.0), 'zero_enemy': (8.0, 0.0)}[MODE]
 state = dict(step='ready', wall=time.monotonic(), done=False, busy=False, index=0, inputs={})
 report = dict(complete=False, probe_passed=False, run=RUN, mode=MODE, shots=[], events=[], failures=[],

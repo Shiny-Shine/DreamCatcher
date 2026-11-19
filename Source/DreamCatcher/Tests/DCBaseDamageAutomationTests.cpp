@@ -203,7 +203,7 @@ bool FDCBaseDamageRifleExecutionTest::RunTest(const FString&)
 	FFixture Fixture;
 	if (!Fixture.Start(*this)) { return false; }
 	// Exercise the saved GE fallback path; this fixture has no story difficulty override.
-	UClass* RifleClass = LoadClass<UGameplayEffect>(nullptr, TEXT("/Game/Weapons/Rifle/GE_Damage_RifleAuto.GE_Damage_RifleAuto_C"));
+	UClass* RifleClass = LoadClass<UGameplayEffect>(nullptr, TEXT("/Game/DreamCatcher/Blueprints/Gameplay/Effects/Weapons/GE_Damage_RifleAuto.GE_Damage_RifleAuto_C"));
 	if (!TestNotNull(TEXT("Saved real Rifle GE"), RifleClass)) { return false; }
 	const UGameplayEffect* Rifle = GetDefault<UGameplayEffect>(RifleClass);
 	if (!TestEqual(TEXT("Original single execution retained"), Rifle->Executions.Num(), 1)) { return false; }

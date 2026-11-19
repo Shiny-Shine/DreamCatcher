@@ -36,8 +36,8 @@ SOURCE = {
     'set': '/Game/DreamCatcher/Data/AbilitySets/AS_DC_Boss',
     'mission': '/Game/DreamCatcher/Data/Stage/DA_DC_MissionList_LevelExample',
 }
-MESH = '/Game/DreamCatcher/Main_Charcher/Big_Brother/BigBrother'
-MATERIAL = '/Game/DreamCatcher/Main_Charcher/Big_Brother/Material_tripo_8ee5710f_9813_4036_8bd6_534cf8d40cce'
+MESH = '/Game/DreamCatcher/Meshes/Characters/Big_Brother/BigBrother'
+MATERIAL = '/Game/DreamCatcher/Materials/Characters/Big_Brother/Material_tripo_8ee5710f_9813_4036_8bd6_534cf8d40cce'
 BODY_MATERIAL = '/Game/Characters/Heroes/PhysMat_Player'
 HEAD_MATERIAL = '/Game/Characters/Heroes/PhysMat_Player_WeakSpot'
 EXCLUDED = {'SkeletalMeshActor_1', 'DC_ExampleSpawner', 'DC_ExampleEncounter', 'DC_ExampleStageDirector',

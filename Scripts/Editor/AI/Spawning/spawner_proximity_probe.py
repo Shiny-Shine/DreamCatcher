@@ -78,9 +78,9 @@ def arm():
     support.inspect_map(u, require_proximity=True)
     cls = lambda name: u.load_class(None, '/Script/DreamCatcher.' + name)
     gas = u.get_default_object(u.load_class(None, '/Script/GameplayAbilities.AbilitySystemBlueprintLibrary'))
-    damage_class = u.load_class(None, '/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
+    damage_class = u.load_class(None, '/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
     assert damage_class
-    experience = u.get_default_object(u.load_asset('/Game/DreamCatcher/Experiences/B_DC_StageUIExperience').generated_class())
+    experience = u.get_default_object(u.load_asset('/Game/DreamCatcher/Blueprints/Experiences/B_DC_StageUIExperience').generated_class())
     pawn_data = experience.get_editor_property('BotPawnData') or experience.get_editor_property('DefaultPawnData')
     expected_pawn_class = pawn_data.get_editor_property('PawnClass')
     state = dict(step='ready', at=0.0, wall=time.monotonic(), done=False, busy=False, immune_pawn=None)

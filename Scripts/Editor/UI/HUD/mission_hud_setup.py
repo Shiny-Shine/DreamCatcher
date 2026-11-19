@@ -38,8 +38,8 @@ PATHS = {
 NEW = ('list', 'entry')
 MARKERS = ('DC_MissionTarget_Combat1', 'DC_MissionTarget_Combat2', 'DC_MissionTarget_Boss')
 ART = {
-    'panel': '/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/Art/MI_UI_AccoladeBorder',
-    'text_panel': '/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/Art/MI_UI_AccoladeBorder_Text',
+    'panel': '/Game/DreamCatcher/Materials/UI/Notifications/Accolades/MI_UI_AccoladeBorder',
+    'text_panel': '/Game/DreamCatcher/Materials/UI/Notifications/Accolades/MI_UI_AccoladeBorder_Text',
     'circle': '/Game/DreamCatcher/Textures/UI/HUD/Shared/T_Circle_Filled',
 }
 STYLE = dict(RightMargin=64, TopOffset=288, PanelWidth=360, MinHeight=132,

@@ -255,7 +255,7 @@ bool FDCStageMissionClearTravelTest::RunTest(const FString&)
 	const TCHAR* Destinations[] = {
 		TEXT("/Game/DreamCatcher/Maps/Story/Level_2.Level_2"),
 		TEXT("/Game/DreamCatcher/Maps/Story/Level_3.Level_3"),
-		TEXT("/Game/DreamCatcher/Maps/L_DC_FrontEnd.L_DC_FrontEnd") };
+		TEXT("/Game/DreamCatcher/Maps/Frontend/L_DC_FrontEnd.L_DC_FrontEnd") };
 	for (const TCHAR* Destination : Destinations)
 	{
 		DCStageFlowTests::FFixture F; if (!F.Start(*this)) { return false; }

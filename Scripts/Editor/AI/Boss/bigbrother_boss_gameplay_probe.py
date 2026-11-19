@@ -70,7 +70,7 @@ def arm():
     phase_threshold = maximum_health * boss_data.get_editor_property('PhaseTwoHealthRatio')
     r['maximum_health'] = maximum_health
     attack_damage = {key:u.get_default_object(u.load_asset(setup.PATHS[key]).generated_class()).get_editor_property('DamageAmount') for key in ('line','ground')}
-    damage_class = u.load_class(None, '/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
+    damage_class = u.load_class(None, '/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller.GE_Damage_Basic_SetByCaller_C')
     data = u.load_asset('/Game/DreamCatcher/Input/Configs/DA_DC_RifleInput')
     def tag(name):
         t = u.GameplayTag(); assert t.import_text('(TagName="' + name + '")'); return t

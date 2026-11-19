@@ -21,7 +21,7 @@ import unreal as ue
 
 PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
 REPORTS = PROJECT / 'Saved/Diagnostics/InGameHUD20261019'
-ASSET = '/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout'
+ASSET = '/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout'
 OBJECT = ASSET + '.W_ShooterHUDLayout'
 SLOT = OBJECT + ':WidgetTree.CanvasPanel_0.CanvasPanelSlot_4'
 DISK = PROJECT / ('Content/' + ASSET.removeprefix('/Game/') + '.uasset')
@@ -98,16 +98,16 @@ def protected_hashes():
     # settings stay untouched; inventory also guards every other existing file.
     names = ['.git/HEAD', '.git/index', 'DreamCatcher.uproject',
              'Binaries/Win64/UnrealEditor-DreamCatcher.dll',
-             'Content/DreamCatcher/Experiences/B_DC_StageUIExperience.uasset',
-             'Content/DreamCatcher/Experiences/ActionSets/LAS_DC_StageHUD.uasset',
-             'Content/DreamCatcher/Experiences/ActionSets/LAS_DC_StageNotifications.uasset',
+             'Content/DreamCatcher/Blueprints/Experiences/B_DC_StageUIExperience.uasset',
+             'Content/DreamCatcher/Data/Experiences/ActionSets/LAS_DC_StageHUD.uasset',
+             'Content/DreamCatcher/Data/Experiences/ActionSets/LAS_DC_StageNotifications.uasset',
              'Plugins/GameFeatures/DCStageUI/Content/DCStageUI.uasset',
-             'Content/DreamCatcher/Lyra/UI/Shared/Foundation/W_OverallUILayout.uasset',
-             'Content/DreamCatcher/Lyra/UI/Shared/Foundation/B_LyraUIPolicy.uasset',
-             'Content/DreamCatcher/Lyra/UI/Shared/W_WeaponReticleHost.uasset',
-             'Content/DreamCatcher/Lyra/Weapons/Rifle/W_Reticle_Rifle.uasset',
-             'Content/DreamCatcher/Lyra/Feedback/DamageTaken/Effects/Camera/Damage/NS_Screen_DamageDirection.uasset',
-             'Content/DreamCatcher/Lyra/Feedback/DamageTaken/Effects/Camera/Damage/Materials/M_DamageDirection.uasset']
+             'Content/DreamCatcher/Blueprints/UI/Common/W_OverallUILayout.uasset',
+             'Content/DreamCatcher/Blueprints/UI/Common/B_LyraUIPolicy.uasset',
+             'Content/DreamCatcher/Blueprints/UI/HUD/Reticles/W_WeaponReticleHost.uasset',
+             'Content/DreamCatcher/Blueprints/UI/HUD/Reticles/W_Reticle_Rifle.uasset',
+             'Content/DreamCatcher/FX/Combat/Damage/NS_Screen_DamageDirection.uasset',
+             'Content/DreamCatcher/Materials/Combat/Damage/M_DamageDirection.uasset']
     return {name: sha(PROJECT / name) for name in names}
 
 

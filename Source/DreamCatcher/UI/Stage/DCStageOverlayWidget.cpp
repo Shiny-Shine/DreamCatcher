@@ -57,7 +57,7 @@ UDCRadarWidget* UDCStageOverlayWidget::FindOwningHUDRadar() const
 {
 	// The extension widget belongs to this HUD's WidgetTree. Never enumerate
 	// unrelated/dormant widgets retained by another world or local player.
-	static const FString HUDClassPath(TEXT("/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout.W_ShooterHUDLayout_C"));
+	static const FString HUDClassPath(TEXT("/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout.W_ShooterHUDLayout_C"));
 	for (UObject* Outer = GetOuter(); Outer; Outer = Outer->GetOuter())
 	{
 		UUserWidget* HUD = Cast<UUserWidget>(Outer);

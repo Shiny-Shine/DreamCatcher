@@ -69,7 +69,7 @@ EDITOR_WORLD = editor.get_editor_world()
 assert EDITOR_WORLD and ue.SystemLibrary.is_valid(EDITOR_WORLD), 'No Editor world available for the foreign-world fixture before PIE'
 assert 'UEDPIE_' not in EDITOR_WORLD.get_path_name()
 STORY = '/Game/DreamCatcher/Maps/Story/Level_1'
-MENU = '/Game/DreamCatcher/Maps/L_DC_FrontEnd'
+MENU = '/Game/DreamCatcher/Maps/Frontend/L_DC_FrontEnd'
 
 
 def sha(path):
@@ -92,7 +92,7 @@ report = dict(run=RUN, complete=False, probe_passed=False, events=[], failures=[
               cpp_build=False, physical_input_verified=False, visual_acceptance=False,
               full_combat_or_packaging_verified=False, offscreen_render='-renderoffscreen' in COMMAND.lower(),
               objective_selection_connected=False,
-              diagnostic_lethal_effect='/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller',
+              diagnostic_lethal_effect='/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller',
               diagnostic_damage_is_weapon_or_balance_verification=False,
               visibility_trace_mapping=dict(index=0, channel='ECC_Visibility', collision_channel_index=3,
                   blocking_response_index=2,
@@ -110,12 +110,12 @@ def bp(path):
 
 
 radar_class = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_DC_Radar')
-hud_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout')
+hud_class = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout')
 frontend_class = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend')
-menu_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/W_LyraGameMenu')
-dialog_class = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Foundation/Dialogs/W_ConfirmationDefault')
+menu_class = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_LyraGameMenu')
+dialog_class = bp('/Game/DreamCatcher/Blueprints/UI/Dialogs/W_ConfirmationDefault')
 boss_class = bp('/Game/DreamCatcher/Blueprints/AI/Boss/BP_DC_Boss')
-damage_class = bp('/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller')
+damage_class = bp('/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller')
 health_class = native('DCLyraHealthComponent')
 result_class = native('DCStageResultLayer')
 ui = ue.get_default_object(ue.load_class(None, '/Script/CommonGame.CommonUIExtensions'))

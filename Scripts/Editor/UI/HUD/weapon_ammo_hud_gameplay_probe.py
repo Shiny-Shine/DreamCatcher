@@ -27,8 +27,8 @@ import unreal as ue
 PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
 REPORTS = PROJECT / 'Saved/Diagnostics/WeaponAmmo20261020'
 BASELINE = REPORTS / 'Before_A/baseline.json'
-ROOT_CLASS = '/Game/DreamCatcher/Lyra/UI/Shared/Equipment/W_QuickBar.W_QuickBar_C'
-HUD_CLASS = '/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout.W_ShooterHUDLayout_C'
+ROOT_CLASS = '/Game/DreamCatcher/Blueprints/UI/Common/W_QuickBar.W_QuickBar_C'
+HUD_CLASS = '/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout.W_ShooterHUDLayout_C'
 _prepared = None
 
 

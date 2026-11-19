@@ -47,8 +47,8 @@ struct FDCTraversalCombatTestAccessor
 
 namespace DCTraversalTests
 {
-constexpr const TCHAR* MeshPath = TEXT("/Game/Characters/UEFN_Mannequin/Meshes/SKM_UEFN_Mannequin.SKM_UEFN_Mannequin");
-constexpr const TCHAR* IdlePath = TEXT("/Game/Characters/UEFN_Mannequin/Animations/Idle/M_Neutral_Stand_Idle_Loop.M_Neutral_Stand_Idle_Loop");
+constexpr const TCHAR* MeshPath = TEXT("/Game/DreamCatcher/Meshes/Characters/UEFN_Mannequin/SKM_UEFN_Mannequin.SKM_UEFN_Mannequin");
+constexpr const TCHAR* IdlePath = TEXT("/Game/DreamCatcher/Animations/Characters/UEFN_Mannequin/Idle/M_Neutral_Stand_Idle_Loop.M_Neutral_Stand_Idle_Loop");
 constexpr const TCHAR* ItemPath = TEXT("/Game/Tests/Equipment/ID_DC_R5_EquipmentSmoke.ID_DC_R5_EquipmentSmoke_C");
 
 template <typename T>

@@ -188,16 +188,16 @@ void CaptureLayout()
 	const bool bPlayerValid = RecordGeometry(Context, TEXT("PlayerScreen"), TEXT("native_player_screen"), PlayerGeometry);
 
 	const FRole Roles[] = {
-		{ TEXT("overall_layout"), TEXT("/Game/DreamCatcher/Lyra/UI/Shared/Foundation/W_OverallUILayout.W_OverallUILayout_C"),
+		{ TEXT("overall_layout"), TEXT("/Game/DreamCatcher/Blueprints/UI/Common/W_OverallUILayout.W_OverallUILayout_C"),
 			{ TEXT("MainOverlay"), TEXT("GameLayer_Stack") }, {} },
-		{ TEXT("hud"), TEXT("/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout.W_ShooterHUDLayout_C"),
+		{ TEXT("hud"), TEXT("/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout.W_ShooterHUDLayout_C"),
 			{ TEXT("SafeZone_0"), TEXT("Overlay_0"), TEXT("CanvasPanel_0"), TEXT("ExtensionPoint_Reticle") }, {} },
-		{ TEXT("host"), TEXT("/Game/DreamCatcher/Lyra/UI/Shared/W_WeaponReticleHost.W_WeaponReticleHost_C"),
+		{ TEXT("host"), TEXT("/Game/DreamCatcher/Blueprints/UI/HUD/Reticles/W_WeaponReticleHost.W_WeaponReticleHost_C"),
 			{ TEXT("VisWrapper"), TEXT("WidgetStack") }, {} },
-		{ TEXT("rifle_reticle"), TEXT("/Game/DreamCatcher/Lyra/Weapons/Rifle/W_Reticle_Rifle.W_Reticle_Rifle_C"),
+		{ TEXT("rifle_reticle"), TEXT("/Game/DreamCatcher/Blueprints/UI/HUD/Reticles/W_Reticle_Rifle.W_Reticle_Rifle_C"),
 			{ TEXT("PrimarySB"), TEXT("Overlay_0"), TEXT("CrossHairs"), TEXT("HitMarkerConfirmations"), TEXT("TargetDot") },
 			{ TEXT("SBOuterReticle"), TEXT("Outer"), TEXT("EliminationMarker") } },
-		{ TEXT("pistol_reticle"), TEXT("/Game/DreamCatcher/Lyra/Weapons/Pistol/W_Reticle_Pistol.W_Reticle_Pistol_C"),
+		{ TEXT("pistol_reticle"), TEXT("/Game/DreamCatcher/Blueprints/UI/HUD/Reticles/W_Reticle_Pistol.W_Reticle_Pistol_C"),
 			{ TEXT("PrimarySB"), TEXT("Overlay_0"), TEXT("CrossHairs"), TEXT("HitMarkerConfirmations"), TEXT("TargetDot") },
 			{ TEXT("SBOuterReticle"), TEXT("Outer"), TEXT("EliminationMarker") } }
 	};

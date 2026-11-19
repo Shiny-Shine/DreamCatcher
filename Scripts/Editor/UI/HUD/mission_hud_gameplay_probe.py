@@ -275,7 +275,7 @@ report = dict(run=RUN, complete=False, probe_passed=False, events=[], failures=[
     transition_observations=[], fade_visual_verified=False,
     fade_visual_scope='Actual native row paint is separate from flow/resolution/normal-exit verification',
     latest_wins_overlap_runtime='Not exercised here; retry covers cancellation during an actual outgoing transition',
-    diagnostic_damage_effect='/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller')
+    diagnostic_damage_effect='/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller')
 
 
 def native(name):
@@ -293,11 +293,11 @@ def bp(path):
 CLASSES = {name: native(name) for name in ('DCStageOverlayWidget', 'DCMissionObjectiveWidget',
     'DCMissionListView', 'DCMissionListData', 'DCBossHealthWidget', 'DCLyraHealthComponent',
     'DCStageResultLayer', 'DCBossCharacter', 'DCBossPhaseComponent', 'DCEnemySpawner', 'DCEncounterController')}
-HUD = bp('/Game/DreamCatcher/Lyra/UI/Stage/ShooterCore/UserInterface/W_ShooterHUDLayout')
+HUD = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout')
 FRONTEND = bp('/Game/DreamCatcher/Blueprints/UI/Frontend/W_DC_Frontend')
-MENU = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Hud/W_LyraGameMenu')
-DIALOG = bp('/Game/DreamCatcher/Lyra/UI/Stage/Game/UI/Foundation/Dialogs/W_ConfirmationDefault')
-DAMAGE = bp('/Game/GameplayEffects/Damage/GE_Damage_Basic_SetByCaller')
+MENU = bp('/Game/DreamCatcher/Blueprints/UI/HUD/W_LyraGameMenu')
+DIALOG = bp('/Game/DreamCatcher/Blueprints/UI/Dialogs/W_ConfirmationDefault')
+DAMAGE = bp('/Game/DreamCatcher/Blueprints/Gameplay/Effects/Damage/GE_Damage_Basic_SetByCaller')
 ui = ue.get_default_object(ue.load_class(None, '/Script/CommonGame.CommonUIExtensions'))
 gas = ue.get_default_object(ue.load_class(None, '/Script/GameplayAbilities.AbilitySystemBlueprintLibrary'))
 math_library = ue.get_default_object(ue.load_class(None, '/Script/Engine.KismetMathLibrary'))

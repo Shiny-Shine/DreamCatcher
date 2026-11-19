@@ -40,9 +40,9 @@ def protected_hashes():
     names = ('.git/HEAD', '.git/index', 'DreamCatcher.uproject', 'AGENTS.md',
              'Binaries/Win64/UnrealEditor-DreamCatcher.dll',
              'Content/' + MAP[6:] + '.umap',
-             'Content/DreamCatcher/Experiences/B_DC_StageUIExperience.uasset',
+             'Content/DreamCatcher/Blueprints/Experiences/B_DC_StageUIExperience.uasset',
              'Content/DreamCatcher/Blueprints/AI/Boss/BP_DC_BossSpawner.uasset',
-             'Content/DreamCatcher/Lyra/Weapons/Rifle/B_Rifle.uasset')
+             'Content/DreamCatcher/Blueprints/Weapons/Rifle/B_Rifle.uasset')
     return {name: sha(PROJECT / name) for name in names}
 
 

@@ -60,7 +60,7 @@ def protected_hashes():
     names = ['.git/HEAD', '.git/index', 'AGENTS.md', 'DreamCatcher.uproject',
              'Binaries/Win64/UnrealEditor-DreamCatcher.dll']
     files = [PROJECT / name for name in names] + [disk(p) for p in MODES + [MISSION_ONE, MISSION_SOURCE,
-        '/Game/DreamCatcher/Experiences/B_DC_StageUIExperience']]
+        '/Game/DreamCatcher/Blueprints/Experiences/B_DC_StageUIExperience']]
     files += [p for top in ('Source', 'Config') for p in (PROJECT / top).rglob('*') if p.is_file()]
     return {p.relative_to(PROJECT).as_posix(): sha(p) for p in files}
 
@@ -490,13 +490,13 @@ def main():
             # Preserve the combat task's latest damage values. Freeze the current
             # files for this run and prove that its Experience change leaves the
             # pawn/AI/component configuration identical to the inspected export.
-            experience_path = 'Content/DreamCatcher/Experiences/B_DC_StageUIExperience.uasset'
+            experience_path = 'Content/DreamCatcher/Blueprints/Experiences/B_DC_StageUIExperience.uasset'
             assert set(changed_dependencies) <= {'Source/DreamCatcher/Tests/DCBaseDamageAutomationTests.cpp', experience_path}, changed_dependencies
             if experience_path in changed_dependencies:
                 reviewed = ROOT.parent / 'CombatValues20261024'
                 old = (reviewed / '0_B_DC_StageUIExperience.t3d').read_text(encoding='utf-8')
                 prior = json.loads((reviewed / 'prechange_review.json').read_text(encoding='utf-8'))
-                experience_package = '/Game/DreamCatcher/Experiences/B_DC_StageUIExperience'
+                experience_package = '/Game/DreamCatcher/Blueprints/Experiences/B_DC_StageUIExperience'
                 assert reference['protected_hashes'][experience_path] == prior['sha256'][experience_package]
                 current = evidence.hud.export(cdo(experience_package), directory / 'experience_current.t3d')
                 damage_fields = ('bUseRoleBasedBaseDamage', 'PlayerBaseDamage', 'EnemyBaseDamage')
