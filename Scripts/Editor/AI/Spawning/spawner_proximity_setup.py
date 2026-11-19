@@ -238,12 +238,16 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == '--commands':
+        sys.path.insert(0, str(PROJECT / 'Scripts/Editor'))
+        from dc_editor_paths import editor_command
+
         run = sys.argv[2]
         assert re.fullmatch(r'[A-Za-z0-9_]+', run)
         assert not (ROOT / run).exists(), 'Print commands with a fresh run id'
+        editor = editor_command(PROJECT)
         for mode in ('apply', 'verify'):
             print(subprocess.list2cmdline([
-                'E:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe',
+                editor,
                 str(PROJECT / 'DreamCatcher.uproject'), '-run=pythonscript', '-script=' + str(Path(__file__).resolve()),
                 '-unattended', '-SCCProvider=None', '-NullRHI', '-NoSound',
                 '-DCSpawnerProximityMode=' + mode, '-DCSpawnerProximityRun=' + run,

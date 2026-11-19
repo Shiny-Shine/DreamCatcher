@@ -298,12 +298,15 @@ if __name__ == '__main__':
         assert len(sys.argv[pos + 1:]) == 4
         raise SystemExit(verify_report(*sys.argv[pos + 1:]))
     if len(sys.argv) == 3 and sys.argv[1] == '--commands':
+        sys.path.insert(0, str(PROJECT / 'Scripts/Editor'))
+        from dc_editor_paths import editor_command
+
         run = sys.argv[2]
         assert re.fullmatch(r'[A-Za-z0-9_]+', run)
         folder = ROOT / ('PIE_' + run)
         assert not folder.exists(), 'Print commands with a fresh run id'
         print(subprocess.list2cmdline([
-            'E:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe',
+            editor_command(PROJECT),
             str(PROJECT / 'DreamCatcher.uproject'), MAP, '-unattended', '-SCCProvider=None',
             '-RenderOffscreen', '-NoSound', '-NoSplash', '-DCSpawnerProximityProbe=' + run,
             '-ExecutePythonScript=' + str(Path(__file__).resolve()),

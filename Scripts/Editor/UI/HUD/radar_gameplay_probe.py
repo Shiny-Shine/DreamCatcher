@@ -43,7 +43,11 @@ if '--verify-report' in sys.argv:
 
 import unreal as ue
 
-PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
+if '__file__' in globals():
+    PROJECT = Path(__file__).resolve().parents[4]
+else:
+    PROJECT = Path(ue.Paths.convert_relative_path_to_full(ue.Paths.project_dir())).resolve()
+    assert (PROJECT / 'DreamCatcher.uproject').is_file(), 'Run this probe in the DreamCatcher project'
 COMMAND = ue.SystemLibrary.get_command_line()
 match = re.search(r'-DCRadarProbe=([A-Za-z0-9_]{1,64})(?=\s|$)', COMMAND)
 assert match and '-unattended' in COMMAND.lower() and '-sccprovider=none' in COMMAND.lower()

@@ -179,9 +179,17 @@ Dream Catcher는 아래 원칙을 기준으로 개발합니다.
 
 ### 요구 사항
 
-- Unreal Engine 5
+- Windows 64비트용 Unreal Engine 5.8
 - Rider 또는 Visual Studio 기반 Unreal C++ 개발 환경
 - Git LFS
+
+### Blueprint Arrange 설치
+
+프로젝트는 블루프린트 노드 정렬용 에디터 플러그인 `BlueprintArrange`를 사용합니다. 새 PC에서 프로젝트를 처음 열기 전에 다음 순서로 설치합니다.
+
+1. Epic 계정의 Fab 라이브러리에 **Blueprint Arrange**를 추가합니다. [Fab 상품 페이지](https://www.fab.com/listings/af6a5d41-480d-4b03-ac84-8b446126dc59)
+2. Epic Games Launcher의 **Unreal Engine → 라이브러리 → Fab 라이브러리**에서 **Blueprint Arrange → 엔진에 설치(Install to Engine)**를 선택하고 프로젝트를 열 UE 5.8에 설치합니다. [Epic 플러그인 설치 안내](https://dev.epicgames.com/documentation/unreal-engine/working-with-plugins-in-unreal-engine)
+3. 팀 에셋 설치를 마치고 프로젝트를 연 뒤 **편집(Edit) → 플러그인(Plugins)**에서 `Blueprint Arrange`를 검색해 활성 상태를 확인합니다.
 
 ### 팀 에셋 설치
 
@@ -230,6 +238,18 @@ Assert-BlockingPack $project
 2. 필요하면 프로젝트 파일을 갱신합니다.
 3. C++ 프로젝트를 빌드합니다.
 4. Unreal Editor에서 프로젝트를 실행합니다.
+
+### 에디터 스크립트 경로와 진단 자료
+
+`Scripts/Editor/`에서 에디터 실행 명령을 생성하는 도구는 스크립트가 있는 체크아웃과 프로젝트에 연결된 UE 5.8 설치를 기준으로 경로를 찾습니다. 별도 엔진 설치를 사용할 때는 도구를 실행하는 셸의 환경 변수 `DC_UNREAL_EDITOR_CMD`에 해당 설치의 `Engine/Binaries/Win64/UnrealEditor-Cmd.exe` 전체 경로를 지정합니다.
+
+다음 도구를 새 PC에서 실행하려면 해당 검사에 사용한 자료도 준비합니다. `Saved/Diagnostics/`는 Git에서 제외된 로컬 폴더입니다.
+
+| 작업 | 필요한 자료 |
+| --- | --- |
+| 미션 HUD 제작 도구 `mission_hud_setup.py` | 해당 UE 5.8 설치의 엔진 소스(`Engine/Source`)와 `Saved/Diagnostics/Level1Merge20261016/apply_merge.py` |
+| 탄약 HUD 검사 `weapon_ammo_hud_gameplay_probe.py` | `Saved/Diagnostics/WeaponAmmo20261020/Before_A/baseline.json` |
+| 스테이지 진행 검사 `level_progression_gameplay_probe.py`의 `decode_error` 사례 | `Saved/Diagnostics/LevelProgression20261023/Apply_A/report.json`과 그 기록의 SHA-256에 일치하는 당시 원본 영상 |
 
 ### 기본 프로젝트 설정
 

@@ -7,7 +7,12 @@ Does not claim manual input, sound perception, rendered marker or network accept
 import hashlib,json,re,time,traceback
 from pathlib import Path
 import unreal as u
-P=Path('E:/Epic Games/UEProjects/DreamCatcher');D=P/'Saved/Diagnostics/HitZones20261018'
+if '__file__' in globals():
+    P = Path(__file__).resolve().parents[3]
+else:
+    P = Path(u.Paths.convert_relative_path_to_full(u.Paths.project_dir())).resolve()
+    assert (P / 'DreamCatcher.uproject').is_file(), 'Run this probe in the DreamCatcher project'
+D = P / 'Saved/Diagnostics/HitZones20261018'
 RUN=re.search(r'-DCHitZoneProbe=([A-Za-z0-9_]+)',u.SystemLibrary.get_command_line()).group(1)
 OUT=D/('pie_'+RUN+'.json');assert not OUT.exists()
 MAP='/Game/DreamCatcher/Maps/Story/Level_1'

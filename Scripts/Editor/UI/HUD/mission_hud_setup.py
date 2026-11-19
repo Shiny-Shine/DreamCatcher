@@ -26,7 +26,7 @@ import traceback
 import unreal as ue
 
 sys.dont_write_bytecode = True
-PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
+PROJECT = Path(__file__).resolve().parents[4]
 REPORTS = PROJECT / 'Saved/Diagnostics/MissionHUD20261019'
 SCHEMA = 2  # Every brush now has independent full-model geometry coverage.
 PATHS = {
@@ -50,11 +50,12 @@ EXAMPLES = (
     ('ReachPlaza', '광장구역으로 이동하기', 'Guidance', 'EncounterGoal'),
 )
 GUID_EVIDENCE = PROJECT / 'Saved/Diagnostics/Level1Merge20261016/apply_merge.py'
-EXPORTER_EVIDENCE = Path('E:/Epic Games/UE_5.8/Engine/Source/Runtime/Engine/Private/UnrealExporter.cpp')
-SPRITE_EVIDENCE = Path('E:/Epic Games/UE_5.8/Engine/Source/Runtime/Engine/Private/Components/SceneComponent.cpp')
-MODEL_EXPORT_EVIDENCE = Path('E:/Epic Games/UE_5.8/Engine/Source/Editor/UnrealEd/Private/EditorExporters.cpp')
-ISM_HEADER = Path('E:/Epic Games/UE_5.8/Engine/Source/Runtime/Engine/Classes/Components/InstancedStaticMeshComponent.h')
-ISM_SOURCE = Path('E:/Epic Games/UE_5.8/Engine/Source/Runtime/Engine/Private/InstancedStaticMesh.cpp')
+ENGINE_SOURCE = Path(ue.Paths.convert_relative_path_to_full(ue.Paths.engine_dir())).resolve() / 'Source'
+EXPORTER_EVIDENCE = ENGINE_SOURCE / 'Runtime/Engine/Private/UnrealExporter.cpp'
+SPRITE_EVIDENCE = ENGINE_SOURCE / 'Runtime/Engine/Private/Components/SceneComponent.cpp'
+MODEL_EXPORT_EVIDENCE = ENGINE_SOURCE / 'Editor/UnrealEd/Private/EditorExporters.cpp'
+ISM_HEADER = ENGINE_SOURCE / 'Runtime/Engine/Classes/Components/InstancedStaticMeshComponent.h'
+ISM_SOURCE = ENGINE_SOURCE / 'Runtime/Engine/Private/InstancedStaticMesh.cpp'
 CACHE_OWNER = PATHS['map'] + '.Level_1:PersistentLevel.BPP_NewMap_C_1'
 CACHE_CLASS = '/Script/Engine.InstancedStaticMeshComponent'
 CACHE_PATHS = tuple(CACHE_OWNER + '.InstancedStaticMesh' + (str(index) if index else '') for index in range(9))

@@ -19,7 +19,7 @@ import traceback
 
 import unreal as ue
 
-PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
+PROJECT = Path(__file__).resolve().parents[4]
 REPORTS = PROJECT / 'Saved/Diagnostics/InGameHUD20261019'
 ASSET = '/Game/DreamCatcher/Blueprints/UI/HUD/W_ShooterHUDLayout'
 OBJECT = ASSET + '.W_ShooterHUDLayout'

@@ -403,12 +403,16 @@ if __name__ == '__main__':
         offset = sys.argv.index('--verify-report'); assert len(sys.argv[offset + 1:]) == 4
         raise SystemExit(verify_report(*sys.argv[offset + 1:]))
     elif len(sys.argv) == 3 and sys.argv[1] == '--commands':
+        sys.path.insert(0, str(PROJECT / 'Scripts/Editor'))
+        from dc_editor_paths import editor_command
+
         run = sys.argv[2]; assert re.fullmatch(r'[A-Za-z0-9_]+', run)
+        editor = editor_command(PROJECT)
         for case in ('chain', 'death', 'media_error', 'decode_error'):
             directory = ROOT / ('PIE_' + run + '_' + case)
             assert not directory.exists()
             print(subprocess.list2cmdline([
-                'E:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe', str(PROJECT / 'DreamCatcher.uproject'),
+                editor, str(PROJECT / 'DreamCatcher.uproject'),
                 '/Game/DreamCatcher/Maps/Story/Level_' + ('1' if case == 'chain' else '2'),
                 '-unattended', '-SCCProvider=None', '-RenderOffscreen', '-NoSplash', '-NoAutoSave', '-NoSaveConfig',
                 '-DCProgressionProbe=' + run + '_' + case, '-DCProgressionCase=' + case,

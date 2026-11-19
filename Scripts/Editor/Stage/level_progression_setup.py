@@ -570,10 +570,14 @@ def main():
 
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == '--commands':
+        sys.path.insert(0, str(PROJECT / 'Scripts/Editor'))
+        from dc_editor_paths import editor_command
+
         run = sys.argv[2]
         assert re.fullmatch(r'[A-Za-z0-9_]+', run)
+        editor = editor_command(PROJECT)
         for mode in ('inspect', 'apply', 'verify'):
-            args = ['E:/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe', str(PROJECT / 'DreamCatcher.uproject')]
+            args = [editor, str(PROJECT / 'DreamCatcher.uproject')]
             # Use the same editor context for all modes: commandlets omit the
             # editor-only light billboard sprite/scale used in the full snapshots.
             args += [MAPS[1], '-ExecutePythonScript=' + str(Path(__file__).resolve())]

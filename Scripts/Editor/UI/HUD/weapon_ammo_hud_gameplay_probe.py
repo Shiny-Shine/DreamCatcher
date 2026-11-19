@@ -24,7 +24,11 @@ import traceback
 
 import unreal as ue
 
-PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
+if '__file__' in globals():
+    PROJECT = Path(__file__).resolve().parents[4]
+else:
+    PROJECT = Path(ue.Paths.convert_relative_path_to_full(ue.Paths.project_dir())).resolve()
+    assert (PROJECT / 'DreamCatcher.uproject').is_file(), 'Run this probe in the DreamCatcher project'
 REPORTS = PROJECT / 'Saved/Diagnostics/WeaponAmmo20261020'
 BASELINE = REPORTS / 'Before_A/baseline.json'
 ROOT_CLASS = '/Game/DreamCatcher/Blueprints/UI/Common/W_QuickBar.W_QuickBar_C'

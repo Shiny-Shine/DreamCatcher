@@ -16,7 +16,7 @@ import traceback
 import unreal as ue
 
 sys.dont_write_bytecode = True
-PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
+PROJECT = Path(__file__).resolve().parents[4]
 REPORTS = PROJECT / 'Saved/Diagnostics/BossHUD20261019'
 ASSET = '/Game/DreamCatcher/Data/Boss/DA_DC_Boss'
 DISK = PROJECT / ('Content/' + ASSET[6:] + '.uasset')

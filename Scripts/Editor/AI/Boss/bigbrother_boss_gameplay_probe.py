@@ -15,7 +15,7 @@ import sys
 import time
 import traceback
 sys.dont_write_bytecode = True
-P = Path('E:/Epic Games/UEProjects/DreamCatcher')
+P = Path(__file__).resolve().parents[4]
 ROOT = P / 'Saved/Diagnostics/BigBrotherBoss20261024'
 
 

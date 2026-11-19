@@ -39,7 +39,11 @@ if __name__ == '__main__' and '--finalize' in sys.argv:
 
 import unreal as ue
 
-PROJECT = Path('E:/Epic Games/UEProjects/DreamCatcher')
+if '__file__' in globals():
+    PROJECT = Path(__file__).resolve().parents[4]
+else:
+    PROJECT = Path(ue.Paths.convert_relative_path_to_full(ue.Paths.project_dir())).resolve()
+    assert (PROJECT / 'DreamCatcher.uproject').is_file(), 'Run this probe in the DreamCatcher project'
 REPORTS = PROJECT / 'Saved/Diagnostics/FrontendPV20261024'
 MENU = '/Game/DreamCatcher/Maps/Frontend/L_DC_FrontEnd'
 match = re.search(r'-DCFrontendIntroProbe=([A-Za-z0-9_]+)\b', ue.SystemLibrary.get_command_line())
