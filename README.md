@@ -200,6 +200,48 @@ Dream Catcher는 아래 원칙을 기준으로 개발합니다.
 
 - Unreal Engine 5
 - Rider 또는 Visual Studio 기반 Unreal C++ 개발 환경
+- Git LFS
+
+### 팀 에셋 설치
+
+`Level_1`은 팀용 로컬 저장소 `DreamCatcher-PrivateAssets`의 `Content/BlockingStarterPack`을 사용합니다. 에셋 저장소와 LFS 객체를 받아 프로젝트와 같은 상위 폴더에 둡니다. 현재 팩은 650개 파일, 135,549,028바이트입니다. 에디터를 열기 전에 [DreamCatcher.uproject](DreamCatcher.uproject)가 있는 폴더에서 PowerShell로 실행합니다.
+
+```powershell
+$project = (Get-Item -LiteralPath '.\DreamCatcher.uproject' -ErrorAction Stop).DirectoryName
+$assets = (Resolve-Path -LiteralPath '..\DreamCatcher-PrivateAssets' -ErrorAction Stop).Path
+$pack = 'Content/BlockingStarterPack'
+$tree = git -C $assets rev-parse "HEAD:$pack"
+if ($tree -ne '20fea4282ab4f6a56d9fc7aeb4a8795a2cebc78a') { throw '팀 에셋 저장소의 팩 버전을 확인하세요.' }
+git -C $assets lfs checkout "$pack/**"
+if ($LASTEXITCODE -ne 0) { throw '팀 저장소에서 LFS 파일을 복원하세요.' }
+$manifest = (git -C $assets lfs ls-files --json --include="$pack/**" HEAD | Out-String | ConvertFrom-Json).files
+if ($manifest.Count -ne 650) { throw 'Git LFS 목록에 팩 파일 650개가 필요합니다.' }
+
+function Assert-BlockingPack($root) {
+    $files = @(Get-ChildItem -LiteralPath (Join-Path $root $pack) -Recurse -File -Force -ErrorAction Stop)
+    if ($files.Count -ne 650) { throw "$root 폴더의 팩 파일 수를 확인하세요." }
+    foreach ($entry in $manifest) {
+        $file = Join-Path $root $entry.name
+        if ((Get-FileHash -LiteralPath $file -Algorithm SHA256 -ErrorAction Stop).Hash -ne $entry.oid) { throw "$file 파일이 LFS 원본과 다릅니다." }
+    }
+}
+Assert-BlockingPack $assets
+$destination = Join-Path $project $pack
+if (-not (Test-Path -LiteralPath $destination)) {
+    git -C $assets diff --cached --quiet HEAD -- $pack
+    if ($LASTEXITCODE -ne 0) { throw '팀 에셋 저장소의 팩에 스테이징된 변경이 있습니다.' }
+    $prefix = $project.Replace('\', '/') + '/'
+    for ($i = 0; $i -lt $manifest.Count; $i += 50) {
+        $end = [Math]::Min($i + 49, $manifest.Count - 1)
+        $paths = $manifest[$i..$end].name
+        git -C $assets checkout-index "--prefix=$prefix" -- $paths
+        if ($LASTEXITCODE -ne 0) { throw '팩 설치가 완료되지 않았습니다. 대상 폴더를 확인하세요.' }
+    }
+}
+Assert-BlockingPack $project
+```
+
+기존 팩 폴더는 검증만 수행합니다. 설치가 끝나면 콘텐츠 브라우저에서 `/Game/BlockingStarterPack/Meshes/Primitives/SM_Cube`를 열고, `/Game/DreamCatcher/Maps/Story/Level_1`에서 블록아웃 메시가 표시되는지 확인합니다.
 
 ### 프로젝트 열기
 
