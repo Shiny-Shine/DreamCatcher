@@ -38,8 +38,8 @@ SOURCE = {
 }
 MESH = '/Game/DreamCatcher/Meshes/Characters/Big_Brother/BigBrother'
 MATERIAL = '/Game/DreamCatcher/Materials/Characters/Big_Brother/Material_tripo_8ee5710f_9813_4036_8bd6_534cf8d40cce'
-BODY_MATERIAL = '/Game/Characters/Heroes/PhysMat_Player'
-HEAD_MATERIAL = '/Game/Characters/Heroes/PhysMat_Player_WeakSpot'
+BODY_MATERIAL = '/Game/DreamCatcher/Physics/Characters/Shared/PhysMat_Player'
+HEAD_MATERIAL = '/Game/DreamCatcher/Physics/Characters/Shared/PhysMat_Player_WeakSpot'
 EXCLUDED = {'SkeletalMeshActor_1', 'DC_ExampleSpawner', 'DC_ExampleEncounter', 'DC_ExampleStageDirector',
             'DC_ExamplePlayerStart', 'DC_ExampleNavBounds', 'DC_ExampleRecast'}
 SPECIAL_PRESERVED = ('DC_ExamplePlayerStart', 'DC_ExampleNavBounds', 'DC_ExampleRecast')

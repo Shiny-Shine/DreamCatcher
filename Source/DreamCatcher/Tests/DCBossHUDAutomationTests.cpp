@@ -103,7 +103,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDCBossHUDMaterialTest, "DreamCatcher.UI.BossHU
 bool FDCBossHUDMaterialTest::RunTest(const FString&)
 {
 	if (!DCBossHUDTests::Context(*this)) { return false; }
-	const TCHAR* Art = TEXT("/Game/DreamCatcher/Lyra/UI/Shared/Equipment/LyraStarterGame/UI/Hud/Art/");
+	const TCHAR* Art = TEXT("/Game/DreamCatcher/Materials/UI/HUD/HealthAndArmor/");
 	UMaterialInterface* Border = LoadObject<UMaterialInterface>(nullptr, *(FString(Art) + TEXT("MI_UI_HealthBar_BarBorder.MI_UI_HealthBar_BarBorder")));
 	UMaterialInterface* Fill = LoadObject<UMaterialInterface>(nullptr, *(FString(Art) + TEXT("MI_UI_HealthBar_Fill.MI_UI_HealthBar_Fill")));
 	if (!TestNotNull(TEXT("Existing border material"), Border) || !TestNotNull(TEXT("Existing fill material"), Fill)) { return false; }

@@ -21,7 +21,7 @@ REPORTS = PROJECT / 'Saved/Diagnostics/BossHUD20261019'
 ASSET = '/Game/DreamCatcher/Data/Boss/DA_DC_Boss'
 DISK = PROJECT / ('Content/' + ASSET[6:] + '.uasset')
 HEALTHBAR = '/Game/DreamCatcher/Blueprints/UI/HUD/W_Healthbar'
-ART = '/Game/DreamCatcher/Lyra/UI/Shared/Equipment/LyraStarterGame/UI/Hud/Art/'
+ART = '/Game/DreamCatcher/Materials/UI/HUD/HealthAndArmor/'
 BRUSHES = {'BarBorderBrush': ('BarBorder', ART + 'MI_UI_HealthBar_BarBorder'),
            'BarFillBrush': ('BarFill', ART + 'MI_UI_HealthBar_Fill')}
 VECTORS = {'PanelSize': (720, 86), 'PanelOffset': (0, 88), 'NameOffset': (0, 0),
