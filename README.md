@@ -148,38 +148,19 @@ Dream Catcher는 아래 하이브리드 방식으로 개발합니다.
 
 ## 저장소 구조
 
-현재 주요 디렉터리는 아래와 같습니다.
+| 작업 대상 | 주요 디렉터리 |
+| --- | --- |
+| 런타임 C++ | `Source/DreamCatcher/` 아래 `Character/`, `Player/`, `GameModes/`, `AI/`, `Stage/`, `UI/` |
+| 블루프린트와 위젯 | `Content/DreamCatcher/Blueprints/` 아래 `AI/`, `Stage/`, `UI/` |
+| 맵 | `Content/DreamCatcher/Maps/` 아래 `Story/`, `Frontend/`, `Tests/` |
+| 입력과 게임 데이터 | `Content/DreamCatcher/Input/`, `Content/DreamCatcher/Data/` |
+| 아트와 사운드 | `Content/DreamCatcher/` 아래 `Meshes/`, `Animations/`, `Textures/`, `Materials/`, `FX/`, `Audio/` |
+| 에디터 제작·검사 스크립트 | `Scripts/Editor/` 아래 `AI/`, `Combat/`, `Stage/`, `UI/` |
+| 프로젝트 설정 | `Config/` |
 
-```text
-Source/DreamCatcher
-  DreamCatcherCharacter.*
-  DreamCatcherPlayerController.*
-  DreamCatcherGameMode.*
-  Components/
-  AI/
-  Stage/
-  UI/
+캐릭터, 플레이어 컨트롤러와 게임 모드는 각 역할 폴더의 C++ 클래스에서 정의합니다. [ADreamCatcherCharacter](Source/DreamCatcher/Character/DreamCatcherCharacter.h) · [ADreamCatcherPlayerController](Source/DreamCatcher/Player/DreamCatcherPlayerController.h) · [ADCLyraGameMode](Source/DreamCatcher/GameModes/DCLyraGameMode.h)
 
-Content/
-  Blueprint/
-  Input/
-  DreamCatcher/
-
-Config/
-```
-
-현재 코드베이스의 핵심 런타임 클래스:
-
-- `DreamCatcherCharacter`
-- `DCHealthComponent`
-- `DCCombatComponent`
-- `DreamCatcherPlayerController`
-- `DreamCatcherGameMode`
-- `DCPlayerHUDWidget`
-- `DCEnemyCharacter`
-- `DCEnemySpawner`
-- `DCEncounterController`
-- `DCStageDirector`
+스테이지 진행을 수정할 때는 `Stage/DCStageDirector.h`의 `ADCStageDirector`, 이를 사용하는 `Blueprints/Stage/BP_StageDirector`, 배치를 확인할 `Maps/Story/Level_1`을 함께 봅니다. [스테이지 C++](Source/DreamCatcher/Stage) · [스테이지 블루프린트](Content/DreamCatcher/Blueprints/Stage) · [스토리 맵](Content/DreamCatcher/Maps/Story)
 
 ## 개발 원칙
 

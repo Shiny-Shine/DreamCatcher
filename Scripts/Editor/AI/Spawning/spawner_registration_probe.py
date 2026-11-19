@@ -58,7 +58,7 @@ def arm():
     case = re.search(r'-DCRegistrationCase=(chain|abort)\b', command).group(1)
     assert '-unattended' in command.lower() and '-sccprovider=none' in command.lower()
     assert '-nullrhi' not in command.lower() and not u.SourceControl.is_enabled()
-    s.module('base_damage_setup').assert_no_other_editor()
+    s.module('Combat/base_damage_setup.py').assert_no_other_editor()
     setting = re.search(r'"-GameUserSettingsINI=([^"]+)"|-GameUserSettingsINI=(?:"([^"]+)"|(\S+))', command, re.I)
     assert setting and Path(next(x for x in setting.groups() if x)).resolve().is_relative_to(ROOT.resolve())
     directory = ROOT / ('PIE_' + run)
